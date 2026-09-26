@@ -2,7 +2,7 @@
 # which the project imports to sign the VSTO manifests. Run once per PC before the first build.
 # Signing.props is per PC and is not committed. Use -Force to replace an existing Signing.props.
 param(
-    [string] $Subject = 'CN=TinyKit (self-signed)',
+    [string] $Subject = 'CN=tinykit (self-signed)',
     [switch] $Force
 )
 

@@ -1,4 +1,4 @@
-# TinyKit for Outlook
+# tinykit for Outlook
 
 A small VSTO add-in (C#, .NET Framework 4.8) for **Outlook Classic** on Windows. It adds a **Tools** ribbon tab with:
 
@@ -7,7 +7,7 @@ A small VSTO add-in (C#, .NET Framework 4.8) for **Outlook Classic** on Windows.
 - **Custom mail fields** (`domainRelated`, `nameRelated`, `me`, `tos`, `ccs`) to sort, group and filter by.
 - **View Font** for the whole table view.
 
-TinyKit is a set of small Office tools; add-ins for other hosts (e.g. `TinyKit.Word`) live in their own repositories.
+tinykit is a set of small Office tools; add-ins for other hosts (e.g. `tinykit.Word`) live in their own repositories.
 
 ## Build / install
 
@@ -15,7 +15,7 @@ Requirements: Windows, Outlook Classic (Microsoft 365 / 2016 or later), Visual S
 
 ```powershell
 .\New-SigningCert.ps1        # once per PC: self-signed cert for the VSTO manifests + Signing.props (not committed)
-& "$env:ProgramFiles\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe" TinyKit.Outlook.sln -p:Configuration=Debug
+& "$env:ProgramFiles\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe" tinykit.Outlook.sln -p:Configuration=Debug
 .\Register-Addin.ps1         # -Unregister to remove, -ShareSettings to share settings through OneDrive
 ```
 
@@ -23,7 +23,7 @@ Building in Visual Studio registers the add-in automatically; a command-line bui
 Close Outlook before building (it locks the add-in DLL) and start it afterwards. The first time, VSTO asks you to trust the
 self-signed publisher; choose **Install**.
 
-The namespace is `TinyKit.OutlookAddin` (not `TinyKit.Outlook`) so the usual
+The namespace is `tinykit.OutlookAddin` (not `tinykit.Outlook`) so the usual
 `using Outlook = Microsoft.Office.Interop.Outlook;` alias doesn't collide.
 
 ## Settings location (sharing across PCs)
@@ -32,15 +32,15 @@ Shared settings files are kept in the personal OneDrive when this folder exists:
 
 ```
 %OneDriveConsumer%\.config\            (hidden; one folder per program)
-    TinyKit\
+    tinykit\
         Outlook\   Saved Filters.xml, History.xml
         Word\      (later)
 ```
 
 - **Folder exists:** every PC signed in to the same personal OneDrive uses the same saved filters and recent values.
   Changes are picked up automatically when OneDrive syncs the file.
-- **Folder missing:** the files stay in `%APPDATA%\TinyKit\Outlook\` (this PC only).
-- **Always local:** `ViewState.xml` (each view's own filter) and `OutlookAddin.log` stay in `%APPDATA%\TinyKit\Outlook\`.
+- **Folder missing:** the files stay in `%APPDATA%\tinykit\Outlook\` (this PC only).
+- **Always local:** `ViewState.xml` (each view's own filter) and `OutlookAddin.log` stay in `%APPDATA%\tinykit\Outlook\`.
 - `%OneDriveConsumer%` is the *personal* OneDrive (`%OneDrive%` can be a work account). If the variable is missing, the
   OneDrive client's registry entry is used.
 - The **Edit Saved Filters** tip and the header comment of `Saved Filters.xml` show where the settings are.
@@ -51,7 +51,7 @@ The current local files are copied there; the local copies stay as a backup.
 **On another PC:**
 1. Clone this repository, build, and run `.\Register-Addin.ps1` (see *Build / install*).
    The script also sets `.config` hidden, because OneDrive syncs the folder but not its Hidden attribute.
-2. Make sure OneDrive has synced `.config\TinyKit\Outlook\`, then start Outlook and accept the VSTO trust prompt once.
+2. Make sure OneDrive has synced `.config\tinykit\Outlook\`, then start Outlook and accept the VSTO trust prompt once.
 
 ## **Tools** tab
 
@@ -140,7 +140,7 @@ Rules without that prefix are never changed. Color is limited to the 16 colors O
 The file is rewritten when you change settings from the ribbon, so comments you add will not be kept.
 
 Files: `Saved Filters.xml` and `History.xml` in the settings folder (see *Settings location*; an older `Filters.xml` is renamed
-automatically); `ViewState.xml` and `OutlookAddin.log` (errors) in `%APPDATA%\TinyKit\Outlook\`.
+automatically); `ViewState.xml` and `OutlookAddin.log` (errors) in `%APPDATA%\tinykit\Outlook\`.
 
 ## License
 
