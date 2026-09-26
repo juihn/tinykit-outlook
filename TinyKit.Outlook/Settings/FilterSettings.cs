@@ -211,29 +211,35 @@ namespace TinyKit.OutlookAddin.Settings
             return fallback;
         }
 
+        /// <summary>The saved filters of a first install (no Saved Filters.xml yet).</summary>
         private static FilterSettings CreateDefault()
         {
+            const string userProp = "http://schemas.microsoft.com/mapi/string/{00020329-0000-0000-C000-000000000046}/";
             var s = new FilterSettings();
-            s.Filters.Add(new SavedFilter
-            {
-                Name = "Unread",
-                Sql = "\"urn:schemas:httpmail:read\" = 0",
-                FormatEnabled = false,
-                Format = new FilterFormat { Bold = true, Color = Outlook.OlColor.olColorNavy },
-            });
+            // Flagged or completed (PR_FLAG_STATUS is set).
             s.Filters.Add(new SavedFilter
             {
                 Name = "Flagged",
-                Sql = "\"http://schemas.microsoft.com/mapi/proptag/0x10900003\" = 2",
+                Sql = "\"http://schemas.microsoft.com/mapi/proptag/0x10900003\" IS NOT NULL",
                 FormatEnabled = false,
                 Format = new FilterFormat { Color = Outlook.OlColor.olColorRed },
             });
+            // Mail I sent (me = ▶, written by Custom Fields).
             s.Filters.Add(new SavedFilter
             {
-                Name = "High Importance",
-                Sql = "\"urn:schemas:httpmail:importance\" = 2",
-                FormatEnabled = false,
-                Format = new FilterFormat { Bold = true, Underline = true, Color = Outlook.OlColor.olColorMaroon },
+                Name = "Sent",
+                Sql = "\"" + userProp + "me\" = '▶'",
+                FormatEnabled = true,
+                Format = new FilterFormat { Underline = true, Color = Outlook.OlColor.olColorTeal },
+            });
+            // Received mail whose sender is not in Contacts (nameRelated is "[contact name]" only for contacts).
+            s.Filters.Add(new SavedFilter
+            {
+                Name = "Unknown",
+                Sql = "\"" + userProp + "nameRelated\" IS NOT NULL AND NOT (\"" + userProp + "nameRelated\" LIKE '[%')"
+                    + " AND \"" + userProp + "me\" <> '▶'",
+                FormatEnabled = true,
+                Format = new FilterFormat { Color = Outlook.OlColor.olColorGray },
             });
             return s;
         }

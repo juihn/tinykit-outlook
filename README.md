@@ -94,6 +94,16 @@ The add-in writes these text columns (user properties) on mail and meeting items
 - **Fill Missing** fills the current folder's items that have no `domainRelated` yet, e.g. mail that arrived while Outlook was closed.
 
 ### Saved Filters group (from `Saved Filters.xml`)
+A first install starts with three saved filters, which you can edit or delete:
+
+| Filter | Shows | Format |
+|---|---|---|
+| **Flagged** | flagged (or completed) mail | red, off |
+| **Sent** | mail I sent (`me` = `▶`) | teal, underlined |
+| **Unknown** | received mail whose sender is not in Contacts (`nameRelated` not `[…]`) | gray |
+
+Sent and Unknown use the Custom Fields, so older mail needs **Fill Missing** once.
+
 - **One toggle button per saved filter** (up to 20). Pressing it applies the filter's SQL as the view filter. Pressing it again restores the view's own filter.
 - **Format** (toggle) applies to the saved filter that is currently applied:
   - **Click:** turns its format on or off as conditional formatting.
