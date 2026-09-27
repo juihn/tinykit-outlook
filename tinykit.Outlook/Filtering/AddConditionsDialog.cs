@@ -19,8 +19,10 @@ namespace tinykit.OutlookAddin.Filtering
     /// </summary>
     internal sealed class AddConditionsDialog : Form
     {
-        // The choice is remembered for the session: the same kind of mail tends to be added repeatedly.
-        private static ConditionField _lastField = ConditionField.Subject;
+        // The choice is remembered per saved filter for the session: the same kind of mail tends to go into the same filter.
+        private static readonly Dictionary<string, ConditionField> LastField = new Dictionary<string, ConditionField>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly string _filterName;
 
         private readonly RadioButton _byDomain;
         private readonly RadioButton _bySubject;
@@ -28,8 +30,10 @@ namespace tinykit.OutlookAddin.Filtering
         private readonly Dictionary<ConditionField, string> _texts = new Dictionary<ConditionField, string>();
         private ConditionField _shown;
 
-        public AddConditionsDialog(string filterName, IList<string> domains, IList<string> subjectPatterns)
+        /// <param name="defaultField">The field chosen the first time for this filter in a session.</param>
+        public AddConditionsDialog(string filterName, IList<string> domains, IList<string> subjectPatterns, ConditionField defaultField)
         {
+            _filterName = filterName;
             Text = "Add to " + filterName;
             Font = new Font("Segoe UI", 9f);
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -86,7 +90,9 @@ namespace tinykit.OutlookAddin.Filtering
             CancelButton = cancel;
             Controls.AddRange(new Control[] { intro, _byDomain, _bySubject, hint, _values, ok, cancel });
 
-            var start = _lastField;
+            ConditionField start;
+            if (!LastField.TryGetValue(filterName, out start))
+                start = defaultField;
             if (start == ConditionField.Subject && subjectPatterns.Count == 0) start = ConditionField.DomainRelated;
             if (start == ConditionField.DomainRelated && domains.Count == 0) start = ConditionField.Subject;
             _shown = start;
@@ -115,7 +121,7 @@ namespace tinykit.OutlookAddin.Filtering
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             if (DialogResult == DialogResult.OK)
-                _lastField = Field;
+                LastField[_filterName] = Field;
             base.OnFormClosed(e);
         }
 

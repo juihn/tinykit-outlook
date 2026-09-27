@@ -167,15 +167,8 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<separator id=\"sepSaved1\"/>");
             sb.Append("<toggleButton id=\"sfFormat\" label=\"Format\" imageMso=\"ConditionalFormattingMenu\"")
               .Append(" getPressed=\"GetApplyFormatPressed\" onAction=\"OnFormatToggle\" screentip=\"Format\" getSupertip=\"GetFormatSupertip\"/>");
-            sb.Append("<button id=\"sfAddDelete\" label=\"Add to ").Append(delete).Append("\" imageMso=\"").Append(AddIcon)
-              .Append("\" getVisible=\"GetMailVisible\" onAction=\"OnAddToDelete\" screentip=\"Add to ").Append(delete)
-              .Append("\" supertip=\"Adds the SUBJECT of each selected mail to the saved filter &quot;").Append(delete)
-              .Append("&quot; (subject = ...), so mails with those subjects match it.\"/>");
-            sb.Append("<button id=\"sfAddIssue\" label=\"Add to ").Append(issue).Append("\" imageMso=\"").Append(AddIcon)
-              .Append("\" getVisible=\"GetMailVisible\" onAction=\"OnAddToIssue\" screentip=\"Add to ").Append(issue)
-              .Append("\" supertip=\"Adds the DOMAINRELATED value of each selected mail to the saved filter &quot;").Append(issue)
-              .Append("&quot; (domainRelated = ...), so mails of those domains match it. The filter is created after &quot;")
-              .Append(delete).Append("&quot; on first use.\"/>");
+            AppendAddByDialog(sb, "sfAddDelete", "Add to " + delete, "OnAddToDelete", delete, null);
+            AppendAddByDialog(sb, "sfAddIssue", "Add to " + issue, "OnAddToIssue", issue, delete);
             var transaction = FilterController.TransactionFilterName;
             AppendAddByDialog(sb, "sfAddTransaction", "Add to Transaction", "OnAddToTransaction", transaction, issue);
             AppendAddByDialog(sb, "sfAddTentative", "Add to Tentative", "OnAddToTentative", FilterController.TentativeFilterName, transaction);
@@ -222,7 +215,8 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" supertip=\"Adds the selected mails to the saved filter &quot;").Append(filter)
               .Append("&quot;. A small window asks whether by DOMAINRELATED or by SUBJECT; subjects become patterns in which numbers, ")
               .Append("dates and month/weekday names are % (e.g. Your trip with Gojek on %), which you can edit before adding. ")
-              .Append("The filter is created after &quot;").Append(after).Append("&quot; on first use.\"/>");
+              .Append(after == null ? "The filter is created on first use." : "The filter is created after &quot;" + after + "&quot; on first use.")
+              .Append("\"/>");
         }
 
         private const string AddIcon = "OutlineExpand";

@@ -511,37 +511,36 @@ namespace tinykit.OutlookAddin
             }
         }
 
-        /// <summary>Add to Delete: the selected mails' subjects become exact-subject conditions of "Delete".</summary>
+        /// <summary>Add to Delete: see <see cref="AddSelectionByDialog"/>; subject first; "Delete" is added at the end.</summary>
         public void AddSelectionToDelete(Outlook.Explorer explorer)
         {
-            AddSelectionTo(explorer, DeleteFilterName, "subject", SelectedValues(explorer, SubjectOf),
-                v => Dasl.PropertyEquals(SubjectProperty, v), null);
+            AddSelectionByDialog(explorer, DeleteFilterName, null, ConditionField.Subject);
         }
 
-        /// <summary>Add to Issue: the selected mails' domainRelated values become conditions of "Issue".</summary>
+        /// <summary>Add to Issue: see <see cref="AddSelectionByDialog"/>; domainRelated first; "Issue" is created after "Delete".</summary>
         public void AddSelectionToIssue(Outlook.Explorer explorer)
         {
-            AddSelectionTo(explorer, IssueFilterName, "domainRelated", SelectedValues(explorer, DomainRelatedOf),
-                v => Dasl.PropertyEquals(DomainRelatedProperty, v), DeleteFilterName);
+            AddSelectionByDialog(explorer, IssueFilterName, DeleteFilterName, ConditionField.DomainRelated);
         }
 
         /// <summary>Add to Transaction: see <see cref="AddSelectionByDialog"/>; "Transactions" is created after "Issue".</summary>
         public void AddSelectionToTransaction(Outlook.Explorer explorer)
         {
-            AddSelectionByDialog(explorer, TransactionFilterName, IssueFilterName);
+            AddSelectionByDialog(explorer, TransactionFilterName, IssueFilterName, ConditionField.Subject);
         }
 
         /// <summary>Add to Tentative: see <see cref="AddSelectionByDialog"/>; "Tentative" is created after "Transactions".</summary>
         public void AddSelectionToTentative(Outlook.Explorer explorer)
         {
-            AddSelectionByDialog(explorer, TentativeFilterName, TransactionFilterName);
+            AddSelectionByDialog(explorer, TentativeFilterName, TransactionFilterName, ConditionField.Subject);
         }
 
         /// <summary>
         /// A dialog chooses domainRelated or subject; subjects become patterns in which numbers, dates and month/weekday
         /// names are % (editable), and each line is added to the saved filter <paramref name="filterName"/> as a condition.
+        /// <paramref name="defaultField"/> is preselected the first time in a session; later the last choice for that filter.
         /// </summary>
-        private void AddSelectionByDialog(Outlook.Explorer explorer, string filterName, string insertAfter)
+        private void AddSelectionByDialog(Outlook.Explorer explorer, string filterName, string insertAfter, ConditionField defaultField)
         {
             if (_kind != ItemKind.Mail)
                 throw new UserMessageException("\"Add to " + filterName + "\" works in mail folders.");
@@ -553,7 +552,7 @@ namespace tinykit.OutlookAddin
 
             ConditionField field;
             List<string> values;
-            using (var dialog = new AddConditionsDialog(filterName, domains, patterns))
+            using (var dialog = new AddConditionsDialog(filterName, domains, patterns, defaultField))
             {
                 if (dialog.ShowDialog(WindowOwner.From(explorer)) != DialogResult.OK)
                     return;
