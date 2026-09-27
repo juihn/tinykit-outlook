@@ -102,6 +102,53 @@ namespace tinykit.OutlookAddin.Filtering
             return Eq(property, value);
         }
 
+        /// <summary>
+        /// A condition for a pattern where % stands for any text. Without % it is an equality. DASL LIKE honours %
+        /// only at the start or end, so "a%b%c" becomes (LIKE 'a%' AND LIKE '%b%' AND LIKE '%c').
+        /// </summary>
+        public static string PropertyMatches(string property, string pattern)
+        {
+            if (pattern.IndexOf('%') < 0)
+                return Eq(property, pattern);
+            var parts = pattern.Split('%');
+            var conditions = new System.Collections.Generic.List<string>();
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (parts[i].Length == 0)
+                    continue;
+                bool first = i == 0, last = i == parts.Length - 1;
+                conditions.Add(Like(property, (first ? "" : "%") + parts[i] + (last ? "" : "%")));
+            }
+            if (conditions.Count == 0)
+                return Quote(property) + " IS NOT NULL"; // just "%"
+            return conditions.Count == 1 ? conditions[0] : "(" + string.Join(" AND ", conditions) + ")";
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex VariablePart = new System.Text.RegularExpressions.Regex(
+            // numbers with their inner separators (dates, times, amounts, ids) and Korean units (9월 27일, 1,234원),
+            // but not digits glued to Latin letters (names and codes such as Zero1, G12, P3B5) ...
+            @"(?<![A-Za-z\d])(?>\d+(?:[.,:/\-]\d+)*)[년월일시분초원]?(?![A-Za-z\d])"
+            // ... and month / weekday names (English, full or short; Korean weekdays)
+            + @"|\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?"
+            + @"|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b"
+            + @"|[월화수목금토일]요일",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        private static readonly System.Text.RegularExpressions.Regex AdjacentWildcards = new System.Text.RegularExpressions.Regex(
+            @"%(?:[\s,./:\-()]*%)+");
+
+        /// <summary>
+        /// A subject pattern for recurring mail: numbers (dates, times, amounts, ids) and month/weekday names become %,
+        /// and neighbouring ones merge: "Your trip with Gojek on Friday, 26 September" → "Your trip with Gojek on %".
+        /// </summary>
+        public static string SubjectPattern(string subject)
+        {
+            var s = (subject ?? "").Trim();
+            s = VariablePart.Replace(s, "%");
+            s = AdjacentWildcards.Replace(s, "%");
+            return s;
+        }
+
         /// <summary>Accepts filters written with or without the "@SQL=" prefix.</summary>
         public static string StripSqlPrefix(string sql)
         {

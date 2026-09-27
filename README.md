@@ -147,7 +147,13 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
   - **Ctrl+click:** opens the Format dialog to edit it (font style, strikeout, underline, color). Font name and size follow the view (View Font).
 - **Add to Delete** (mail) adds the **subject** of each selected mail to the saved filter `Delete` (`subject = ...`).
 - **Add to Issue** (mail) adds the **domainRelated** of each selected mail to the saved filter `Issue` (`domainRelated = ...`). `Issue` is created right after `Delete` on first use.
-  Both add one condition per line (`... OR` + new line) and skip values the filter already covers.
+- **Add to Transaction** (mail) opens a small window that asks whether to add the selected mails to the saved filter
+  `Transactions` by **domainRelated** or by **Subject**. Subjects become patterns in which numbers (dates, times, amounts,
+  ids, `9월 27일`, `1,234원`) and month/weekday names are `%` (`Your trip with Gojek on Friday, 26 September` →
+  `Your trip with Gojek on %`); the list can be edited before adding. `Transactions` is created after `Issue` on first use.
+  DASL `LIKE` only honours `%` at the start or end, so a pattern with `%` in the middle is added as prefix/middle/suffix
+  conditions joined with `AND`.
+  All three add one condition per line (`... OR` + new line) and skip values the filter already covers.
 - **Edit Saved Filters** opens the current folder kind's saved filters file in VS Code (Notepad if not installed). Saved changes are picked up automatically; **Manage > Reload** forces it.
 - **Save View as Filter...** saves the current view filter (e.g. one built in View Settings > Filter) as a saved filter.
 - **Manage** (menu):

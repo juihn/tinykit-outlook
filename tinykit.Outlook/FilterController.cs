@@ -385,6 +385,9 @@ namespace tinykit.OutlookAddin
         /// <summary>Saved filter that "Add to Issue" extends with domainRelated values (created after Delete).</summary>
         public const string IssueFilterName = "Issue";
 
+        /// <summary>Saved filter that "Add to Transaction" extends with subject patterns or domainRelated values.</summary>
+        public const string TransactionFilterName = "Transactions";
+
         private static readonly string DomainRelatedProperty = CustomFieldNames.Dasl(CustomFieldNames.DomainRelated);
 
         private const string SubjectProperty = "http://schemas.microsoft.com/mapi/proptag/0x0037001F"; // PR_SUBJECT
@@ -515,6 +518,37 @@ namespace tinykit.OutlookAddin
         {
             AddSelectionTo(explorer, IssueFilterName, "domainRelated", SelectedValues(explorer, DomainRelatedOf),
                 v => Dasl.PropertyEquals(DomainRelatedProperty, v), DeleteFilterName);
+        }
+
+        /// <summary>
+        /// Add to Transaction: a dialog chooses domainRelated or subject; subjects become patterns in which numbers, dates
+        /// and month/weekday names are % (editable), and each is added to "Transactions" as a condition.
+        /// </summary>
+        public void AddSelectionToTransaction(Outlook.Explorer explorer)
+        {
+            if (_kind != ItemKind.Mail)
+                throw new UserMessageException("\"Add to Transaction\" works in mail folders.");
+            var domains = SelectedValues(explorer, DomainRelatedOf);
+            var patterns = SelectedValues(explorer, SubjectOf).Select(Dasl.SubjectPattern)
+                .Where(p => p.Length > 0).Distinct(StringComparer.Ordinal).ToList();
+            if (domains.Count == 0 && patterns.Count == 0)
+                throw new UserMessageException("Select the mails to add to \"" + TransactionFilterName + "\" first.");
+
+            ConditionField field;
+            List<string> values;
+            using (var dialog = new AddConditionsDialog(TransactionFilterName, domains, patterns))
+            {
+                if (dialog.ShowDialog(WindowOwner.From(explorer)) != DialogResult.OK)
+                    return;
+                field = dialog.Field;
+                values = dialog.Values;
+            }
+            if (field == ConditionField.Subject)
+                AddSelectionTo(explorer, TransactionFilterName, "subject", values,
+                    v => Dasl.PropertyMatches(SubjectProperty, v), IssueFilterName);
+            else
+                AddSelectionTo(explorer, TransactionFilterName, "domainRelated", values,
+                    v => Dasl.PropertyEquals(DomainRelatedProperty, v), IssueFilterName);
         }
 
         /// <summary>
