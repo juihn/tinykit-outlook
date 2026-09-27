@@ -212,7 +212,7 @@ namespace tinykit.OutlookAddin.CustomFields
                 {
                     try
                     {
-                        var changed = Fill(item, true); // Fill Fields / Fill Missing: always write through to the store
+                        var changed = Fill(item, true); // Fill Fields button: always write through to the store
                         if (changed == null) result.Skipped++;
                         else if (changed.Value) result.Updated++;
                         else result.Unchanged++;

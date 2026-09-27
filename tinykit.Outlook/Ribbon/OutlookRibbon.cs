@@ -120,10 +120,11 @@ namespace tinykit.OutlookAddin.Ribbon
 
             // Custom mail fields (domainRelated, nameRelated, me, tos, ccs, unknownDomain): mail folders only.
             sb.Append("<group id=\"grpFields\" label=\"Custom Mail Fields\" getVisible=\"GetMailVisible\">");
-            sb.Append("<button id=\"cfFillSelected\" label=\"Fill Fields\" imageMso=\"PropertySheet\" onAction=\"OnFillSelected\"")
-              .Append(" screentip=\"Fill Fields\" supertip=\"Fill domainRelated, nameRelated, me, tos, ccs and unknownDomain of the selected items (recomputed).\"/>");
-            sb.Append("<button id=\"cfFillMissing\" label=\"Fill Missing\" imageMso=\"FindDialog\" onAction=\"OnFillMissing\"")
-              .Append(" screentip=\"Fill Missing\" supertip=\"Fill the items of the current folder that have no domainRelated or unknownDomain yet (e.g. received while Outlook was closed).\"/>");
+            sb.Append("<button id=\"cfFill\" label=\"Fill Fields\" imageMso=\"PropertySheet\" onAction=\"OnFillFields\"")
+              .Append(" screentip=\"Fill Fields\" supertip=\"Fill domainRelated, nameRelated, me, tos, ccs and unknownDomain. ")
+              .Append("Click: the items of the current folder that do not have them yet (e.g. mail received while Outlook was closed, ")
+              .Append("or in folders other than Inbox and Sent Items). Shift+click: recompute the selected items, even if they already have ")
+              .Append("values (e.g. after editing Known Domains.txt or adding a contact).\"/>");
             sb.Append("<button id=\"cfAddKnown\" label=\"Add Known Domain\" imageMso=\"AddToFavorites\" onAction=\"OnAddKnownDomain\"")
               .Append(" screentip=\"Add Known Domain\" getSupertip=\"GetAddKnownSupertip\"/>");
             sb.Append("<checkBox id=\"cfAutoFill\" label=\"Auto-fill new mail\" getPressed=\"GetAutoFillPressed\" onAction=\"OnAutoFillToggle\"")
@@ -466,14 +467,9 @@ namespace tinykit.OutlookAddin.Ribbon
             Run(control, ex => _controller.EditViewFont(ex));
         }
 
-        public void OnFillSelected(Office.IRibbonControl control)
+        public void OnFillFields(Office.IRibbonControl control)
         {
-            Run(control, ex => _controller.FillSelectedFields(ex));
-        }
-
-        public void OnFillMissing(Office.IRibbonControl control)
-        {
-            Run(control, ex => _controller.FillMissingFields(ex));
+            Run(control, ex => _controller.FillFieldsButton(ex));
         }
 
         public void OnAddKnownDomain(Office.IRibbonControl control)

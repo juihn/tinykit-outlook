@@ -106,16 +106,17 @@ The add-in writes these text columns (user properties) on mail and meeting items
 - Contact name means the contact's e-mail display name for that address, or File As if that is empty. Contacts are looked up in every store's Contacts folder and its subfolders (e.g. `olk/family`), skipping system folders such as Recipient Cache and GAL Contacts.
 - A mail counts as "mine" when its sender (or principal) is one of my accounts' addresses.
 - **Auto-fill new mail** fills mail as it arrives in each account's Inbox or Sent Items.
-- **Fill Fields** recomputes the selected items.
-- **Fill Missing** fills the current folder's items that have no `domainRelated` or `unknownDomain` yet, e.g. mail that arrived while Outlook was closed.
+- **Fill Fields** fills the current folder's items that have no `domainRelated` or `unknownDomain` yet, e.g. mail that arrived
+  while Outlook was closed or in folders other than Inbox and Sent Items.
+  **Shift+click** recomputes the selected items instead, even if they already have values (e.g. after editing Known Domains.txt).
 - **Add Known Domain** adds the base domain of each selected mail's sender (`a@billing.fabrikam.com` → `fabrikam.com`) to
   `Known Domains.txt`, then refills the selected mails and this folder's mail from those domains that is still marked `*` or `+`.
   **Ctrl+click** opens `Known Domains.txt` in VS Code (Notepad if not installed).
 
 `Known Domains.txt` (in the settings folder) has one domain per line after the date it was added and a tab, e.g.
 `'26.09.27일 21:05:03<Tab>fabrikam.com`; a line may also be just a domain, and `#` lines are comments. A domain covers
-its subdomains. My own addresses among the recipients are ignored. Edits apply to the next mail filled; use Fill Fields
-or Fill Missing to recompute existing mail.
+its subdomains. My own addresses among the recipients are ignored. Edits apply to the next mail filled; Shift+click
+Fill Fields to recompute existing mail.
 
 ### Saved Filters group (from `Saved Filters - Mail.xml`, `- Contacts.xml`, `- Tasks.xml`)
 Mail, contact and task folders each have their own saved filters file; the group shows the ones of the folder you are in.
@@ -132,7 +133,7 @@ Each file starts with these saved filters, which you can edit or delete:
 | Tasks | **Completed** | completed tasks | gray, strikeout |
 | Tasks | **High** | active tasks of high importance | red |
 
-Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Missing** once.
+Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields** once.
 
 - **One toggle button per saved filter** (up to 20). Pressing it applies the filter's SQL as the view filter. Pressing it again restores the view's own filter.
 - **Format** (toggle) applies to the saved filter that is currently applied:

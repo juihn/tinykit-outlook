@@ -911,7 +911,19 @@ namespace tinykit.OutlookAddin
 
         private const int ConfirmAbove = 200;
 
-        /// <summary>Fills domainRelated/nameRelated/me/tos/ccs for the selected items.</summary>
+        /// <summary>
+        /// Fill Fields button: fills the current folder's items that have no fields yet; Shift+click recomputes the
+        /// selected items instead.
+        /// </summary>
+        public void FillFieldsButton(Outlook.Explorer explorer)
+        {
+            if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift)
+                FillSelectedFields(explorer);
+            else
+                FillMissingFields(explorer);
+        }
+
+        /// <summary>Fills (recomputes) the custom mail fields of the selected items.</summary>
         public void FillSelectedFields(Outlook.Explorer explorer)
         {
             Outlook.Selection selection;
@@ -945,7 +957,8 @@ namespace tinykit.OutlookAddin
                 + CustomFieldNames.Dasl(CustomFieldNames.UnknownDomain) + "\" IS NULL");
             int count = missing.Count;
             if (count == 0)
-                throw new UserMessageException("Every item in \"" + folder.Name + "\" already has its fields.");
+                throw new UserMessageException("Every item in \"" + folder.Name + "\" already has its fields.\n"
+                    + "Shift+click Fill Fields to recompute the selected items.");
             if (!ConfirmMany(explorer, count, "unfilled in \"" + folder.Name + "\""))
                 return;
             var items = new List<object>(count);
