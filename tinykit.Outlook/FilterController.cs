@@ -1123,6 +1123,22 @@ namespace tinykit.OutlookAddin
                 Notifier.Info(explorer, text);
         }
 
+        /// <summary>Recipients Report: the first selected mail's recipients by domain and department, in a window.</summary>
+        public void ShowRecipientsReport(Outlook.Explorer explorer)
+        {
+            var item = FirstSelected(explorer);
+            if (item == null || ItemView.From(item) == null)
+                throw new UserMessageException("Select a mail (or meeting request) first.");
+            dynamic d = item;
+            string entryId = d.EntryID;
+            string storeId = ((Outlook.MAPIFolder)d.Parent).StoreID;
+            var app = Globals.ThisAddIn.Application;
+            // Refresh re-reads the item, so edits (e.g. a contact added meanwhile) show up.
+            var form = new Reports.RecipientsReportForm(app,
+                () => Reports.RecipientsReport.Build(app.Session.GetItemFromID(entryId, storeId), Fields.Calculator));
+            form.Show(WindowOwner.From(explorer));
+        }
+
         /// <summary>Kept in the mail saved filters file (autoFillFields).</summary>
         public bool AutoFillFields
         {

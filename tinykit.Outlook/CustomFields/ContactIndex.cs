@@ -7,8 +7,18 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace tinykit.OutlookAddin.CustomFields
 {
+    /// <summary>A contact found for an e-mail address.</summary>
+    internal sealed class ContactEntry
+    {
+        /// <summary>The e-mail display name of the matching slot, else File As.</summary>
+        public string Name;
+        public string Department;
+        public string EntryId;
+        public string StoreId;
+    }
+
     /// <summary>
-    /// E-mail address → contact name, over the default Contacts folder of every store
+    /// E-mail address → contact, over the default Contacts folder of every store and its subfolders
     /// (default store first; the first contact with an address wins).
     /// Rebuilt lazily after any contact is added, changed or removed.
     /// </summary>
@@ -16,6 +26,7 @@ namespace tinykit.OutlookAddin.CustomFields
     {
         private const string ContactSet = "http://schemas.microsoft.com/mapi/id/{00062004-0000-0000-C000-000000000046}/";
         private const string FileAs = ContactSet + "8005001F";
+        private const string Department = "urn:schemas:contacts:department";
         private const int BatchRows = 2000;
 
         // (address, e-mail display name) per e-mail slot 1..3
@@ -29,7 +40,7 @@ namespace tinykit.OutlookAddin.CustomFields
         private readonly Outlook.NameSpace _session;
         private readonly List<Outlook.Items> _watched = new List<Outlook.Items>();
         private readonly HashSet<string> _watchedIds = new HashSet<string>(StringComparer.Ordinal);
-        private Dictionary<string, string> _names;
+        private Dictionary<string, ContactEntry> _entries;
 
         public ContactIndex(Outlook.NameSpace session)
         {
@@ -42,33 +53,44 @@ namespace tinykit.OutlookAddin.CustomFields
         /// </summary>
         public string Find(string smtp)
         {
+            var entry = Lookup(smtp);
+            return entry == null ? null : entry.Name;
+        }
+
+        /// <summary>The contact for <paramref name="smtp"/>, or null when the address is not in Contacts.</summary>
+        public ContactEntry Lookup(string smtp)
+        {
             if (string.IsNullOrEmpty(smtp))
                 return null;
-            if (_names == null)
+            if (_entries == null)
                 Build();
-            string name;
-            return _names.TryGetValue(smtp.Trim(), out name) ? name : null;
+            ContactEntry entry;
+            return _entries.TryGetValue(smtp.Trim(), out entry) ? entry : null;
         }
 
         private void Build()
         {
-            var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var entries = new Dictionary<string, ContactEntry>(StringComparer.OrdinalIgnoreCase);
             foreach (var folder in ContactFolders())
             {
                 try
                 {
                     Watch(folder);
+                    var storeId = folder.StoreID;
                     var table = folder.GetTable();
                     table.Columns.RemoveAll();
                     table.Columns.Add("MessageClass");
+                    table.Columns.Add("EntryID");
                     table.Columns.Add(FileAs);
+                    table.Columns.Add(Department);
                     foreach (var slot in Slots)
                     {
                         table.Columns.Add(slot[0]);
                         table.Columns.Add(slot[1]);
                     }
 
-                    // Columns: 0 MessageClass, 1 FileAs, then (address, display name) per slot.
+                    // Columns: 0 MessageClass, 1 EntryID, 2 FileAs, 3 Department, then (address, display name) per slot.
+                    const int firstSlot = 4;
                     while (!table.EndOfTable)
                     {
                         var rows = (Array)table.GetArray(BatchRows);
@@ -78,16 +100,24 @@ namespace tinykit.OutlookAddin.CustomFields
                             var cls = rows.GetValue(r, c0) as string;
                             if (cls == null || !cls.StartsWith("IPM.Contact", StringComparison.OrdinalIgnoreCase))
                                 continue;
-                            var fileAs = (rows.GetValue(r, c0 + 1) as string ?? "").Trim();
+                            var entryId = rows.GetValue(r, c0 + 1) as string;
+                            var fileAs = (rows.GetValue(r, c0 + 2) as string ?? "").Trim();
+                            var department = (rows.GetValue(r, c0 + 3) as string ?? "").Trim();
                             for (int s = 0; s < Slots.Length; s++)
                             {
-                                var address = (rows.GetValue(r, c0 + 2 + 2 * s) as string ?? "").Trim();
-                                if (address.IndexOf('@') < 0 || names.ContainsKey(address))
+                                var address = (rows.GetValue(r, c0 + firstSlot + 2 * s) as string ?? "").Trim();
+                                if (address.IndexOf('@') < 0 || entries.ContainsKey(address))
                                     continue;
-                                var display = (rows.GetValue(r, c0 + 3 + 2 * s) as string ?? "").Trim();
+                                var display = (rows.GetValue(r, c0 + firstSlot + 1 + 2 * s) as string ?? "").Trim();
                                 var name = display.Length > 0 ? display : fileAs;
                                 if (name.Length > 0)
-                                    names[address] = name;
+                                    entries[address] = new ContactEntry
+                                    {
+                                        Name = name,
+                                        Department = department.Length > 0 ? department : null,
+                                        EntryId = entryId,
+                                        StoreId = storeId,
+                                    };
                             }
                         }
                     }
@@ -97,7 +127,7 @@ namespace tinykit.OutlookAddin.CustomFields
                     Log.Error("ContactIndex " + folder.FolderPath, ex);
                 }
             }
-            _names = names;
+            _entries = entries;
         }
 
         private IEnumerable<Outlook.MAPIFolder> ContactFolders()
@@ -175,12 +205,12 @@ namespace tinykit.OutlookAddin.CustomFields
 
         private void OnChanged(object item)
         {
-            _names = null;
+            _entries = null;
         }
 
         private void OnRemoved()
         {
-            _names = null;
+            _entries = null;
         }
 
         private static string SafeGet(Func<string> get)

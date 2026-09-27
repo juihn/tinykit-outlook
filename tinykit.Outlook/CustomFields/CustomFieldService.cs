@@ -53,7 +53,7 @@ namespace tinykit.OutlookAddin.CustomFields
             _timer.Tick += (s, e) => ProcessQueue();
         }
 
-        private CustomFieldCalculator Calculator
+        internal CustomFieldCalculator Calculator
         {
             get { return _calculator ?? (_calculator = new CustomFieldCalculator(_app.Session, Known)); }
         }

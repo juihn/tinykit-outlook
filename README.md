@@ -118,6 +118,13 @@ The add-in writes these text columns (user properties) on mail and meeting items
   `Known Domains.txt`, then refills the selected mails and this folder's mail from those domains that is still marked `*` or `+`.
   **Ctrl+click** opens `Known Domains.txt` in VS Code (Notepad if not installed).
 
+**Recipients Report** opens a window for the selected mail: the sender, then the recipients grouped by **domain** and by
+the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background: in Contacts. The check boxes add each
+person's display name and user name. Click a person to open the contact (or search LinkedIn when there is none),
+**Ctrl+click** for a new contact with the name and address filled in, **Shift+click** to add the address to the
+addresses on the clipboard. **Search** finds people by name or user name and lists their addresses; **Copy Contents**
+copies the report as text; **Refresh** reads the mail and Contacts again. The subject opens the mail.
+
 `Known Domains.txt` (in the settings folder) has one domain per line after the date it was added and a tab, e.g.
 `'26.09.07월 15:42:39 +08<Tab>fabrikam.com` (date, Korean day of week, time, UTC offset); a line may also be just a domain, and `#` lines are comments. A domain covers
 its subdomains. My own addresses among the recipients are ignored. Edits apply to the next mail filled; Shift+click

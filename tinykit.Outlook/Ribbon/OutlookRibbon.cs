@@ -127,6 +127,10 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("values (e.g. after editing Known Domains.txt or adding a contact).\"/>");
             sb.Append("<button id=\"cfAddKnown\" label=\"Add Known Domain\" imageMso=\"AddToFavorites\" onAction=\"OnAddKnownDomain\"")
               .Append(" screentip=\"Add Known Domain\" getSupertip=\"GetAddKnownSupertip\"/>");
+            sb.Append("<button id=\"cfRecipients\" label=\"Recipients Report\" imageMso=\"ContactProperties\" onAction=\"OnRecipientsReport\"")
+              .Append(" screentip=\"Recipients Report\" supertip=\"Show the selected mail's sender and recipients grouped by domain and ")
+              .Append("department (from Contacts). Blue: To, gray: Cc/Bcc; green: in Contacts. In the window, click a person to open the ")
+              .Append("contact (or search LinkedIn), Ctrl+click for a new contact, Shift+click to add the address to the clipboard.\"/>");
             sb.Append("<checkBox id=\"cfAutoFill\" label=\"Auto-fill new mail\" getPressed=\"GetAutoFillPressed\" onAction=\"OnAutoFillToggle\"")
               .Append(" screentip=\"Auto-fill new mail\" supertip=\"Fill the fields of mail arriving in each account's Inbox and Sent Items.\"/>");
             sb.Append("</group>");
@@ -515,6 +519,11 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnFillFields(Office.IRibbonControl control)
         {
             Run(control, ex => _controller.FillFieldsButton(ex));
+        }
+
+        public void OnRecipientsReport(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.ShowRecipientsReport(ex));
         }
 
         public void OnAddKnownDomain(Office.IRibbonControl control)

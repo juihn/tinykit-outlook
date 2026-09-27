@@ -196,7 +196,7 @@ namespace tinykit.OutlookAddin.CustomFields
             return address != null && address.IndexOf('@') < 0 && Me.IsMe(RecipientSmtp(r));
         }
 
-        private string RecipientSmtp(Outlook.Recipient r)
+        public string RecipientSmtp(Outlook.Recipient r)
         {
             var address = r.Address;
             if (address != null && address.IndexOf('@') >= 0)

@@ -165,6 +165,10 @@
     <Compile Include="Settings\ViewColumns.cs" />
     <Compile Include="FilterController.cs" />
     <Compile Include="Ribbon\OutlookRibbon.cs" />
+    <Compile Include="Reports\RecipientsReport.cs" />
+    <Compile Include="Reports\RecipientsReportForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="ThisAddIn.cs">
       <SubType>Code</SubType>
     </Compile>
