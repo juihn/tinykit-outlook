@@ -9,7 +9,7 @@ using tinykit.OutlookAddin.Common;
 namespace tinykit.OutlookAddin.CustomFields
 {
     /// <summary>
-    /// Known Domains.txt: the base domains whose mail is trusted, one per line as "'yy.MM.dd(day) HH:mm:ss&lt;Tab&gt;domain"
+    /// Known Domains.txt: the base domains whose mail is trusted, one per line as "'yy.MM.dd(day) HH:mm:ss +zz&lt;Tab&gt;domain"
     /// (the date it was added, then the domain). A line may also be just a domain; lines starting with # are comments.
     /// A domain also covers its subdomains (fabrikam.com covers billing.fabrikam.com).
     /// The file is re-read whenever it changes, so edits made in an editor apply to the next mail.
@@ -101,12 +101,17 @@ namespace tinykit.OutlookAddin.CustomFields
             File.WriteAllText(_path, Header.Replace("\r\n", "\n").Replace("\n", "\r\n"), new UTF8Encoding(true));
         }
 
-        /// <summary>"'26.09.27토 21:05:03": year, month, day, Korean day of week, time.</summary>
+        /// <summary>
+        /// "'26.09.07월 15:42:39 +08": year, month, day, Korean day of week, local time and UTC offset
+        /// (hours only when whole, e.g. +08; with minutes otherwise, e.g. +05:30).
+        /// </summary>
         public static string Stamp(DateTime time)
         {
             var ko = CultureInfo.GetCultureInfo("ko-KR");
+            var offset = TimeZoneInfo.Local.GetUtcOffset(time);
             return "'" + time.ToString("yy.MM.dd", CultureInfo.InvariantCulture) + time.ToString("ddd", ko)
-                + " " + time.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+                + " " + time.ToString("HH:mm:ss", CultureInfo.InvariantCulture)
+                + " " + (offset < TimeSpan.Zero ? "-" : "+") + offset.Duration().ToString(offset.Minutes == 0 ? "hh" : "hh\\:mm");
         }
 
         private static string Host(string smtp)

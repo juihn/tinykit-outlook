@@ -114,7 +114,7 @@ The add-in writes these text columns (user properties) on mail and meeting items
   **Ctrl+click** opens `Known Domains.txt` in VS Code (Notepad if not installed).
 
 `Known Domains.txt` (in the settings folder) has one domain per line after the date it was added and a tab, e.g.
-`'26.09.27일 21:05:03<Tab>fabrikam.com`; a line may also be just a domain, and `#` lines are comments. A domain covers
+`'26.09.07월 15:42:39 +08<Tab>fabrikam.com` (date, Korean day of week, time, UTC offset); a line may also be just a domain, and `#` lines are comments. A domain covers
 its subdomains. My own addresses among the recipients are ignored. Edits apply to the next mail filled; Shift+click
 Fill Fields to recompute existing mail.
 
