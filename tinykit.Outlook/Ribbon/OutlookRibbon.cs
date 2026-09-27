@@ -177,12 +177,8 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("&quot; (domainRelated = ...), so mails of those domains match it. The filter is created after &quot;")
               .Append(delete).Append("&quot; on first use.\"/>");
             var transaction = FilterController.TransactionFilterName;
-            sb.Append("<button id=\"sfAddTransaction\" label=\"Add to Transaction\" imageMso=\"").Append(AddIcon)
-              .Append("\" getVisible=\"GetMailVisible\" onAction=\"OnAddToTransaction\" screentip=\"Add to Transaction\"")
-              .Append(" supertip=\"Adds the selected mails to the saved filter &quot;").Append(transaction)
-              .Append("&quot;. A small window asks whether by DOMAINRELATED or by SUBJECT; subjects become patterns in which numbers, ")
-              .Append("dates and month/weekday names are % (e.g. Your trip with Gojek on %), which you can edit before adding. ")
-              .Append("The filter is created after &quot;").Append(issue).Append("&quot; on first use.\"/>");
+            AppendAddByDialog(sb, "sfAddTransaction", "Add to Transaction", "OnAddToTransaction", transaction, issue);
+            AppendAddByDialog(sb, "sfAddTantitive", "Add to Tantitive", "OnAddToTantitive", FilterController.TantitiveFilterName, transaction);
             sb.Append("<separator id=\"sepSaved2\"/>");
             sb.Append("<button id=\"mSettings\" label=\"Edit Saved Filters\" imageMso=\"").Append(XmlIcon)
               .Append("\" onAction=\"OnOpenSettings\" getScreentip=\"GetSettingsScreentip\" getSupertip=\"GetSettingsSupertip\"/>");
@@ -216,6 +212,17 @@ namespace tinykit.OutlookAddin.Ribbon
 
             sb.Append("</tab></tabs></ribbon></customUI>");
             return sb.ToString();
+        }
+
+        /// <summary>An "Add to ..." button that asks (domainRelated or subject pattern) before adding to a saved filter.</summary>
+        private static void AppendAddByDialog(StringBuilder sb, string id, string label, string onAction, string filter, string after)
+        {
+            sb.Append("<button id=\"").Append(id).Append("\" label=\"").Append(label).Append("\" imageMso=\"").Append(AddIcon)
+              .Append("\" getVisible=\"GetMailVisible\" onAction=\"").Append(onAction).Append("\" screentip=\"").Append(label).Append("\"")
+              .Append(" supertip=\"Adds the selected mails to the saved filter &quot;").Append(filter)
+              .Append("&quot;. A small window asks whether by DOMAINRELATED or by SUBJECT; subjects become patterns in which numbers, ")
+              .Append("dates and month/weekday names are % (e.g. Your trip with Gojek on %), which you can edit before adding. ")
+              .Append("The filter is created after &quot;").Append(after).Append("&quot; on first use.\"/>");
         }
 
         private const string AddIcon = "OutlineExpand";
@@ -407,6 +414,11 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnAddToTransaction(Office.IRibbonControl control)
         {
             Run(control, ex => _controller.AddSelectionToTransaction(ex));
+        }
+
+        public void OnAddToTantitive(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.AddSelectionToTantitive(ex));
         }
 
         public string GetSettingsScreentip(Office.IRibbonControl control)

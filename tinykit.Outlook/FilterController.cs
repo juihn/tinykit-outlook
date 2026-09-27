@@ -388,6 +388,9 @@ namespace tinykit.OutlookAddin
         /// <summary>Saved filter that "Add to Transaction" extends with subject patterns or domainRelated values.</summary>
         public const string TransactionFilterName = "Transactions";
 
+        /// <summary>Saved filter that "Add to Tantitive" extends the same way (created after "Transactions").</summary>
+        public const string TantitiveFilterName = "Tantitive";
+
         private static readonly string DomainRelatedProperty = CustomFieldNames.Dasl(CustomFieldNames.DomainRelated);
 
         private const string SubjectProperty = "http://schemas.microsoft.com/mapi/proptag/0x0037001F"; // PR_SUBJECT
@@ -520,23 +523,35 @@ namespace tinykit.OutlookAddin
                 v => Dasl.PropertyEquals(DomainRelatedProperty, v), DeleteFilterName);
         }
 
-        /// <summary>
-        /// Add to Transaction: a dialog chooses domainRelated or subject; subjects become patterns in which numbers, dates
-        /// and month/weekday names are % (editable), and each is added to "Transactions" as a condition.
-        /// </summary>
+        /// <summary>Add to Transaction: see <see cref="AddSelectionByDialog"/>; "Transactions" is created after "Issue".</summary>
         public void AddSelectionToTransaction(Outlook.Explorer explorer)
         {
+            AddSelectionByDialog(explorer, TransactionFilterName, IssueFilterName);
+        }
+
+        /// <summary>Add to Tantitive: see <see cref="AddSelectionByDialog"/>; "Tantitive" is created after "Transactions".</summary>
+        public void AddSelectionToTantitive(Outlook.Explorer explorer)
+        {
+            AddSelectionByDialog(explorer, TantitiveFilterName, TransactionFilterName);
+        }
+
+        /// <summary>
+        /// A dialog chooses domainRelated or subject; subjects become patterns in which numbers, dates and month/weekday
+        /// names are % (editable), and each line is added to the saved filter <paramref name="filterName"/> as a condition.
+        /// </summary>
+        private void AddSelectionByDialog(Outlook.Explorer explorer, string filterName, string insertAfter)
+        {
             if (_kind != ItemKind.Mail)
-                throw new UserMessageException("\"Add to Transaction\" works in mail folders.");
+                throw new UserMessageException("\"Add to " + filterName + "\" works in mail folders.");
             var domains = SelectedValues(explorer, DomainRelatedOf);
             var patterns = SelectedValues(explorer, SubjectOf).Select(Dasl.SubjectPattern)
                 .Where(p => p.Length > 0).Distinct(StringComparer.Ordinal).ToList();
             if (domains.Count == 0 && patterns.Count == 0)
-                throw new UserMessageException("Select the mails to add to \"" + TransactionFilterName + "\" first.");
+                throw new UserMessageException("Select the mails to add to \"" + filterName + "\" first.");
 
             ConditionField field;
             List<string> values;
-            using (var dialog = new AddConditionsDialog(TransactionFilterName, domains, patterns))
+            using (var dialog = new AddConditionsDialog(filterName, domains, patterns))
             {
                 if (dialog.ShowDialog(WindowOwner.From(explorer)) != DialogResult.OK)
                     return;
@@ -544,11 +559,11 @@ namespace tinykit.OutlookAddin
                 values = dialog.Values;
             }
             if (field == ConditionField.Subject)
-                AddSelectionTo(explorer, TransactionFilterName, "subject", values,
-                    v => Dasl.PropertyMatches(SubjectProperty, v), IssueFilterName);
+                AddSelectionTo(explorer, filterName, "subject", values,
+                    v => Dasl.PropertyMatches(SubjectProperty, v), insertAfter);
             else
-                AddSelectionTo(explorer, TransactionFilterName, "domainRelated", values,
-                    v => Dasl.PropertyEquals(DomainRelatedProperty, v), IssueFilterName);
+                AddSelectionTo(explorer, filterName, "domainRelated", values,
+                    v => Dasl.PropertyEquals(DomainRelatedProperty, v), insertAfter);
         }
 
         /// <summary>
