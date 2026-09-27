@@ -68,6 +68,11 @@ The tab follows the kind of folder you are in:
 | Tasks | hidden | hidden | `- Tasks` files |
 | Other (calendar, notes, ...) | hidden | hidden | Saved Filters hidden |
 
+Informational messages (results such as *Custom fields: 3 updated*, and hints such as *Select the mails first*) appear as
+Windows notifications under Outlook (classic), using the *urgent* scenario so they also show in Do Not Disturb. Errors,
+warnings and questions stay message boxes. If Outlook's notifications are turned off in Windows Settings, message boxes
+are used instead.
+
 ### Quick Filter group
 One input box, then two rows of two buttons, each followed by a ▼ drop-down.
 The filter shows the items whose field *contains* the value (`LIKE '%value%'`):

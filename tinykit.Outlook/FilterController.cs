@@ -1018,11 +1018,13 @@ namespace tinykit.OutlookAddin
             }
             var result = Fields.FillItems(items);
 
-            MessageBox.Show(WindowOwner.From(explorer),
-                (added.Count > 0 ? "Added to known domains: " + string.Join(", ", added) : "Already known: " + string.Join(", ", domains))
+            var text = (added.Count > 0 ? "Added to known domains: " + string.Join(", ", added) : "Already known: " + string.Join(", ", domains))
                 + "\n\nRefilled " + (result.Updated + result.Unchanged) + " mail(s)"
-                + (result.Failed > 0 ? ", " + result.Failed + " failed (see OutlookAddin.log)" : "") + ".",
-                ThisAddIn.Title, MessageBoxButtons.OK, result.Failed > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+                + (result.Failed > 0 ? ", " + result.Failed + " failed (see OutlookAddin.log)" : "") + ".";
+            if (result.Failed > 0)
+                MessageBox.Show(WindowOwner.From(explorer), text, ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            else
+                Notifier.Info(explorer, text);
         }
 
         /// <summary>Kept in the mail saved filters file (autoFillFields).</summary>
@@ -1050,8 +1052,11 @@ namespace tinykit.OutlookAddin
 
         private static void Report(Outlook.Explorer explorer, FillResult result)
         {
-            MessageBox.Show(WindowOwner.From(explorer), "Custom fields: " + result, ThisAddIn.Title,
-                MessageBoxButtons.OK, result.Failed > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+            if (result.Failed > 0)
+                MessageBox.Show(WindowOwner.From(explorer), "Custom fields: " + result, ThisAddIn.Title,
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            else
+                Notifier.Info(explorer, "Custom fields: " + result);
         }
 
         // ---------- Settings ----------
@@ -1110,9 +1115,8 @@ namespace tinykit.OutlookAddin
             State(_kind).KnownHash = FileHash(path);
             UseSettings(explorer, _kind, loaded);
             if (Settings.Filters.Count > MaxSavedFilters)
-                MessageBox.Show(WindowOwner.From(explorer),
-                    "Only the first " + MaxSavedFilters + " of " + Settings.Filters.Count + " saved filters are shown on the ribbon.",
-                    ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Notifier.Info(explorer,
+                    "Only the first " + MaxSavedFilters + " of " + Settings.Filters.Count + " saved filters are shown on the ribbon.");
         }
 
         /// <summary>Saves the current view's filter (e.g. built with View Settings &gt; Filter) as a saved filter.</summary>

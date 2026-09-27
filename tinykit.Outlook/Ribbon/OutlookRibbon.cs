@@ -547,7 +547,7 @@ namespace tinykit.OutlookAddin.Ribbon
             }
             catch (UserMessageException ex)
             {
-                MessageBox.Show(WindowOwner.From(explorer), ex.Message, ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Notifier.Info(explorer, ex.Message); // guidance, not an error: a notification instead of a message box
                 _controller.Invalidate();
             }
             catch (Exception ex)
