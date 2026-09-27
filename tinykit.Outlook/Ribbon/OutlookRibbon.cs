@@ -164,6 +164,9 @@ namespace tinykit.OutlookAddin.Ribbon
                   .Append("\" getLabel=\"GetSavedLabel\" getVisible=\"GetSavedVisible\" getPressed=\"GetSavedPressed\" onAction=\"OnSavedToggle\"")
                   .Append(" getScreentip=\"GetSavedLabel\" getSupertip=\"GetSavedSupertip\"/>");
             }
+            sb.Append("<toggleButton id=\"sfOthers\" label=\"Others\" getVisible=\"GetOthersVisible\" getPressed=\"GetOthersPressed\"")
+              .Append(" onAction=\"OnOthersToggle\" screentip=\"Others\" supertip=\"Show only the items that none of the saved filters on the left ")
+              .Append("match (NOT (filter 1 OR filter 2 ...)). Press again to restore the view's own filter.\"/>");
             sb.Append("<separator id=\"sepSaved1\"/>");
             sb.Append("<toggleButton id=\"sfFormat\" label=\"Format\" imageMso=\"ConditionalFormattingMenu\"")
               .Append(" getPressed=\"GetApplyFormatPressed\" onAction=\"OnFormatToggle\" screentip=\"Format\" getSupertip=\"GetFormatSupertip\"/>");
@@ -364,6 +367,22 @@ namespace tinykit.OutlookAddin.Ribbon
         {
             var ex = control.Context as Outlook.Explorer;
             return ex != null && Safe(() => { Focus(control); return _controller.IsSavedActive(ex, SlotOf(control)); }, false);
+        }
+
+        public bool GetOthersVisible(Office.IRibbonControl control)
+        {
+            return Safe(() => Focus(control) != null && _controller.IsOthersVisible, false);
+        }
+
+        public bool GetOthersPressed(Office.IRibbonControl control)
+        {
+            var ex = control.Context as Outlook.Explorer;
+            return ex != null && Safe(() => { Focus(control); return _controller.IsOthersActive(ex); }, false);
+        }
+
+        public void OnOthersToggle(Office.IRibbonControl control, bool pressed)
+        {
+            Run(control, ex => _controller.ToggleOthers(ex, pressed));
         }
 
         public void OnSavedToggle(Office.IRibbonControl control, bool pressed)

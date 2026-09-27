@@ -101,7 +101,8 @@ namespace tinykit.OutlookAddin
             History = FilterHistory.Load(SettingsPaths.HistoryFile);
             Views = new ViewFilterService(SettingsPaths.ViewStateFile);
             Views.IsAddinFilter = f => !string.IsNullOrWhiteSpace(f)
-                && _states.Values.Any(st => st.Settings.Filters.Any(s => Dasl.SameFilter(s.Sql, f)));
+                && _states.Values.Any(st => st.Settings.Filters.Any(s => Dasl.SameFilter(s.Sql, f))
+                                         || Dasl.SameFilter(OthersSql(st.Settings) ?? "", f));
             State(ItemKind.Mail); // mail settings hold autoFillFields, needed at startup
         }
 
@@ -215,6 +216,14 @@ namespace tinykit.OutlookAddin
                             Views.Clear(explorer);
                         else if (!Dasl.SameFilter(now.Sql, active.Sql))
                             Views.Apply(explorer, Dasl.StripSqlPrefix(now.Sql), SavedSourcePrefix + now.Name);
+                    }
+                    if (Views.ActiveSource(explorer) == OthersSource)
+                    {
+                        var others = OthersSql(loaded);
+                        if (others == null)
+                            Views.Clear(explorer);
+                        else
+                            Views.Apply(explorer, others, OthersSource);
                     }
                     if (loaded.AutoApplyFormats)
                         SyncFormats(explorer, false);
@@ -416,6 +425,43 @@ namespace tinykit.OutlookAddin
             {
                 Views.Clear(explorer);
             }
+            Invalidate();
+        }
+
+        // ---------- Others: the mail no saved filter matches ----------
+
+        private const string OthersSource = "others";
+
+        /// <summary>
+        /// NOT ((filter 1) OR (filter 2) ...) over the saved filters shown on the ribbon (placeholders without SQL are
+        /// left out); null when there are none.
+        /// </summary>
+        private static string OthersSql(FilterSettings settings)
+        {
+            var parts = settings.Filters.Where(f => !string.IsNullOrWhiteSpace(f.Sql)).Take(MaxSavedFilters)
+                .Select(f => "(" + Dasl.StripSqlPrefix(f.Sql).Trim() + ")").ToList();
+            return parts.Count == 0 ? null : "NOT (" + string.Join(" OR ", parts) + ")";
+        }
+
+        public bool IsOthersVisible
+        {
+            get { return OthersSql(Settings) != null; }
+        }
+
+        public bool IsOthersActive(Outlook.Explorer explorer)
+        {
+            return Views.ActiveSource(explorer) == OthersSource;
+        }
+
+        /// <summary>Others toggle: shows only the items none of the saved filters match; off restores the view's filter.</summary>
+        public void ToggleOthers(Outlook.Explorer explorer, bool on)
+        {
+            ReloadIfChanged(explorer); // use the saved filters as they are in the file now
+            var sql = OthersSql(Settings);
+            if (on && sql != null)
+                Views.Apply(explorer, sql, OthersSource);
+            else
+                Views.Clear(explorer);
             Invalidate();
         }
 

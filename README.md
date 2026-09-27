@@ -141,6 +141,8 @@ Each file starts with these saved filters, which you can edit or delete:
 Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields** once.
 
 - **One toggle button per saved filter** (up to 20). Pressing it applies the filter's SQL as the view filter. Pressing it again restores the view's own filter.
+- **Others** (toggle, after the saved filters) shows only the items that **none** of the saved filters match:
+  `NOT ((filter 1) OR (filter 2) ...)`. Filters without SQL are left out. Pressing it again restores the view's own filter.
 - **Format** (toggle) applies to the saved filter that is currently applied:
   - **Click:** turns its format on or off as conditional formatting.
   - **No format defined yet:** opens the Format dialog first, and the new format is turned on.
