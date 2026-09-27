@@ -44,45 +44,64 @@ namespace tinykit.OutlookAddin.CustomFields
 
         public MyIdentity Me { get; private set; }
         public ContactIndex Contacts { get; private set; }
+        public KnownDomains Known { get; private set; }
 
-        public CustomFieldCalculator(Outlook.NameSpace session)
+        public CustomFieldCalculator(Outlook.NameSpace session, KnownDomains known)
         {
             _session = session;
             Me = new MyIdentity(session);
             Contacts = new ContactIndex(session);
+            Known = known;
+        }
+
+        /// <summary>SMTP address the mail is from: the principal for "on behalf of", else the sender.</summary>
+        public string FromSmtpOf(ItemView v)
+        {
+            string senderAddress, senderSmtp, repAddress, repSmtp;
+            bool onBehalf;
+            return ResolveFrom(v, out senderAddress, out senderSmtp, out repAddress, out repSmtp, out onBehalf);
+        }
+
+        private string ResolveFrom(ItemView v, out string senderAddress, out string senderSmtp,
+            out string repAddress, out string repSmtp, out bool onBehalf)
+        {
+            // Sender and, for "on behalf of", the principal (PR_SENT_REPRESENTING_*).
+            senderAddress = Str(v.Props, SenderEmail);
+            senderSmtp = ToSmtp(Str(v.Props, SenderAddrType), senderAddress, Str(v.Props, SenderSmtp), v.Sender);
+            repAddress = Str(v.Props, RepEmail);
+            onBehalf = repAddress != null && !SameAddress(repAddress, senderAddress);
+            repSmtp = onBehalf ? ToSmtp(Str(v.Props, RepAddrType), repAddress, Str(v.Props, RepSmtp), null) : senderSmtp;
+            if (onBehalf && SameAddress(repSmtp, senderSmtp))
+                onBehalf = false;
+            return onBehalf ? repSmtp : senderSmtp;
         }
 
         public CustomFieldValues Compute(ItemView v)
         {
             var values = new CustomFieldValues();
 
-            // Sender and, for "on behalf of", the principal (PR_SENT_REPRESENTING_*).
-            var senderAddress = Str(v.Props, SenderEmail);
-            var senderSmtp = ToSmtp(Str(v.Props, SenderAddrType), senderAddress, Str(v.Props, SenderSmtp), v.Sender);
+            string senderAddress, senderSmtp, repAddress, repSmtp;
+            bool onBehalf;
+            var fromSmtp = ResolveFrom(v, out senderAddress, out senderSmtp, out repAddress, out repSmtp, out onBehalf);
             var senderName = Str(v.Props, SenderName) ?? v.SenderName;
-
-            var repAddress = Str(v.Props, RepEmail);
-            var onBehalf = repAddress != null && !SameAddress(repAddress, senderAddress);
-            var repSmtp = onBehalf ? ToSmtp(Str(v.Props, RepAddrType), repAddress, Str(v.Props, RepSmtp), null) : senderSmtp;
-            if (onBehalf && SameAddress(repSmtp, senderSmtp))
-                onBehalf = false;
-
-            var fromSmtp = onBehalf ? repSmtp : senderSmtp;
             var fromName = onBehalf ? (Str(v.Props, RepName) ?? senderName) : senderName;
             var sentByMe = Me.IsMe(senderSmtp) || Me.IsMe(senderAddress) || Me.IsMe(repSmtp) || Me.IsMe(repAddress);
 
             // Recipients.
             var to = new List<Outlook.Recipient>();
             var cc = new List<Outlook.Recipient>();
+            var all = new List<Outlook.Recipient>();
             int total = v.Recipients.Count;
             for (int i = 1; i <= total; i++)
             {
                 var r = v.Recipients[i];
+                all.Add(r);
                 if (r.Type == (int)Outlook.OlMailRecipientType.olTo)
                     to.Add(r);
                 else if (r.Type == (int)Outlook.OlMailRecipientType.olCC)
                     cc.Add(r);
             }
+            values.UnknownDomain = UnknownDomainOf(sentByMe, fromSmtp, all);
             values.Tos = Count(to.Count);
             values.Ccs = Count(cc.Count);
             values.Me = sentByMe ? MeSender : to.Any(IsMe) ? MeInTo : cc.Any(IsMe) ? MeInCc : CustomFieldValues.None;
@@ -104,6 +123,26 @@ namespace tinykit.OutlookAddin.CustomFields
                 values.NameRelated = contact != null ? "[" + contact + "]" : SenderDisplay(fromName, fromSmtp);
             }
             return values;
+        }
+
+        /// <summary>
+        /// "*" when the sender's domain is not known, "+" when it is but some recipient's is not, "-" otherwise.
+        /// Mail I sent counts as a known sender, and my own addresses among the recipients are skipped.
+        /// </summary>
+        private string UnknownDomainOf(bool sentByMe, string fromSmtp, List<Outlook.Recipient> recipients)
+        {
+            if (Known == null)
+                return CustomFieldValues.None;
+            if (!sentByMe && !Known.IsKnown(fromSmtp))
+                return CustomFieldValues.UnknownSender;
+            foreach (var r in recipients)
+            {
+                if (IsMe(r))
+                    continue;
+                if (!Known.IsKnown(RecipientSmtp(r)))
+                    return CustomFieldValues.UnknownRecipient;
+            }
+            return CustomFieldValues.None;
         }
 
         /// <summary>The sender's display name; "(local part)" when it is empty or just the address.</summary>

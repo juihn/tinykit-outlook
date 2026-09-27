@@ -90,6 +90,9 @@ namespace tinykit.OutlookAddin.Settings
 
         public static string HistoryFile { get { return Path.Combine(SettingsFolder, "History.xml"); } }
 
+        /// <summary>Base domains trusted by the unknownDomain column.</summary>
+        public static string KnownDomainsFile { get { return Path.Combine(SettingsFolder, "Known Domains.txt"); } }
+
         /// <summary>Table view columns of one kind of folder: View Columns - Mail.txt, - Contacts.txt, - Tasks.txt.</summary>
         public static string ViewColumnsFile(ItemKind kind)
         {
@@ -120,7 +123,7 @@ namespace tinykit.OutlookAddin.Settings
                 return;
             var names = ItemKinds.All.Select(SavedFiltersName)
                 .Concat(ItemKinds.All.Select(k => Path.GetFileName(ViewColumnsFile(k))))
-                .Concat(new[] { "History.xml" });
+                .Concat(new[] { "History.xml", "Known Domains.txt" });
             foreach (var name in names)
             {
                 var local = Path.Combine(LocalFolder, name);

@@ -126,7 +126,7 @@ namespace tinykit.OutlookAddin.Filtering
             return Quote(property) + " = " + Literal(value);
         }
 
-        private static string Like(string property, string pattern)
+        public static string Like(string property, string pattern)
         {
             return Quote(property) + " LIKE " + Literal(pattern);
         }

@@ -118,12 +118,14 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\" onLoad=\"OnLoad\">");
             sb.Append("<ribbon><tabs><tab id=\"tabOAFilter\" label=\"Tools\" insertAfterMso=\"TabMail\">");
 
-            // Custom mail fields (domainRelated, nameRelated, me, tos, ccs): mail folders only.
+            // Custom mail fields (domainRelated, nameRelated, me, tos, ccs, unknownDomain): mail folders only.
             sb.Append("<group id=\"grpFields\" label=\"Custom Mail Fields\" getVisible=\"GetMailVisible\">");
             sb.Append("<button id=\"cfFillSelected\" label=\"Fill Fields\" imageMso=\"PropertySheet\" onAction=\"OnFillSelected\"")
-              .Append(" screentip=\"Fill Fields\" supertip=\"Fill domainRelated, nameRelated, me, tos and ccs of the selected items (recomputed).\"/>");
+              .Append(" screentip=\"Fill Fields\" supertip=\"Fill domainRelated, nameRelated, me, tos, ccs and unknownDomain of the selected items (recomputed).\"/>");
             sb.Append("<button id=\"cfFillMissing\" label=\"Fill Missing\" imageMso=\"FindDialog\" onAction=\"OnFillMissing\"")
-              .Append(" screentip=\"Fill Missing\" supertip=\"Fill the items of the current folder that have no domainRelated yet (e.g. received while Outlook was closed).\"/>");
+              .Append(" screentip=\"Fill Missing\" supertip=\"Fill the items of the current folder that have no domainRelated or unknownDomain yet (e.g. received while Outlook was closed).\"/>");
+            sb.Append("<button id=\"cfAddKnown\" label=\"Add Known Domain\" imageMso=\"AddToFavorites\" onAction=\"OnAddKnownDomain\"")
+              .Append(" screentip=\"Add Known Domain\" getSupertip=\"GetAddKnownSupertip\"/>");
             sb.Append("<checkBox id=\"cfAutoFill\" label=\"Auto-fill new mail\" getPressed=\"GetAutoFillPressed\" onAction=\"OnAutoFillToggle\"")
               .Append(" screentip=\"Auto-fill new mail\" supertip=\"Fill the fields of mail arriving in each account's Inbox and Sent Items.\"/>");
             sb.Append("</group>");
@@ -472,6 +474,19 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnFillMissing(Office.IRibbonControl control)
         {
             Run(control, ex => _controller.FillMissingFields(ex));
+        }
+
+        public void OnAddKnownDomain(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.AddKnownDomainButton(ex));
+        }
+
+        public string GetAddKnownSupertip(Office.IRibbonControl control)
+        {
+            return Safe(() => "Add the base domain of each selected mail's sender (billing.fabrikam.com → fabrikam.com) to the known domains, "
+                + "then refill unknownDomain of the selected mails and of this folder's mail from those domains. "
+                + "unknownDomain: * unknown sender domain, + known sender but an unknown recipient domain, - all known. "
+                + "Ctrl+click: edit the list. File: " + SettingsPaths.KnownDomainsFile, "");
         }
 
         public bool GetAutoFillPressed(Office.IRibbonControl control)

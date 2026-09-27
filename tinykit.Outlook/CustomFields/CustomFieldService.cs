@@ -41,17 +41,34 @@ namespace tinykit.OutlookAddin.CustomFields
 
         public bool AutoFill { get; set; }
 
-        public CustomFieldService(Outlook.Application app, bool autoFill)
+        /// <summary>Known Domains.txt, behind the unknownDomain column.</summary>
+        public KnownDomains Known { get; private set; }
+
+        public CustomFieldService(Outlook.Application app, bool autoFill, KnownDomains known)
         {
             _app = app;
             AutoFill = autoFill;
+            Known = known;
             _timer = new Timer { Interval = 1500 };
             _timer.Tick += (s, e) => ProcessQueue();
         }
 
         private CustomFieldCalculator Calculator
         {
-            get { return _calculator ?? (_calculator = new CustomFieldCalculator(_app.Session)); }
+            get { return _calculator ?? (_calculator = new CustomFieldCalculator(_app.Session, Known)); }
+        }
+
+        /// <summary>
+        /// The base domain of the item's sender (the principal for "on behalf of"); null for mail I sent or items
+        /// without a sender address.
+        /// </summary>
+        public string SenderBaseDomainOf(object item)
+        {
+            var view = ItemView.From(item);
+            if (view == null)
+                return null;
+            var smtp = Calculator.FromSmtpOf(view);
+            return smtp == null || Calculator.Me.IsMe(smtp) ? null : Filtering.MailInfo.BaseDomain(smtp);
         }
 
         /// <summary>Hooks ItemAdd on the Inbox and Sent Items of every account's delivery store.</summary>

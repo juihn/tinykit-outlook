@@ -935,13 +935,14 @@ namespace tinykit.OutlookAddin
             Report(explorer, Fields.FillItems(items));
         }
 
-        /// <summary>Fills the items of the current folder that have no domainRelated yet.</summary>
+        /// <summary>Fills the items of the current folder that have no domainRelated or no unknownDomain yet.</summary>
         public void FillMissingFields(Outlook.Explorer explorer)
         {
             var folder = explorer.CurrentFolder;
             if (folder == null)
                 return;
-            var missing = folder.Items.Restrict("@SQL=\"" + CustomFieldNames.Dasl(CustomFieldNames.DomainRelated) + "\" IS NULL");
+            var missing = folder.Items.Restrict("@SQL=\"" + CustomFieldNames.Dasl(CustomFieldNames.DomainRelated) + "\" IS NULL OR \""
+                + CustomFieldNames.Dasl(CustomFieldNames.UnknownDomain) + "\" IS NULL");
             int count = missing.Count;
             if (count == 0)
                 throw new UserMessageException("Every item in \"" + folder.Name + "\" already has its fields.");
@@ -951,6 +952,64 @@ namespace tinykit.OutlookAddin
             foreach (var item in missing)
                 items.Add(item);
             Report(explorer, Fields.FillItems(items));
+        }
+
+        /// <summary>
+        /// Add Known Domain: adds the base domains of the selected mails' senders to Known Domains.txt, then refills
+        /// the selected mails and this folder's mails from those domains that are still marked unknown.
+        /// Ctrl+click opens Known Domains.txt for editing instead.
+        /// </summary>
+        public void AddKnownDomainButton(Outlook.Explorer explorer)
+        {
+            var known = Fields.Known;
+            if ((Control.ModifierKeys & Keys.Control) == Keys.Control)
+            {
+                known.EnsureExists();
+                OpenInEditor(known.Path);
+                return;
+            }
+
+            var domains = SelectedValues(explorer, Fields.SenderBaseDomainOf);
+            if (domains.Count == 0)
+                throw new UserMessageException("Select the mails whose sender's domain should become known.\n"
+                    + "(Mail you sent is skipped.) Ctrl+click Add Known Domain to edit " + Path.GetFileName(known.Path) + ".");
+            var added = known.Add(domains);
+
+            // The selected mails, and this folder's mail from those domains that is not marked "-" yet.
+            var items = new List<object>();
+            var selection = explorer.Selection;
+            for (int i = 1; i <= selection.Count; i++)
+                items.Add(selection[i]);
+            var ids = new HashSet<string>(items.Select(it => (string)((dynamic)it).EntryID));
+            var unknownDomain = CustomFieldNames.Dasl(CustomFieldNames.UnknownDomain);
+            var fromDomain = string.Join(" OR ", domains.SelectMany(d => new[]
+            {
+                Dasl.Like(Dasl.SenderSmtp, "%@" + d), Dasl.Like(Dasl.SenderSmtp, "%." + d),
+                Dasl.Like(Dasl.SenderEmail, "%@" + d), Dasl.Like(Dasl.SenderEmail, "%." + d),
+            }));
+            try
+            {
+                var more = explorer.CurrentFolder.Items.Restrict("@SQL=(" + fromDomain + ") AND (\"" + unknownDomain
+                    + "\" IS NULL OR \"" + unknownDomain + "\" <> '" + CustomFieldValues.None + "')");
+                foreach (var item in more)
+                {
+                    if (ids.Add((string)((dynamic)item).EntryID))
+                        items.Add(item);
+                    else
+                        Marshal.ReleaseComObject(item);
+                }
+            }
+            catch (COMException ex)
+            {
+                Log.Error("AddKnownDomain restrict", ex); // the selection is still refilled
+            }
+            var result = Fields.FillItems(items);
+
+            MessageBox.Show(WindowOwner.From(explorer),
+                (added.Count > 0 ? "Added to known domains: " + string.Join(", ", added) : "Already known: " + string.Join(", ", domains))
+                + "\n\nRefilled " + (result.Updated + result.Unchanged) + " mail(s)"
+                + (result.Failed > 0 ? ", " + result.Failed + " failed (see OutlookAddin.log)" : "") + ".",
+                ThisAddIn.Title, MessageBoxButtons.OK, result.Failed > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
         }
 
         /// <summary>Kept in the mail saved filters file (autoFillFields).</summary>

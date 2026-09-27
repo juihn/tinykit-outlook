@@ -34,7 +34,8 @@ Shared settings files are kept in the personal OneDrive when this folder exists:
 %OneDriveConsumer%\.config\            (hidden; one folder per program)
     tinykit\
         Outlook\   Saved Filters - Mail.xml, Saved Filters - Contacts.xml, Saved Filters - Tasks.xml,
-                   View Columns - Mail.txt, View Columns - Contacts.txt, View Columns - Tasks.txt, History.xml
+                   View Columns - Mail.txt, View Columns - Contacts.txt, View Columns - Tasks.txt,
+                   Known Domains.txt, History.xml
         Word\      (later)
 ```
 
@@ -99,13 +100,22 @@ The add-in writes these text columns (user properties) on mail and meeting items
 | `nameRelated` | `[contact name]` if the sender is in Contacts, else the sender display name; `(local part)` when that is just the address | `▶ ` + first recipient + ` (+)` when there are several recipients |
 | `me` | `●` I am in To · `○` I am in Cc · `-` | `▶` |
 | `tos` / `ccs` | number of To / Cc recipients (`-` for 0) | same |
+| `unknownDomain` | `*` the sender's domain is not in *Known Domains.txt* · `+` it is, but a recipient's is not · `-` all known | `+` / `-` for the recipients (I am a known sender) |
 
 - For mail I sent, the first recipient is shown as follows. If it was picked from an address book (contact or GAL), it shows the name Outlook displayed. If an address was typed or pasted (`Name <address>`), it shows `[contact name]` when the address is in Contacts, otherwise the address itself.
 - Contact name means the contact's e-mail display name for that address, or File As if that is empty. Contacts are looked up in every store's Contacts folder and its subfolders (e.g. `olk/family`), skipping system folders such as Recipient Cache and GAL Contacts.
 - A mail counts as "mine" when its sender (or principal) is one of my accounts' addresses.
 - **Auto-fill new mail** fills mail as it arrives in each account's Inbox or Sent Items.
 - **Fill Fields** recomputes the selected items.
-- **Fill Missing** fills the current folder's items that have no `domainRelated` yet, e.g. mail that arrived while Outlook was closed.
+- **Fill Missing** fills the current folder's items that have no `domainRelated` or `unknownDomain` yet, e.g. mail that arrived while Outlook was closed.
+- **Add Known Domain** adds the base domain of each selected mail's sender (`a@billing.fabrikam.com` → `fabrikam.com`) to
+  `Known Domains.txt`, then refills the selected mails and this folder's mail from those domains that is still marked `*` or `+`.
+  **Ctrl+click** opens `Known Domains.txt` in VS Code (Notepad if not installed).
+
+`Known Domains.txt` (in the settings folder) has one domain per line after the date it was added and a tab, e.g.
+`'26.09.27일 21:05:03<Tab>fabrikam.com`; a line may also be just a domain, and `#` lines are comments. A domain covers
+its subdomains. My own addresses among the recipients are ignored. Edits apply to the next mail filled; use Fill Fields
+or Fill Missing to recompute existing mail.
 
 ### Saved Filters group (from `Saved Filters - Mail.xml`, `- Contacts.xml`, `- Tasks.xml`)
 Mail, contact and task folders each have their own saved filters file; the group shows the ones of the folder you are in.

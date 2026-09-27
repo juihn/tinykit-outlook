@@ -10,6 +10,7 @@ namespace tinykit.OutlookAddin.CustomFields
         public const string Me = "me";
         public const string Tos = "tos";
         public const string Ccs = "ccs";
+        public const string UnknownDomain = "unknownDomain";
 
         /// <summary>DASL name of a (PS_PUBLIC_STRINGS) user property, for filters.</summary>
         public static string Dasl(string name)
@@ -29,6 +30,12 @@ namespace tinykit.OutlookAddin.CustomFields
         public string Tos = None;
         public string Ccs = None;
 
+        /// <summary>"*" unknown sender domain, "+" known sender but an unknown recipient domain, "-" all known.</summary>
+        public string UnknownDomain = None;
+
+        public const string UnknownSender = "*";
+        public const string UnknownRecipient = "+";
+
         public IEnumerable<KeyValuePair<string, string>> Pairs
         {
             get
@@ -38,12 +45,13 @@ namespace tinykit.OutlookAddin.CustomFields
                 yield return new KeyValuePair<string, string>(CustomFieldNames.Me, Me);
                 yield return new KeyValuePair<string, string>(CustomFieldNames.Tos, Tos);
                 yield return new KeyValuePair<string, string>(CustomFieldNames.Ccs, Ccs);
+                yield return new KeyValuePair<string, string>(CustomFieldNames.UnknownDomain, UnknownDomain);
             }
         }
 
         public override string ToString()
         {
-            return DomainRelated + " | " + NameRelated + " | " + Me + " | " + Tos + " | " + Ccs;
+            return DomainRelated + " | " + NameRelated + " | " + Me + " | " + Tos + " | " + Ccs + " | " + UnknownDomain;
         }
     }
 }

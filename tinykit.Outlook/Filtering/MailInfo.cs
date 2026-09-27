@@ -132,6 +132,17 @@ namespace tinykit.OutlookAddin.Filtering
             return string.Join("/", parts);
         }
 
+        /// <summary>
+        /// The base (registrable) domain of an address's host: a@billing.fabrikam.com → fabrikam.com,
+        /// a@x.mail.contoso.co.kr → contoso.co.kr.
+        /// </summary>
+        public static string BaseDomain(string smtp)
+        {
+            int i;
+            var labels = HostLabels(smtp, out i);
+            return labels == null ? null : string.Join(".", labels, i, labels.Length - i);
+        }
+
         /// <summary>Lower-cased host labels of an address and the index of its organization label; null if no host.</summary>
         private static string[] HostLabels(string smtp, out int labelIndex)
         {
