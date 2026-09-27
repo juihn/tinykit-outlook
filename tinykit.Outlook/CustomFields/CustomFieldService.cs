@@ -17,7 +17,7 @@ namespace tinykit.OutlookAddin.CustomFields
 
         public override string ToString()
         {
-            return Updated + " updated, " + Unchanged + " already up to date, " + Skipped + " skipped (not mail)"
+            return Updated + " updated, " + Unchanged + " unchanged (saved again), " + Skipped + " skipped (not mail)"
                 + (Failed > 0 ? ", " + Failed + " failed (see OutlookAddin.log)" : "");
         }
     }
@@ -136,10 +136,20 @@ namespace tinykit.OutlookAddin.CustomFields
         /// <summary>Computes and writes the columns; saves only when a value changed. Null for non-mail items.</summary>
         public bool? Fill(object item)
         {
+            return Fill(item, false);
+        }
+
+        /// <summary>
+        /// Computes and writes the columns. Returns whether a value changed (null for non-mail items).
+        /// <paramref name="alwaysSave"/> saves even when nothing changed: Outlook can keep a cached copy of an item whose
+        /// values are no longer in the store (e.g. after the server replaced the item), and then only a save writes them back.
+        /// </summary>
+        private bool? Fill(object item, bool alwaysSave)
+        {
             var view = ItemView.From(item);
             if (view == null)
                 return null;
-            return Write(view, Calculator.Compute(view));
+            return Write(view, Calculator.Compute(view), alwaysSave);
         }
 
         public CustomFieldValues Compute(object item)
@@ -185,7 +195,7 @@ namespace tinykit.OutlookAddin.CustomFields
                 {
                     try
                     {
-                        var changed = Fill(item);
+                        var changed = Fill(item, true); // Fill Fields / Fill Missing: always write through to the store
                         if (changed == null) result.Skipped++;
                         else if (changed.Value) result.Updated++;
                         else result.Unchanged++;
@@ -208,7 +218,7 @@ namespace tinykit.OutlookAddin.CustomFields
             return result;
         }
 
-        private static bool Write(ItemView view, CustomFieldValues values)
+        private static bool Write(ItemView view, CustomFieldValues values, bool alwaysSave)
         {
             bool changed = false;
             foreach (var pair in values.Pairs)
@@ -226,7 +236,7 @@ namespace tinykit.OutlookAddin.CustomFields
                     changed = true;
                 }
             }
-            if (changed)
+            if (changed || alwaysSave)
                 view.Save();
             return changed;
         }
