@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using tinykit.OutlookAddin.Common;
 
@@ -80,6 +80,8 @@ namespace tinykit.OutlookAddin.Settings
 
         public static string HistoryFile { get { return Path.Combine(SettingsFolder, "History.xml"); } }
 
+        public static string ViewColumnsFile { get { return Path.Combine(SettingsFolder, "View Columns.txt"); } }
+
         public static string ViewStateFile { get { return Path.Combine(LocalFolder, "ViewState.xml"); } }
 
         public static string LogFile { get { return Path.Combine(LocalFolder, "OutlookAddin.log"); } }
@@ -97,7 +99,7 @@ namespace tinykit.OutlookAddin.Settings
 
             if (!IsShared)
                 return;
-            foreach (var name in new[] { "Saved Filters.xml", "History.xml" })
+            foreach (var name in new[] { "Saved Filters.xml", "History.xml", "View Columns.txt" })
             {
                 var local = Path.Combine(LocalFolder, name);
                 var shared = Path.Combine(SharedFolderCandidate, name);

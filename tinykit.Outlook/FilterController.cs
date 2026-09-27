@@ -657,6 +657,41 @@ namespace tinykit.OutlookAddin
         }
 
         /// <summary>
+        /// View Columns button: replaces the current table view's columns with View Columns.txt (created with defaults
+        /// on first use). Ctrl+click opens the file for editing instead.
+        /// </summary>
+        public void ViewColumnsButton(Outlook.Explorer explorer)
+        {
+            var path = SettingsPaths.ViewColumnsFile;
+            if (!File.Exists(path))
+                ViewColumns.CreateDefault(path);
+            if ((Control.ModifierKeys & Keys.Control) == Keys.Control)
+            {
+                OpenInEditor(path);
+                return;
+            }
+
+            List<ViewColumn> columns;
+            try
+            {
+                columns = ViewColumns.Load(path);
+            }
+            catch (FormatException ex)
+            {
+                throw new UserMessageException("View Columns.txt: " + ex.Message + "\n\nCtrl+click View Columns to edit the file.");
+            }
+            if (columns.Count == 0)
+                throw new UserMessageException("View Columns.txt has no columns (every line is empty or a # comment).\n\nCtrl+click View Columns to edit the file.");
+
+            List<string> problems = null;
+            KeepSelection(explorer, () => problems = ViewColumnsService.Apply(explorer, columns, Views.OwnFilter(explorer)));
+            if (problems != null && problems.Count > 0)
+                MessageBox.Show(WindowOwner.From(explorer),
+                    "The other columns were applied, but:\n\n" + string.Join("\n", problems) + "\n\nCtrl+click View Columns to edit " + path + ".",
+                    ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        /// <summary>
         /// All Formats Off: takes every saved filter's format out of the views. Each filter's Format on/off setting is
         /// kept, so Refresh Formats brings the same formats back.
         /// </summary>
@@ -825,7 +860,13 @@ namespace tinykit.OutlookAddin
         {
             if (!File.Exists(SettingsPaths.SavedFiltersFile))
                 SaveSettings();
-            Process.Start(FindVsCode() ?? "notepad.exe", "\"" + SettingsPaths.SavedFiltersFile + "\"");
+            OpenInEditor(SettingsPaths.SavedFiltersFile);
+        }
+
+        /// <summary>Opens a settings file in VS Code, or Notepad when VS Code is not installed.</summary>
+        private static void OpenInEditor(string path)
+        {
+            Process.Start(FindVsCode() ?? "notepad.exe", "\"" + path + "\"");
         }
 
         /// <summary>Code.exe of a user or machine VS Code install, or the one next to "code.cmd" on PATH; null if none.</summary>

@@ -178,6 +178,8 @@ namespace tinykit.OutlookAddin.Ribbon
 
             // View.
             sb.Append("<group id=\"grpView\" label=\"View\">");
+            sb.Append("<button id=\"mViewColumns\" label=\"View Columns\" imageMso=\"TableInsert\" onAction=\"OnViewColumns\"")
+              .Append(" screentip=\"View Columns\" getSupertip=\"GetViewColumnsSupertip\"/>");
             sb.Append("<button id=\"mViewFont\" label=\"View Font...\" imageMso=\"FontDialog\" onAction=\"OnViewFont\"")
               .Append(" screentip=\"View Font\" supertip=\"Choose the font and size of the whole table view: rows, column headers and conditional formatting.\"/>");
             sb.Append("</group>");
@@ -355,6 +357,18 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnRemoveFormats(Office.IRibbonControl control)
         {
             Run(control, ex => _controller.RemoveFormats(ex));
+        }
+
+        public void OnViewColumns(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.ViewColumnsButton(ex));
+        }
+
+        public string GetViewColumnsSupertip(Office.IRibbonControl control)
+        {
+            return Safe(() => "Replace the columns of the current table view with the ones in View Columns.txt "
+                + "(field, width, format, alignment, heading). Ctrl+click: edit the file. File: "
+                + Settings.SettingsPaths.ViewColumnsFile, "");
         }
 
         public void OnViewFont(Office.IRibbonControl control)

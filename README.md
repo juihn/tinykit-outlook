@@ -123,6 +123,8 @@ The rules are written to the view's *View Settings > Conditional Formatting* and
 Rules without that prefix are never changed. Color is limited to the 16 colors Outlook's conditional formatting supports.
 
 ### View group
+- **View Columns** replaces the columns of the current table view with the ones in `View Columns.txt`, in that order.
+  **Ctrl+click** opens the file in VS Code (Notepad if not installed). It is created with default columns on first use.
 - **View Font...** sets the font and size for the whole current table view: rows, and optionally column headers and all conditional
   formatting rules, which keep their own style and color.
 
@@ -139,7 +141,34 @@ Rules without that prefix are never changed. Color is limited to the 16 colors O
 `font` and `size` are optional. `color` takes `Auto`, a palette name, or `#RRGGBB` (mapped to the nearest palette color).
 The file is rewritten when you change settings from the ribbon, so comments you add will not be kept.
 
-Files: `Saved Filters.xml` and `History.xml` in the settings folder (see *Settings location*; an older `Filters.xml` is renamed
+### View Columns.txt
+One column per line. The fields are aligned with tabs (tab width 4); an empty field is just more tabs, and `#` lines are skipped:
+
+| Field | Starts at column | Meaning |
+|---|---|---|
+| FieldName | 0 | a field as named in View Settings > Columns (`Received`, `Flag Status`, ...) or a user-defined field |
+| Width | 16 | width in characters |
+| Type | 20 | `olText`, `olDateTime`, `olInteger`, `olNumber`, `olYesNo`: creates a missing user-defined field in the folder |
+| Format | 32 | position (1, 2, ...) in the column's Format drop-down of View Settings |
+| Alignment | 36 | `Left`, `Center` or `Right` |
+| Alias | 44 | column heading, when it should differ from the field name |
+
+```
+#FieldName		Width
+#					Type
+#								Format
+#									Alignment
+#											Alias
+Received		18	olDateTime	3
+nameRelated		18					Right
+unknownDomain	4					Center	ud
+Size			9				3	Right
+```
+
+The add-in's own fields (`domainRelated`, `nameRelated`, `me`, `tos`, `ccs`) are created in the folder automatically when missing.
+Columns that can't be added, or a Format that is not in a field's list, are reported; the other columns are still applied.
+
+Files: `Saved Filters.xml`, `History.xml` and `View Columns.txt` in the settings folder (see *Settings location*; an older `Filters.xml` is renamed
 automatically); `ViewState.xml` and `OutlookAddin.log` (errors) in `%APPDATA%\tinykit\Outlook\`.
 
 ## License

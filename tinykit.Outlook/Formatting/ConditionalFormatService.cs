@@ -121,6 +121,13 @@ namespace tinykit.OutlookAddin.Formatting
             return true;
         }
 
+        /// <summary>Saves a table view changed elsewhere (e.g. its columns) with the same filter swap and rule guard.</summary>
+        public static void SaveView(Outlook.TableView view, string ownFilter)
+        {
+            var rules = view.AutoFormatRules;
+            Save(view, rules, OtherCustomRules(rules), ownFilter);
+        }
+
         private static void Save(Outlook.TableView view, Outlook.AutoFormatRules rules, IList<string> othersBefore, string ownFilter)
         {
             rules.Save();

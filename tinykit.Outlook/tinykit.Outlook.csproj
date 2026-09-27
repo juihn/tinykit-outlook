@@ -149,12 +149,14 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Formatting\OlColorMap.cs" />
+    <Compile Include="Formatting\ViewColumnsService.cs" />
     <Compile Include="Formatting\ViewFontDialog.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Settings\FilterHistory.cs" />
     <Compile Include="Settings\FilterSettings.cs" />
     <Compile Include="Settings\SettingsPaths.cs" />
+    <Compile Include="Settings\ViewColumns.cs" />
     <Compile Include="FilterController.cs" />
     <Compile Include="Ribbon\OutlookRibbon.cs" />
     <Compile Include="ThisAddIn.cs">
