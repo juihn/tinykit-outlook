@@ -151,7 +151,7 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
   `Transactions` by **domainRelated** or by **Subject**. Subjects become patterns in which numbers (dates, times, amounts,
   ids, `9월 27일`, `1,234원`) and month/weekday names are `%` (`Your trip with Gojek on Friday, 26 September` →
   `Your trip with Gojek on %`); the list can be edited before adding. `Transactions` is created after `Issue` on first use.
-- **Add to Tantitive** (mail) works the same way for the saved filter `Tantitive` (created after `Transactions`).
+- **Add to Tentative** (mail) works the same way for the saved filter `Tentative` (created after `Transactions`).
   DASL `LIKE` only honours `%` at the start or end, so a pattern with `%` in the middle is added as prefix/middle/suffix
   conditions joined with `AND`.
   All three add one condition per line (`... OR` + new line) and skip values the filter already covers.

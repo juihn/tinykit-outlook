@@ -178,7 +178,7 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(delete).Append("&quot; on first use.\"/>");
             var transaction = FilterController.TransactionFilterName;
             AppendAddByDialog(sb, "sfAddTransaction", "Add to Transaction", "OnAddToTransaction", transaction, issue);
-            AppendAddByDialog(sb, "sfAddTantitive", "Add to Tantitive", "OnAddToTantitive", FilterController.TantitiveFilterName, transaction);
+            AppendAddByDialog(sb, "sfAddTentative", "Add to Tentative", "OnAddToTentative", FilterController.TentativeFilterName, transaction);
             sb.Append("<separator id=\"sepSaved2\"/>");
             sb.Append("<button id=\"mSettings\" label=\"Edit Saved Filters\" imageMso=\"").Append(XmlIcon)
               .Append("\" onAction=\"OnOpenSettings\" getScreentip=\"GetSettingsScreentip\" getSupertip=\"GetSettingsSupertip\"/>");
@@ -416,9 +416,9 @@ namespace tinykit.OutlookAddin.Ribbon
             Run(control, ex => _controller.AddSelectionToTransaction(ex));
         }
 
-        public void OnAddToTantitive(Office.IRibbonControl control)
+        public void OnAddToTentative(Office.IRibbonControl control)
         {
-            Run(control, ex => _controller.AddSelectionToTantitive(ex));
+            Run(control, ex => _controller.AddSelectionToTentative(ex));
         }
 
         public string GetSettingsScreentip(Office.IRibbonControl control)

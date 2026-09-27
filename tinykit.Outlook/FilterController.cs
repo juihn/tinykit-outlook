@@ -390,8 +390,8 @@ namespace tinykit.OutlookAddin
         /// <summary>Saved filter that "Add to Transaction" extends with subject patterns or domainRelated values.</summary>
         public const string TransactionFilterName = "Transactions";
 
-        /// <summary>Saved filter that "Add to Tantitive" extends the same way (created after "Transactions").</summary>
-        public const string TantitiveFilterName = "Tantitive";
+        /// <summary>Saved filter that "Add to Tentative" extends the same way (created after "Transactions").</summary>
+        public const string TentativeFilterName = "Tentative";
 
         private static readonly string DomainRelatedProperty = CustomFieldNames.Dasl(CustomFieldNames.DomainRelated);
 
@@ -531,10 +531,10 @@ namespace tinykit.OutlookAddin
             AddSelectionByDialog(explorer, TransactionFilterName, IssueFilterName);
         }
 
-        /// <summary>Add to Tantitive: see <see cref="AddSelectionByDialog"/>; "Tantitive" is created after "Transactions".</summary>
-        public void AddSelectionToTantitive(Outlook.Explorer explorer)
+        /// <summary>Add to Tentative: see <see cref="AddSelectionByDialog"/>; "Tentative" is created after "Transactions".</summary>
+        public void AddSelectionToTentative(Outlook.Explorer explorer)
         {
-            AddSelectionByDialog(explorer, TantitiveFilterName, TransactionFilterName);
+            AddSelectionByDialog(explorer, TentativeFilterName, TransactionFilterName);
         }
 
         /// <summary>
