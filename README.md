@@ -143,12 +143,14 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
 - **Add to Delete** (mail) adds the **subject** of each selected mail to the saved filter `Delete` (`subject = ...`).
 - **Add to Issue** (mail) adds the **domainRelated** of each selected mail to the saved filter `Issue` (`domainRelated = ...`). `Issue` is created right after `Delete` on first use.
   Both add one condition per line (`... OR` + new line) and skip values the filter already covers.
-- **Edit Saved Filters** opens the current folder kind's saved filters file in VS Code (Notepad if not installed). Saved changes are picked up automatically; **Reload** forces it.
+- **Edit Saved Filters** opens the current folder kind's saved filters file in VS Code (Notepad if not installed). Saved changes are picked up automatically; **Manage > Reload** forces it.
 - **Save View as Filter...** saves the current view filter (e.g. one built in View Settings > Filter) as a saved filter.
-- **Refresh Formats** turns the formats back on (after All Formats Off) and rewrites the rules of all filters whose Format is on into the current view.
-- **All Formats Off** takes all saved filters' formats out of the views (`formatsOn="false"`). Each filter's Format on/off setting is kept, so Refresh Formats brings the same set back. Turning a filter's Format on also turns formats back on.
-- **Remove Formats** deletes the add-in's rules from the current view after a warning. Settings are unchanged, so the rules come back with Refresh Formats or the next auto-apply.
-- **Auto-apply formats**: when on, syncs the rules into each table view as you switch folders and views.
+- **Manage** (menu):
+  - **Reload** reads the saved filters file again now.
+  - **Refresh Formats** turns the formats back on (after All Formats Off) and rewrites the rules of all filters whose Format is on into the current view.
+  - **All Formats Off** takes all saved filters' formats out of the views (`formatsOn="false"`). Each filter's Format on/off setting is kept, so Refresh Formats brings the same set back. Turning a filter's Format on also turns formats back on.
+  - **Remove Formats** deletes the add-in's rules from the current view after a warning. Settings are unchanged, so the rules come back with Refresh Formats or the next auto-apply.
+  - **Auto-apply formats**: when on, syncs the rules into each table view as you switch folders and views.
 
 The rules are written to the view's *View Settings > Conditional Formatting* and named `[TK] <filter name> #<SQL hash>`.
 Rules without that prefix are never changed. Color is limited to the 16 colors Outlook's conditional formatting supports.

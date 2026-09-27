@@ -179,9 +179,15 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<separator id=\"sepSaved2\"/>");
             sb.Append("<button id=\"mSettings\" label=\"Edit Saved Filters\" imageMso=\"").Append(XmlIcon)
               .Append("\" onAction=\"OnOpenSettings\" getScreentip=\"GetSettingsScreentip\" getSupertip=\"GetSettingsSupertip\"/>");
-            sb.Append("<button id=\"mReload\" label=\"Reload\" imageMso=\"Refresh\" onAction=\"OnReload\" getScreentip=\"GetReloadScreentip\"/>");
             sb.Append("<button id=\"mSaveView\" label=\"Save View as Filter...\" imageMso=\"FileSaveAs\" onAction=\"OnSaveViewFilter\"")
               .Append(" screentip=\"Save View as Filter\" supertip=\"Save the current view's filter (e.g. from View Settings &gt; Filter) as a saved filter.\"/>");
+
+            // Manage: reloading the file and the conditional-format housekeeping, out of the way in one menu.
+            sb.Append("<menu id=\"mManage\" label=\"Manage\" imageMso=\"").Append(ManageIcon).Append("\" screentip=\"Manage\"")
+              .Append(" supertip=\"Reload the saved filters file and manage the saved filters' conditional formatting.\">");
+            sb.Append("<button id=\"mReload\" label=\"Reload\" imageMso=\"Refresh\" onAction=\"OnReload\" getScreentip=\"GetReloadScreentip\"")
+              .Append(" supertip=\"Read the saved filters file again now (changes saved in an editor are also picked up automatically).\"/>");
+            sb.Append("<menuSeparator id=\"mManageSep\"/>");
             sb.Append("<button id=\"mApplyFormats\" label=\"Refresh Formats\" imageMso=\"Refresh\" onAction=\"OnApplyFormats\"")
               .Append(" screentip=\"Refresh Formats\" supertip=\"Turn the saved filters' formats on (after All Formats Off) and rewrite the formats of all saved filters whose Format is on into this view's conditional formatting.\"/>");
             sb.Append("<button id=\"mFormatsOff\" label=\"All Formats Off\" imageMso=\"").Append(FormatsOffIcon).Append("\" onAction=\"OnAllFormatsOff\"")
@@ -190,6 +196,7 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" screentip=\"Remove Formats\" supertip=\"Delete this add-in's conditional formatting rules ([TK] ...) from the current view (asks first). Settings are unchanged.\"/>");
             sb.Append("<checkBox id=\"mAutoApply\" label=\"Auto-apply formats\" getPressed=\"GetAutoApplyPressed\" onAction=\"OnAutoApplyToggle\"")
               .Append(" screentip=\"Auto-apply formats\" supertip=\"Sync the formats into each table view when switching folders or views.\"/>");
+            sb.Append("</menu>");
             sb.Append("</group>");
 
             // View.
@@ -207,6 +214,7 @@ namespace tinykit.OutlookAddin.Ribbon
         private const string AddIcon = "OutlineExpand";
         private const string XmlIcon = "EditItem";
         private const string FormatsOffIcon = "ConditionalFormattingClearMenu";
+        private const string ManageIcon = "AlignJustify";
 
         /// <summary>
         /// A filter button followed by an arrow-only gallery of that field's recent values (a gallery placed directly
