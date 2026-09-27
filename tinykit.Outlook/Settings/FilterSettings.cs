@@ -132,7 +132,9 @@ namespace tinykit.OutlookAddin.Settings
                 var name = ((string)e.Attribute("name") ?? "").Trim();
                 var rawSql = (string)e.Element("Sql") ?? "";
                 var sql = rawSql.Trim();
-                if (name.Length == 0 || sql.Length == 0)
+                // A filter without SQL is kept as a placeholder (e.g. set up for "Add to ..." with its format ready);
+                // it is not shown on the ribbon until it has SQL.
+                if (name.Length == 0)
                     continue;
                 var fe = e.Element("Format");
                 settings.Filters.Add(new SavedFilter

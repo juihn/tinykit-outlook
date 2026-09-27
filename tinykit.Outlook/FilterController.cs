@@ -245,14 +245,16 @@ namespace tinykit.OutlookAddin
             }
         }
 
+        /// <summary>The saved filters shown on the ribbon: those with SQL (empty ones are placeholders), at most 20.</summary>
         public IList<SavedFilter> VisibleFilters
         {
-            get { return Settings.Filters.Take(MaxSavedFilters).ToList(); }
+            get { return Settings.Filters.Where(f => !string.IsNullOrWhiteSpace(f.Sql)).Take(MaxSavedFilters).ToList(); }
         }
 
         public SavedFilter FilterAt(int index)
         {
-            return index >= 0 && index < Settings.Filters.Count && index < MaxSavedFilters ? Settings.Filters[index] : null;
+            var visible = VisibleFilters;
+            return index >= 0 && index < visible.Count ? visible[index] : null;
         }
 
         // ---------- Quick filters ----------
@@ -1163,9 +1165,9 @@ namespace tinykit.OutlookAddin
             }
             State(_kind).KnownHash = FileHash(path);
             UseSettings(explorer, _kind, loaded);
-            if (Settings.Filters.Count > MaxSavedFilters)
-                Notifier.Info(explorer,
-                    "Only the first " + MaxSavedFilters + " of " + Settings.Filters.Count + " saved filters are shown on the ribbon.");
+            var withSql = Settings.Filters.Count(f => !string.IsNullOrWhiteSpace(f.Sql));
+            if (withSql > MaxSavedFilters)
+                Notifier.Info(explorer, "Only the first " + MaxSavedFilters + " of " + withSql + " saved filters are shown on the ribbon.");
         }
 
         /// <summary>Saves the current view's filter (e.g. built with View Settings &gt; Filter) as a saved filter.</summary>
