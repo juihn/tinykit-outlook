@@ -155,6 +155,7 @@
     </Compile>
     <Compile Include="Settings\FilterHistory.cs" />
     <Compile Include="Settings\FilterSettings.cs" />
+    <Compile Include="Settings\ItemKind.cs" />
     <Compile Include="Settings\SettingsPaths.cs" />
     <Compile Include="Settings\ViewColumns.cs" />
     <Compile Include="FilterController.cs" />

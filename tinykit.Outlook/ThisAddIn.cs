@@ -45,7 +45,7 @@ namespace tinykit.OutlookAddin
 
             try
             {
-                Controller.Fields = new CustomFieldService(Application, Controller.Settings.AutoFillFields);
+                Controller.Fields = new CustomFieldService(Application, Controller.AutoFillFields);
                 Controller.Fields.Start();
             }
             catch (Exception ex)

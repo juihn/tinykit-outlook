@@ -58,12 +58,17 @@ namespace tinykit.OutlookAddin.Settings
     }
 
     /// <summary>
-    /// Saved Filters.xml — hand-editable. SQL is Outlook DASL (the "SQL" tab of View Settings &gt; Filter),
+    /// Saved Filters - Mail.xml / - Contacts.xml / - Tasks.xml — hand-editable. SQL is Outlook DASL (the "SQL" tab of View Settings &gt; Filter),
     /// with or without the "@SQL=" prefix.
     /// </summary>
     internal sealed class FilterSettings
     {
+        /// <summary>The kind of folder these saved filters are for (one file per kind).</summary>
+        public ItemKind Kind = ItemKind.Mail;
+
         public bool AutoApplyFormats = true;
+
+        /// <summary>Mail only: fill the custom mail fields of arriving mail.</summary>
         public bool AutoFillFields = true;
 
         /// <summary>Global switch for the saved filters' formats: All Formats Off clears it, Refresh Formats sets it.
@@ -72,12 +77,13 @@ namespace tinykit.OutlookAddin.Settings
         public List<SavedFilter> Filters = new List<SavedFilter>();
 
         private const string Schema = @"
-  Saved Filters.xml — tinykit Outlook saved filters. Edit, save, then press Manage > Reload on the ribbon.
+  tinykit Outlook saved filters. One file per kind of folder: Saved Filters - Mail.xml, - Contacts.xml and
+  - Tasks.xml; the ribbon shows the ones of the folder you are in. Saved changes are picked up automatically.
 
   <SavedFilters autoApplyFormats=""true|false""         autoApplyFormats: sync formatting rules into
                                                        each table view when you switch folders/views
-                autoFillFields=""true|false""           autoFillFields: fill domainRelated/nameRelated/me/
-                                                       tos/ccs of mail arriving in Inbox / Sent Items
+                autoFillFields=""true|false""           autoFillFields (Mail only): fill domainRelated/nameRelated/
+                                                       me/tos/ccs of mail arriving in Inbox / Sent Items
                 formatsOn=""true|false"">               formatsOn: all formats on/off (All Formats Off /
                                                        Refresh Formats); formatEnabled per filter is kept
     <Filter name=""Ribbon button label"" formatEnabled=""true|false"">
@@ -95,15 +101,16 @@ namespace tinykit.OutlookAddin.Settings
 
   Location: %OneDriveConsumer%\.config\tinykit\Outlook\ when that folder exists (shared by every PC
   signed in to the same personal OneDrive; create it and restart Outlook to move there), otherwise
-  %APPDATA%\tinykit\Outlook\. History.xml follows the same rule; ViewState.xml and the log stay local. ""Add to Delete"" appends the selected mails'
-  subjects to the saved filter named ""Delete"" (created if missing).
+  %APPDATA%\tinykit\Outlook\. History.xml and View Columns - *.txt follow the same rule; ViewState.xml and the
+  log stay local. Mail: ""Add to Delete"" appends the selected mails' subjects to the saved filter named ""Delete""
+  (created if missing), ""Add to Issue"" their domainRelated values to ""Issue"".
 ";
 
-        public static FilterSettings Load(string path)
+        public static FilterSettings Load(string path, ItemKind kind)
         {
             if (!File.Exists(path))
             {
-                var created = CreateDefault();
+                var created = CreateDefault(kind);
                 created.Save(path);
                 return created;
             }
@@ -115,6 +122,7 @@ namespace tinykit.OutlookAddin.Settings
 
             var settings = new FilterSettings
             {
+                Kind = kind,
                 AutoApplyFormats = ParseBool(root.Attribute("autoApplyFormats"), true),
                 AutoFillFields = ParseBool(root.Attribute("autoFillFields"), true),
                 FormatsOn = ParseBool(root.Attribute("formatsOn"), true),
@@ -148,7 +156,7 @@ namespace tinykit.OutlookAddin.Settings
                 new XComment(Schema),
                 new XElement("SavedFilters",
                     new XAttribute("autoApplyFormats", AutoApplyFormats ? "true" : "false"),
-                    new XAttribute("autoFillFields", AutoFillFields ? "true" : "false"),
+                    Kind == ItemKind.Mail ? new XAttribute("autoFillFields", AutoFillFields ? "true" : "false") : null,
                     new XAttribute("formatsOn", FormatsOn ? "true" : "false"),
                     Filters.Select(ToElement)));
             doc.Save(path);
@@ -211,16 +219,78 @@ namespace tinykit.OutlookAddin.Settings
             return fallback;
         }
 
-        /// <summary>The saved filters of a first install (no Saved Filters.xml yet).</summary>
-        private static FilterSettings CreateDefault()
+        private const string FlagStatus = "\"http://schemas.microsoft.com/mapi/proptag/0x10900003\" IS NOT NULL";
+
+        /// <summary>The saved filters of a first install (no saved filters file of that kind yet).</summary>
+        private static FilterSettings CreateDefault(ItemKind kind)
+        {
+            switch (kind)
+            {
+                case ItemKind.Contact: return CreateContactDefault();
+                case ItemKind.Task: return CreateTaskDefault();
+                default: return CreateMailDefault();
+            }
+        }
+
+        private static FilterSettings CreateContactDefault()
+        {
+            const string email = "http://schemas.microsoft.com/mapi/id/{00062004-0000-0000-C000-000000000046}/";
+            var s = new FilterSettings { Kind = ItemKind.Contact };
+            // No e-mail address at all (Email1..3 = PidLidEmail1/2/3EmailAddress).
+            s.Filters.Add(new SavedFilter
+            {
+                Name = "No Email",
+                Sql = "\"" + email + "8083001f\" IS NULL AND \"" + email + "8093001f\" IS NULL AND \"" + email + "80a3001f\" IS NULL",
+                FormatEnabled = true,
+                Format = new FilterFormat { Color = Outlook.OlColor.olColorGray },
+            });
+            s.Filters.Add(new SavedFilter
+            {
+                Name = "Flagged",
+                Sql = FlagStatus,
+                FormatEnabled = false,
+                Format = new FilterFormat { Color = Outlook.OlColor.olColorRed },
+            });
+            return s;
+        }
+
+        private static FilterSettings CreateTaskDefault()
+        {
+            const string complete = "\"http://schemas.microsoft.com/mapi/id/{00062003-0000-0000-C000-000000000046}/811c000b\"";
+            var s = new FilterSettings { Kind = ItemKind.Task };
+            s.Filters.Add(new SavedFilter
+            {
+                Name = "Active",
+                Sql = complete + " = 0",
+                FormatEnabled = false,
+                Format = new FilterFormat { Bold = true },
+            });
+            s.Filters.Add(new SavedFilter
+            {
+                Name = "Completed",
+                Sql = complete + " = 1",
+                FormatEnabled = true,
+                Format = new FilterFormat { Strikeout = true, Color = Outlook.OlColor.olColorGray },
+            });
+            s.Filters.Add(new SavedFilter
+            {
+                Name = "High",
+                Sql = "\"urn:schemas:httpmail:importance\" = 2 AND " + complete + " = 0",
+                FormatEnabled = true,
+                Format = new FilterFormat { Color = Outlook.OlColor.olColorRed },
+            });
+            return s;
+        }
+
+        private static FilterSettings CreateMailDefault()
         {
             const string userProp = "http://schemas.microsoft.com/mapi/string/{00020329-0000-0000-C000-000000000046}/";
-            var s = new FilterSettings();
+            var s = new FilterSettings { Kind = ItemKind.Mail };
             // Flagged or completed (PR_FLAG_STATUS is set).
             s.Filters.Add(new SavedFilter
             {
                 Name = "Flagged",
-                Sql = "\"http://schemas.microsoft.com/mapi/proptag/0x10900003\" IS NOT NULL",
+                Sql = FlagStatus,
                 FormatEnabled = false,
                 Format = new FilterFormat { Color = Outlook.OlColor.olColorRed },
             });

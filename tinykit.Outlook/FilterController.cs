@@ -27,7 +27,64 @@ namespace tinykit.OutlookAddin
         private string _inputText = "";
         private bool _syncing;
 
-        public FilterSettings Settings { get; private set; }
+        /// <summary>Saved filters of one kind of folder and the state of their file.</summary>
+        private sealed class KindState
+        {
+            public FilterSettings Settings;
+            // Content hash of the file as last loaded or written by the add-in; any other content means the file
+            // was edited outside (e.g. in VS Code) and must be reloaded before use.
+            public string KnownHash;
+            public string ReportedBadHash;
+        }
+
+        private readonly Dictionary<ItemKind, KindState> _states = new Dictionary<ItemKind, KindState>();
+        private ItemKind _kind = ItemKind.Mail;
+
+        /// <summary>
+        /// Makes the kind of the explorer's folder (mail, contacts, tasks) current: <see cref="Settings"/> and the
+        /// ribbon then use that kind's saved filters. Returns null (current kind unchanged) for other folders.
+        /// </summary>
+        public ItemKind? Focus(Outlook.Explorer explorer)
+        {
+            var kind = ItemKinds.Of(explorer);
+            if (kind.HasValue)
+                _kind = kind.Value;
+            return kind;
+        }
+
+        /// <summary>The kind made current by the last <see cref="Focus"/>.</summary>
+        public ItemKind Kind
+        {
+            get { return _kind; }
+        }
+
+        /// <summary>Saved filters of the current kind of folder.</summary>
+        public FilterSettings Settings
+        {
+            get { return State(_kind).Settings; }
+        }
+
+        private KindState State(ItemKind kind)
+        {
+            KindState state;
+            if (_states.TryGetValue(kind, out state))
+                return state;
+            state = new KindState();
+            var path = SettingsPaths.SavedFiltersFile(kind);
+            try
+            {
+                state.Settings = FilterSettings.Load(path, kind);
+                state.KnownHash = FileHash(path);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Load " + Path.GetFileName(path), ex);
+                state.Settings = new FilterSettings { Kind = kind };
+            }
+            _states[kind] = state;
+            return state;
+        }
+
         public FilterHistory History { get; private set; }
         public ViewFilterService Views { get; private set; }
 
@@ -44,35 +101,22 @@ namespace tinykit.OutlookAddin
             History = FilterHistory.Load(SettingsPaths.HistoryFile);
             Views = new ViewFilterService(SettingsPaths.ViewStateFile);
             Views.IsAddinFilter = f => !string.IsNullOrWhiteSpace(f)
-                && Settings != null && Settings.Filters.Any(s => Dasl.SameFilter(s.Sql, f));
-            try
-            {
-                Settings = FilterSettings.Load(SettingsPaths.SavedFiltersFile);
-                _knownFileHash = FileHash(SettingsPaths.SavedFiltersFile);
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Load settings", ex);
-                Settings = new FilterSettings();
-            }
+                && _states.Values.Any(st => st.Settings.Filters.Any(s => Dasl.SameFilter(s.Sql, f)));
+            State(ItemKind.Mail); // mail settings hold autoFillFields, needed at startup
         }
 
-        // ---------- Saved Filters.xml sync ----------
+        // ---------- Saved Filters - <kind>.xml sync ----------
 
-        // Content hash of Saved Filters.xml as last loaded or written by the add-in; any other content means
-        // the file was edited outside (e.g. in VS Code) and must be reloaded before use.
-        private string _knownFileHash;
-        private string _reportedBadHash;
         private FileSystemWatcher _watcher;
         private volatile bool _fileTouched;
         private Timer _fileTimer;
         private Func<Outlook.Explorer> _activeExplorer = () => null;
 
-        /// <summary>Reloads Saved Filters.xml automatically whenever it is saved outside the add-in.</summary>
+        /// <summary>Reloads the saved filters files automatically whenever one is saved outside the add-in.</summary>
         public void WatchSettingsFile(Func<Outlook.Explorer> activeExplorer)
         {
             _activeExplorer = activeExplorer;
-            _watcher = new FileSystemWatcher(SettingsPaths.SettingsFolder, Path.GetFileName(SettingsPaths.SavedFiltersFile))
+            _watcher = new FileSystemWatcher(SettingsPaths.SettingsFolder, "Saved Filters - *.xml")
             {
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
             };
@@ -90,7 +134,9 @@ namespace tinykit.OutlookAddin
                 _fileTouched = false;
                 try
                 {
-                    ReloadIfChanged(_activeExplorer());
+                    var explorer = _activeExplorer();
+                    foreach (var kind in _states.Keys.ToList())
+                        ReloadIfChanged(kind, explorer);
                 }
                 catch (Exception ex)
                 {
@@ -100,63 +146,84 @@ namespace tinykit.OutlookAddin
             _fileTimer.Start();
         }
 
-        /// <summary>
-        /// Reloads Saved Filters.xml if it differs from what the add-in last loaded or wrote.
-        /// An invalid file is reported once and the current saved filters are kept.
-        /// </summary>
+        /// <summary>Reloads the current kind's saved filters file if it was changed outside the add-in.</summary>
         private bool ReloadIfChanged(Outlook.Explorer explorer)
         {
-            var path = SettingsPaths.SavedFiltersFile;
+            return ReloadIfChanged(_kind, explorer);
+        }
+
+        /// <summary>
+        /// Reloads a saved filters file if it differs from what the add-in last loaded or wrote.
+        /// An invalid file is reported once and the current saved filters are kept.
+        /// </summary>
+        private bool ReloadIfChanged(ItemKind kind, Outlook.Explorer explorer)
+        {
+            var state = State(kind);
+            var path = SettingsPaths.SavedFiltersFile(kind);
             var hash = FileHash(path);
             if (hash == null)
             {
                 _fileTouched = true; // locked while being written: try again on the next tick
                 return false;
             }
-            if (hash == _knownFileHash)
+            if (hash == state.KnownHash)
                 return false;
 
             FilterSettings loaded;
             try
             {
-                loaded = FilterSettings.Load(path);
+                loaded = FilterSettings.Load(path, kind);
             }
             catch (Exception ex)
             {
-                if (hash != _reportedBadHash)
+                if (hash != state.ReportedBadHash)
                 {
-                    _reportedBadHash = hash;
-                    Log.Error("Saved Filters.xml", ex);
+                    state.ReportedBadHash = hash;
+                    Log.Error(Path.GetFileName(path), ex);
                     MessageBox.Show(explorer == null ? null : WindowOwner.From(explorer),
-                        "Saved Filters.xml could not be loaded; the previous saved filters are kept until it is fixed.\n\n" + ex.Message,
+                        Path.GetFileName(path) + " could not be loaded; the previous saved filters are kept until it is fixed.\n\n" + ex.Message,
                         ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
                 return false;
             }
-            _knownFileHash = hash;
-            UseSettings(explorer, loaded);
+            state.KnownHash = hash;
+            UseSettings(explorer, kind, loaded);
             return true;
         }
 
-        /// <summary>Switches to newly loaded settings, re-applying the shown saved filter if its SQL changed.</summary>
-        private void UseSettings(Outlook.Explorer explorer, FilterSettings loaded)
+        /// <summary>
+        /// Switches to newly loaded settings of <paramref name="kind"/>; when the explorer shows that kind of folder,
+        /// re-applies the shown saved filter if its SQL changed.
+        /// </summary>
+        private void UseSettings(Outlook.Explorer explorer, ItemKind kind, FilterSettings loaded)
         {
-            var active = explorer == null ? null : ActiveSavedFilter(explorer);
-            Settings = loaded;
-            if (Fields != null)
-                Fields.AutoFill = Settings.AutoFillFields;
-            if (explorer != null)
+            var shown = explorer != null && ItemKinds.Of(explorer) == kind;
+            var previous = _kind;
+            _kind = kind;
+            try
             {
-                if (active != null)
+                var active = shown ? ActiveSavedFilter(explorer) : null;
+                State(kind).Settings = loaded;
+                if (kind == ItemKind.Mail && Fields != null)
+                    Fields.AutoFill = loaded.AutoFillFields;
+                if (shown)
                 {
-                    var now = Settings.Find(active.Name);
-                    if (now == null)
-                        Views.Clear(explorer);
-                    else if (!Dasl.SameFilter(now.Sql, active.Sql))
-                        Views.Apply(explorer, Dasl.StripSqlPrefix(now.Sql), SavedSourcePrefix + now.Name);
+                    if (active != null)
+                    {
+                        var now = loaded.Find(active.Name);
+                        if (now == null)
+                            Views.Clear(explorer);
+                        else if (!Dasl.SameFilter(now.Sql, active.Sql))
+                            Views.Apply(explorer, Dasl.StripSqlPrefix(now.Sql), SavedSourcePrefix + now.Name);
+                    }
+                    if (loaded.AutoApplyFormats)
+                        SyncFormats(explorer, false);
                 }
-                if (Settings.AutoApplyFormats)
-                    SyncFormats(explorer, false);
+            }
+            finally
+            {
+                if (!shown)
+                    _kind = previous;
             }
             Invalidate();
         }
@@ -200,9 +267,20 @@ namespace tinykit.OutlookAddin
             _inputText = text ?? "";
         }
 
+        /// <summary>The quick filter fields of a kind of folder, in ribbon order (row 1 left, right; row 2 left, right).</summary>
+        public static QuickKind[] QuickKindsFor(ItemKind? kind)
+        {
+            switch (kind)
+            {
+                case ItemKind.Mail: return new[] { QuickKind.From, QuickKind.Subject, QuickKind.Name, QuickKind.Domain };
+                case ItemKind.Contact: return new[] { QuickKind.FileAs, QuickKind.Email, QuickKind.Company, QuickKind.Department };
+                default: return new QuickKind[0]; // tasks and other folders: no quick filter
+            }
+        }
+
         /// <summary>
-        /// F/N/S/D button: filters by the input box text if there is any, otherwise by the value of the first
-        /// selected mail.
+        /// Quick filter button: filters by the input box text if there is any, otherwise by the value of the first
+        /// selected mail or contact.
         /// </summary>
         public void QuickButton(Outlook.Explorer explorer, QuickKind kind)
         {
@@ -212,15 +290,55 @@ namespace tinykit.OutlookAddin
                 ApplyQuick(explorer, kind, typed);
                 return;
             }
-            var info = MailInfo.FromFirstSelected(explorer,
-                Fields == null ? null : (Func<object, string>)Fields.DomainRelatedOf,
-                Fields == null ? null : (Func<object, string>)Fields.NameRelatedOf);
-            if (info == null)
-                throw new UserMessageException("Type a value in the box, or select a mail first.");
-            var value = info.ValueFor(kind);
+            string value, what;
+            if (_kind == ItemKind.Contact)
+            {
+                what = "contact";
+                var contact = FirstSelected(explorer) as Outlook.ContactItem;
+                if (contact == null)
+                    throw new UserMessageException("Type a value in the box, or select a contact first.");
+                value = ContactValue(contact, kind);
+            }
+            else
+            {
+                what = "mail";
+                var info = MailInfo.FromFirstSelected(explorer,
+                    Fields == null ? null : (Func<object, string>)Fields.DomainRelatedOf,
+                    Fields == null ? null : (Func<object, string>)Fields.NameRelatedOf);
+                if (info == null)
+                    throw new UserMessageException("Type a value in the box, or select a mail first.");
+                value = info.ValueFor(kind);
+            }
             if (string.IsNullOrWhiteSpace(value))
-                throw new UserMessageException("The selected mail has no " + kind + " value.");
+                throw new UserMessageException("The selected " + what + " has no " + kind + " value.");
             ApplyQuick(explorer, kind, value);
+        }
+
+        private static object FirstSelected(Outlook.Explorer explorer)
+        {
+            try
+            {
+                var selection = explorer.Selection;
+                return selection.Count > 0 ? selection[1] : null;
+            }
+            catch (COMException)
+            {
+                return null;
+            }
+        }
+
+        private static string ContactValue(Outlook.ContactItem c, QuickKind kind)
+        {
+            switch (kind)
+            {
+                case QuickKind.FileAs: return c.FileAs;
+                case QuickKind.Email:
+                    return new[] { c.Email1Address, c.Email2Address, c.Email3Address }
+                        .FirstOrDefault(a => !string.IsNullOrWhiteSpace(a) && a.Contains("@"));
+                case QuickKind.Company: return c.CompanyName;
+                case QuickKind.Department: return c.Department;
+            }
+            return null;
         }
 
         /// <summary>
@@ -406,6 +524,8 @@ namespace tinykit.OutlookAddin
         private void AddSelectionTo(Outlook.Explorer explorer, string filterName, string what, List<string> values,
             Func<string, string> clauseFor, string insertAfter)
         {
+            if (_kind != ItemKind.Mail)
+                throw new UserMessageException("\"Add to " + filterName + "\" works in mail folders.");
             ReloadIfChanged(explorer); // never overwrite edits made outside the add-in
             if (values.Count == 0)
                 throw new UserMessageException("Select the mails whose " + what + " should be added to \"" + filterName + "\".");
@@ -414,7 +534,7 @@ namespace tinykit.OutlookAddin
             if (f == null)
             {
                 if (Settings.Filters.Count >= MaxSavedFilters)
-                    throw new UserMessageException("The ribbon shows at most " + MaxSavedFilters + " saved filters. Remove one in Saved Filters.xml first.");
+                    throw new UserMessageException("The ribbon shows at most " + MaxSavedFilters + " saved filters. Remove one in " + SettingsPaths.SavedFiltersName(_kind) + " first.");
                 f = new SavedFilter { Name = filterName, Sql = "" };
                 var after = insertAfter == null ? null : Settings.Find(insertAfter);
                 if (after != null)
@@ -657,14 +777,18 @@ namespace tinykit.OutlookAddin
         }
 
         /// <summary>
-        /// View Columns button: replaces the current table view's columns with View Columns.txt (created with defaults
-        /// on first use). Ctrl+click opens the file for editing instead.
+        /// View Columns button: replaces the current table view's columns with the View Columns file of the folder's kind
+        /// (mail, contacts, tasks; created with defaults on first use). Ctrl+click opens that file for editing instead.
         /// </summary>
         public void ViewColumnsButton(Outlook.Explorer explorer)
         {
-            var path = SettingsPaths.ViewColumnsFile;
+            var kind = Focus(explorer);
+            if (kind == null)
+                throw new UserMessageException("View Columns works in mail, contact and task folders.");
+            var path = SettingsPaths.ViewColumnsFile(kind.Value);
+            var name = Path.GetFileName(path);
             if (!File.Exists(path))
-                ViewColumns.CreateDefault(path);
+                ViewColumns.CreateDefault(path, kind.Value);
             if ((Control.ModifierKeys & Keys.Control) == Keys.Control)
             {
                 OpenInEditor(path);
@@ -678,10 +802,10 @@ namespace tinykit.OutlookAddin
             }
             catch (FormatException ex)
             {
-                throw new UserMessageException("View Columns.txt: " + ex.Message + "\n\nCtrl+click View Columns to edit the file.");
+                throw new UserMessageException(name + ": " + ex.Message + "\n\nCtrl+click View Columns to edit the file.");
             }
             if (columns.Count == 0)
-                throw new UserMessageException("View Columns.txt has no columns (every line is empty or a # comment).\n\nCtrl+click View Columns to edit the file.");
+                throw new UserMessageException(name + " has no columns (every line is empty or a # comment).\n\nCtrl+click View Columns to edit the file.");
 
             List<string> problems = null;
             KeepSelection(explorer, () => problems = ViewColumnsService.Apply(explorer, columns, Views.OwnFilter(explorer)));
@@ -753,12 +877,15 @@ namespace tinykit.OutlookAddin
                 SyncFormats(explorer, false);
         }
 
-        /// <summary>Folder or view switched: keep formats in sync (quietly) and refresh pressed states.</summary>
+        /// <summary>
+        /// Folder or view switched: switch to the saved filters of the folder's kind, keep formats in sync (quietly)
+        /// and refresh the ribbon (which groups show depends on the kind).
+        /// </summary>
         public void OnViewChanged(Outlook.Explorer explorer)
         {
             try
             {
-                if (Settings.AutoApplyFormats)
+                if (Focus(explorer) != null && Settings.AutoApplyFormats)
                 {
                     // A rule's Filter set through the object model does not survive an Outlook restart, so each
                     // view's rules are rewritten on its first visit per session; later visits only fix differences.
@@ -826,18 +953,19 @@ namespace tinykit.OutlookAddin
             Report(explorer, Fields.FillItems(items));
         }
 
+        /// <summary>Kept in the mail saved filters file (autoFillFields).</summary>
         public bool AutoFillFields
         {
-            get { return Settings.AutoFillFields; }
+            get { return State(ItemKind.Mail).Settings.AutoFillFields; }
         }
 
         public void SetAutoFillFields(bool on)
         {
-            ReloadIfChanged(_activeExplorer());
-            Settings.AutoFillFields = on;
+            ReloadIfChanged(ItemKind.Mail, _activeExplorer());
+            State(ItemKind.Mail).Settings.AutoFillFields = on;
             if (Fields != null)
                 Fields.AutoFill = on;
-            SaveSettings();
+            SaveSettings(ItemKind.Mail);
         }
 
         private static bool ConfirmMany(Outlook.Explorer explorer, int count, string what)
@@ -856,11 +984,13 @@ namespace tinykit.OutlookAddin
 
         // ---------- Settings ----------
 
+        /// <summary>Opens the saved filters file of the current kind of folder.</summary>
         public void OpenSettingsFile()
         {
-            if (!File.Exists(SettingsPaths.SavedFiltersFile))
+            var path = SettingsPaths.SavedFiltersFile(_kind);
+            if (!File.Exists(path))
                 SaveSettings();
-            OpenInEditor(SettingsPaths.SavedFiltersFile);
+            OpenInEditor(path);
         }
 
         /// <summary>Opens a settings file in VS Code, or Notepad when VS Code is not installed.</summary>
@@ -895,17 +1025,18 @@ namespace tinykit.OutlookAddin
 
         public void ReloadSettings(Outlook.Explorer explorer)
         {
+            var path = SettingsPaths.SavedFiltersFile(_kind);
             FilterSettings loaded;
             try
             {
-                loaded = FilterSettings.Load(SettingsPaths.SavedFiltersFile);
+                loaded = FilterSettings.Load(path, _kind);
             }
             catch (Exception ex)
             {
-                throw new UserMessageException("Saved Filters.xml could not be loaded; the previous saved filters are kept.\n\n" + ex.Message);
+                throw new UserMessageException(Path.GetFileName(path) + " could not be loaded; the previous saved filters are kept.\n\n" + ex.Message);
             }
-            _knownFileHash = FileHash(SettingsPaths.SavedFiltersFile);
-            UseSettings(explorer, loaded);
+            State(_kind).KnownHash = FileHash(path);
+            UseSettings(explorer, _kind, loaded);
             if (Settings.Filters.Count > MaxSavedFilters)
                 MessageBox.Show(WindowOwner.From(explorer),
                     "Only the first " + MaxSavedFilters + " of " + Settings.Filters.Count + " saved filters are shown on the ribbon.",
@@ -939,7 +1070,7 @@ namespace tinykit.OutlookAddin
             else
             {
                 if (Settings.Filters.Count >= MaxSavedFilters)
-                    throw new UserMessageException("The ribbon shows at most " + MaxSavedFilters + " saved filters. Remove one in Saved Filters.xml first.");
+                    throw new UserMessageException("The ribbon shows at most " + MaxSavedFilters + " saved filters. Remove one in " + SettingsPaths.SavedFiltersName(_kind) + " first.");
                 Settings.Filters.Add(new SavedFilter { Name = name, Sql = sql });
             }
             SaveSettings();
@@ -982,8 +1113,15 @@ namespace tinykit.OutlookAddin
 
         private void SaveSettings()
         {
-            Settings.Save(SettingsPaths.SavedFiltersFile);
-            _knownFileHash = FileHash(SettingsPaths.SavedFiltersFile);
+            SaveSettings(_kind);
+        }
+
+        private void SaveSettings(ItemKind kind)
+        {
+            var state = State(kind);
+            var path = SettingsPaths.SavedFiltersFile(kind);
+            state.Settings.Save(path);
+            state.KnownHash = FileHash(path);
         }
 
         public static string Truncate(string s, int max)

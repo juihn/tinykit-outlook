@@ -17,9 +17,19 @@ namespace tinykit.OutlookAddin.Filtering
         public const string DomainRelated = UserProperty + "domainRelated";
         public const string NameRelated = UserProperty + "nameRelated";
 
+        private const string ContactId = "http://schemas.microsoft.com/mapi/id/{00062004-0000-0000-C000-000000000046}/";
+        public const string FileAs = "urn:schemas:contacts:fileas";
+        public const string Company = "urn:schemas:contacts:o";
+        public const string Department = "urn:schemas:contacts:department";
+        public static readonly string[] ContactEmails =   // PidLidEmail1/2/3EmailAddress
+        {
+            ContactId + "8083001f", ContactId + "8093001f", ContactId + "80a3001f",
+        };
+
         /// <summary>
         /// Builds the quick filter: the value may appear anywhere (LIKE '%value%') in
-        /// From → the From (sender) e-mail address, Name → nameRelated, Subject → subject, Domain → domainRelated.
+        /// From → the From (sender) e-mail address, Name → nameRelated, Subject → subject, Domain → domainRelated;
+        /// FileAs, Email (any of the three addresses), Company and Department of a contact.
         /// </summary>
         public static string Build(QuickKind kind, string value)
         {
@@ -34,6 +44,14 @@ namespace tinykit.OutlookAddin.Filtering
                     return Like(Subject, pattern);
                 case QuickKind.Domain:
                     return Like(DomainRelated, pattern);
+                case QuickKind.FileAs:
+                    return Like(FileAs, pattern);
+                case QuickKind.Email:
+                    return Or(Array.ConvertAll(ContactEmails, p => Like(p, pattern)));
+                case QuickKind.Company:
+                    return Like(Company, pattern);
+                case QuickKind.Department:
+                    return Like(Department, pattern);
             }
             throw new ArgumentOutOfRangeException("kind");
         }

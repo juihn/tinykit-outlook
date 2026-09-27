@@ -32,10 +32,11 @@ namespace tinykit.OutlookAddin.Settings
         // Start column of each field: FieldName, Width, Type, Format, Alignment, Alias.
         private static readonly int[] FieldStops = { 0, 16, 20, 32, 36, 44 };
 
-        public const string DefaultContent =
-@"# View Columns.txt — tinykit Outlook: the columns of the current table view.
+        private const string Header =
+@"# tinykit Outlook: the columns of the current table view. One file per kind of folder:
+#   View Columns - Mail.txt, View Columns - Contacts.txt, View Columns - Tasks.txt.
 #   View Columns (ribbon, View group) replaces the view's columns with the lines below, in this order.
-#   Ctrl+click View Columns to edit this file. Lines starting with # are skipped.
+#   Ctrl+click View Columns to edit the file of the folder you are in. Lines starting with # are skipped.
 #
 # Fields, aligned with tabs (tab width 4); leave a field empty with more tabs:
 #   FieldName   column 0    field name as in View Settings > Columns (e.g. Received, Flag Status) or a user-defined field
@@ -52,7 +53,10 @@ namespace tinykit.OutlookAddin.Settings
 #								Format
 #									Alignment
 #											Alias
-Icon			1
+";
+
+        private const string MailColumns =
+@"Icon			1
 Reminder		1				4
 Importance		1
 Received		18	olDateTime	3
@@ -68,15 +72,52 @@ Subject			60
 Flag Status		4
 ";
 
+        private const string ContactColumns =
+@"Icon			1
+File As			25
+Company			20
+Department		15
+Job Title		15
+Email			25
+Business Phone	15
+Mobile Phone	15
+Categories		10
+Flag Status		4
+";
+
+        private const string TaskColumns =
+@"Icon			1
+Complete		3
+Priority		3
+Subject			50
+Status			12
+Due Date		15
+Start Date		15
+% Complete		8
+Categories		10
+In Folder		12
+";
+
+        /// <summary>The View Columns file written on first use for <paramref name="kind"/>.</summary>
+        public static string DefaultContent(ItemKind kind)
+        {
+            switch (kind)
+            {
+                case ItemKind.Contact: return Header + ContactColumns;
+                case ItemKind.Task: return Header + TaskColumns;
+                default: return Header + MailColumns;
+            }
+        }
+
         public static List<ViewColumn> Load(string path)
         {
             return Parse(File.ReadAllLines(path, Encoding.UTF8));
         }
 
-        public static void CreateDefault(string path)
+        public static void CreateDefault(string path, ItemKind kind)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            File.WriteAllText(path, DefaultContent.Replace("\r\n", "\n").Replace("\n", "\r\n"), new UTF8Encoding(true));
+            File.WriteAllText(path, DefaultContent(kind).Replace("\r\n", "\n").Replace("\n", "\r\n"), new UTF8Encoding(true));
         }
 
         public static List<ViewColumn> Parse(IEnumerable<string> lines)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using tinykit.OutlookAddin.Common;
 
 namespace tinykit.OutlookAddin.Settings
@@ -76,30 +77,51 @@ namespace tinykit.OutlookAddin.Settings
             get { return IsShared ? SharedFolderCandidate : LocalFolder; }
         }
 
-        public static string SavedFiltersFile { get { return Path.Combine(SettingsFolder, "Saved Filters.xml"); } }
+        /// <summary>Saved filters of one kind of folder: Saved Filters - Mail.xml, - Contacts.xml, - Tasks.xml.</summary>
+        public static string SavedFiltersFile(ItemKind kind)
+        {
+            return Path.Combine(SettingsFolder, SavedFiltersName(kind));
+        }
+
+        public static string SavedFiltersName(ItemKind kind)
+        {
+            return "Saved Filters - " + ItemKinds.FileSuffix(kind) + ".xml";
+        }
 
         public static string HistoryFile { get { return Path.Combine(SettingsFolder, "History.xml"); } }
 
-        public static string ViewColumnsFile { get { return Path.Combine(SettingsFolder, "View Columns.txt"); } }
+        /// <summary>Table view columns of one kind of folder: View Columns - Mail.txt, - Contacts.txt, - Tasks.txt.</summary>
+        public static string ViewColumnsFile(ItemKind kind)
+        {
+            return Path.Combine(SettingsFolder, "View Columns - " + ItemKinds.FileSuffix(kind) + ".txt");
+        }
 
         public static string ViewStateFile { get { return Path.Combine(LocalFolder, "ViewState.xml"); } }
 
         public static string LogFile { get { return Path.Combine(LocalFolder, "OutlookAddin.log"); } }
 
         /// <summary>
-        /// One-time moves at startup: the pre-"Saved Filters" file name (Filters.xml), and — when the OneDrive folder has
-        /// just been created — copies of the local settings into it (the local files stay as a backup).
+        /// One-time moves at startup: older file names (Filters.xml, then Saved Filters.xml and View Columns.txt from before
+        /// the per-kind files, which were for mail), and — when the OneDrive folder has just been created — copies of
+        /// the local settings into it (the local files stay as a backup).
         /// </summary>
         public static void MigrateLegacyFiles()
         {
-            var legacy = Path.Combine(LocalFolder, "Filters.xml");
-            var localSaved = Path.Combine(LocalFolder, "Saved Filters.xml");
-            if (File.Exists(legacy) && !File.Exists(localSaved))
-                File.Move(legacy, localSaved);
+            var mailSaved = SavedFiltersName(ItemKind.Mail);
+            var mailColumns = Path.GetFileName(ViewColumnsFile(ItemKind.Mail));
+            Rename(LocalFolder, "Filters.xml", "Saved Filters.xml");
+            foreach (var folder in IsShared ? new[] { LocalFolder, SharedFolderCandidate } : new[] { LocalFolder })
+            {
+                Rename(folder, "Saved Filters.xml", mailSaved);
+                Rename(folder, "View Columns.txt", mailColumns);
+            }
 
             if (!IsShared)
                 return;
-            foreach (var name in new[] { "Saved Filters.xml", "History.xml", "View Columns.txt" })
+            var names = ItemKinds.All.Select(SavedFiltersName)
+                .Concat(ItemKinds.All.Select(k => Path.GetFileName(ViewColumnsFile(k))))
+                .Concat(new[] { "History.xml" });
+            foreach (var name in names)
             {
                 var local = Path.Combine(LocalFolder, name);
                 var shared = Path.Combine(SharedFolderCandidate, name);
@@ -108,6 +130,17 @@ namespace tinykit.OutlookAddin.Settings
                     File.Copy(local, shared);
                     Log.Info("Copied " + local + " to the shared settings folder " + shared);
                 }
+            }
+        }
+
+        private static void Rename(string folder, string from, string to)
+        {
+            var source = Path.Combine(folder, from);
+            var target = Path.Combine(folder, to);
+            if (File.Exists(source) && !File.Exists(target))
+            {
+                File.Move(source, target);
+                Log.Info("Renamed " + source + " to " + to);
             }
         }
 

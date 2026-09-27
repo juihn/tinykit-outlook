@@ -33,7 +33,8 @@ Shared settings files are kept in the personal OneDrive when this folder exists:
 ```
 %OneDriveConsumer%\.config\            (hidden; one folder per program)
     tinykit\
-        Outlook\   Saved Filters.xml, History.xml
+        Outlook\   Saved Filters - Mail.xml, Saved Filters - Contacts.xml, Saved Filters - Tasks.xml,
+                   View Columns - Mail.txt, View Columns - Contacts.txt, View Columns - Tasks.txt, History.xml
         Word\      (later)
 ```
 
@@ -43,7 +44,8 @@ Shared settings files are kept in the personal OneDrive when this folder exists:
 - **Always local:** `ViewState.xml` (each view's own filter) and `OutlookAddin.log` stay in `%APPDATA%\tinykit\Outlook\`.
 - `%OneDriveConsumer%` is the *personal* OneDrive (`%OneDrive%` can be a work account). If the variable is missing, the
   OneDrive client's registry entry is used.
-- The **Edit Saved Filters** tip and the header comment of `Saved Filters.xml` show where the settings are.
+- The **Edit Saved Filters** tip and the header comment of the saved filters files show where the settings are.
+- Files from before the per-kind split (`Saved Filters.xml`, `View Columns.txt`) are renamed to the `- Mail` files at startup.
 
 **To start sharing:** create the folder (or run `Register-Addin.ps1 -ShareSettings`) and restart Outlook.
 The current local files are copied there; the local copies stay as a backup.
@@ -55,28 +57,40 @@ The current local files are copied there; the local copies stay as a backup.
 
 ## **Tools** tab
 
-Groups, left to right: Custom Fields · Quick Filter · Clear · Saved Filters · View.
+Groups, left to right: Custom Mail Fields · Quick Filter · Clear · Saved Filters · View.
+The tab follows the kind of folder you are in:
+
+| Folder | Custom Mail Fields | Quick Filter | Saved Filters, View Columns |
+|---|---|---|---|
+| Mail | shown | F S / N D | `- Mail` files |
+| Contacts | hidden | F E / C D | `- Contacts` files |
+| Tasks | hidden | hidden | `- Tasks` files |
+| Other (calendar, notes, ...) | hidden | hidden | Saved Filters hidden |
 
 ### Quick Filter group
-One input box, then **F** (From) and **S** (Subject) on the second row and **N** (Name) and **D** (Domain) on the third, each followed by a ▼ drop-down.
-The filter shows mail whose field *contains* the value (`LIKE '%value%'`):
+One input box, then two rows of two buttons, each followed by a ▼ drop-down.
+The filter shows the items whose field *contains* the value (`LIKE '%value%'`):
 
-| Button | Column used |
-|---|---|
-| **F** | the From (sender) e-mail address |
-| **N** | `nameRelated` (taken from a mail without `▶ `, ` (+)`, `[ ]`/`( )`, so received and sent mail of the same person match) |
-| **S** | the subject (RE:/FW: ignored when taken from a mail) |
-| **D** | `domainRelated` |
+| Folder | Button | Column used |
+|---|---|---|
+| Mail | **F** | the From (sender) e-mail address |
+| Mail | **S** | the subject (RE:/FW: ignored when taken from a mail) |
+| Mail | **N** | `nameRelated` (taken from a mail without `▶ `, ` (+)`, `[ ]`/`( )`, so received and sent mail of the same person match) |
+| Mail | **D** | `domainRelated` |
+| Contacts | **F** | File As |
+| Contacts | **E** | E-mail, E-mail 2 or E-mail 3 |
+| Contacts | **C** | Company |
+| Contacts | **D** | Department |
 
-- **Button:** uses the text in the input box. If the box is empty, it uses the value of the first selected mail.
+- **Button:** uses the text in the input box. If the box is empty, it uses the value of the first selected mail or contact.
 - **▼:** opens a one-level list of that field's last 19 values as `[short date] value`. Clicking one filters by it and puts it in the box.
-  **Ctrl+click** removes it from the list.
+  **Ctrl+click** removes it from the list. Every field keeps its own list, so mail and contact values never mix.
 - The box keeps its text after filtering, so the same word can be tried with another field. **Clear Filter** empties it.
 
 ### Clear group
 - **Clear Filter** removes the quick or saved filter and restores the view's own filter (recorded in `ViewState.xml`, so it survives a restart).
 
-### Custom Fields group
+### Custom Mail Fields group (mail folders)
 The add-in writes these text columns (user properties) on mail and meeting items:
 
 | Column | Received mail | Mail I sent |
@@ -93,26 +107,32 @@ The add-in writes these text columns (user properties) on mail and meeting items
 - **Fill Fields** recomputes the selected items.
 - **Fill Missing** fills the current folder's items that have no `domainRelated` yet, e.g. mail that arrived while Outlook was closed.
 
-### Saved Filters group (from `Saved Filters.xml`)
-A first install starts with three saved filters, which you can edit or delete:
+### Saved Filters group (from `Saved Filters - Mail.xml`, `- Contacts.xml`, `- Tasks.xml`)
+Mail, contact and task folders each have their own saved filters file; the group shows the ones of the folder you are in.
+Each file starts with these saved filters, which you can edit or delete:
 
-| Filter | Shows | Format |
-|---|---|---|
-| **Flagged** | flagged (or completed) mail | red, off |
-| **Sent** | mail I sent (`me` = `▶`) | teal, underlined |
-| **Unknown** | received mail whose sender is not in Contacts (`nameRelated` not `[…]`) | gray |
+| File | Filter | Shows | Format |
+|---|---|---|---|
+| Mail | **Flagged** | flagged (or completed) mail | red, off |
+| Mail | **Sent** | mail I sent (`me` = `▶`) | teal, underlined |
+| Mail | **Unknown** | received mail whose sender is not in Contacts (`nameRelated` not `[…]`) | gray |
+| Contacts | **No Email** | contacts without any e-mail address | gray |
+| Contacts | **Flagged** | flagged contacts | red, off |
+| Tasks | **Active** | tasks not completed | bold, off |
+| Tasks | **Completed** | completed tasks | gray, strikeout |
+| Tasks | **High** | active tasks of high importance | red |
 
-Sent and Unknown use the Custom Fields, so older mail needs **Fill Missing** once.
+Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Missing** once.
 
 - **One toggle button per saved filter** (up to 20). Pressing it applies the filter's SQL as the view filter. Pressing it again restores the view's own filter.
 - **Format** (toggle) applies to the saved filter that is currently applied:
   - **Click:** turns its format on or off as conditional formatting.
   - **No format defined yet:** opens the Format dialog first, and the new format is turned on.
   - **Ctrl+click:** opens the Format dialog to edit it (font style, strikeout, underline, color). Font name and size follow the view (View Font).
-- **Add to Delete** adds the **subject** of each selected mail to the saved filter `Delete` (`subject = ...`).
-- **Add to Issue** adds the **domainRelated** of each selected mail to the saved filter `Issue` (`domainRelated = ...`). `Issue` is created right after `Delete` on first use.
+- **Add to Delete** (mail) adds the **subject** of each selected mail to the saved filter `Delete` (`subject = ...`).
+- **Add to Issue** (mail) adds the **domainRelated** of each selected mail to the saved filter `Issue` (`domainRelated = ...`). `Issue` is created right after `Delete` on first use.
   Both add one condition per line (`... OR` + new line) and skip values the filter already covers.
-- **Edit Saved Filters** opens `Saved Filters.xml` in VS Code (Notepad if not installed). Saved changes are picked up automatically; **Reload** forces it.
+- **Edit Saved Filters** opens the current folder kind's saved filters file in VS Code (Notepad if not installed). Saved changes are picked up automatically; **Reload** forces it.
 - **Save View as Filter...** saves the current view filter (e.g. one built in View Settings > Filter) as a saved filter.
 - **Refresh Formats** turns the formats back on (after All Formats Off) and rewrites the rules of all filters whose Format is on into the current view.
 - **All Formats Off** takes all saved filters' formats out of the views (`formatsOn="false"`). Each filter's Format on/off setting is kept, so Refresh Formats brings the same set back. Turning a filter's Format on also turns formats back on.
@@ -123,12 +143,13 @@ The rules are written to the view's *View Settings > Conditional Formatting* and
 Rules without that prefix are never changed. Color is limited to the 16 colors Outlook's conditional formatting supports.
 
 ### View group
-- **View Columns** replaces the columns of the current table view with the ones in `View Columns.txt`, in that order.
-  **Ctrl+click** opens the file in VS Code (Notepad if not installed). It is created with default columns on first use.
+- **View Columns** replaces the columns of the current table view with the ones in the View Columns file of the folder's
+  kind (`View Columns - Mail.txt`, `- Contacts.txt`, `- Tasks.txt`), in that order. **Ctrl+click** opens that file in
+  VS Code (Notepad if not installed). Each file is created with default columns on first use.
 - **View Font...** sets the font and size for the whole current table view: rows, and optionally column headers and all conditional
   formatting rules, which keep their own style and color.
 
-### Saved Filters.xml
+### Saved Filters - Mail.xml / - Contacts.xml / - Tasks.xml
 ```xml
 <SavedFilters autoApplyFormats="true" autoFillFields="true" formatsOn="true">
   <Filter name="Unread" formatEnabled="true">
@@ -141,7 +162,7 @@ Rules without that prefix are never changed. Color is limited to the 16 colors O
 `font` and `size` are optional. `color` takes `Auto`, a palette name, or `#RRGGBB` (mapped to the nearest palette color).
 The file is rewritten when you change settings from the ribbon, so comments you add will not be kept.
 
-### View Columns.txt
+### View Columns - Mail.txt / - Contacts.txt / - Tasks.txt
 One column per line. The fields are aligned with tabs (tab width 4); an empty field is just more tabs, and `#` lines are skipped:
 
 | Field | Starts at column | Meaning |
@@ -168,8 +189,8 @@ Size			9				3	Right
 The add-in's own fields (`domainRelated`, `nameRelated`, `me`, `tos`, `ccs`) are created in the folder automatically when missing.
 Columns that can't be added, or a Format that is not in a field's list, are reported; the other columns are still applied.
 
-Files: `Saved Filters.xml`, `History.xml` and `View Columns.txt` in the settings folder (see *Settings location*; an older `Filters.xml` is renamed
-automatically); `ViewState.xml` and `OutlookAddin.log` (errors) in `%APPDATA%\tinykit\Outlook\`.
+Files: `Saved Filters - <kind>.xml`, `View Columns - <kind>.txt` and `History.xml` in the settings folder (see *Settings location*;
+older `Filters.xml`, `Saved Filters.xml` and `View Columns.txt` are renamed automatically); `ViewState.xml` and `OutlookAddin.log` (errors) in `%APPDATA%\tinykit\Outlook\`.
 
 ## License
 

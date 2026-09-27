@@ -8,6 +8,7 @@ using System.Text;
 using System.Windows.Forms;
 using tinykit.OutlookAddin.Common;
 using tinykit.OutlookAddin.Filtering;
+using tinykit.OutlookAddin.Settings;
 using Office = Microsoft.Office.Core;
 using Outlook = Microsoft.Office.Interop.Outlook;
 
@@ -23,20 +24,19 @@ namespace tinykit.OutlookAddin.Ribbon
         private const string ExplorerRibbonId = "Microsoft.Outlook.Explorer";
         private const string SlotSeparator = "_";
 
-        // Quick filter rows, top to bottom, with what each one matches (shown in the tips).
-        private static readonly QuickKind[][] QuickRows =
-        {
-            new[] { QuickKind.From, QuickKind.Subject },
-            new[] { QuickKind.Name, QuickKind.Domain },
-        };
+        // Quick filter slots: two rows of two; which field a slot filters by depends on the folder
+        // (FilterController.QuickKindsFor: mail F S / N D, contacts F E / C D).
+        private const int QuickSlots = 4;
 
         /// <summary>
         /// The one-letter labels padded with narrow Unicode spaces to the widest one in the ribbon font, so the four
         /// buttons come out the same width. A zero-width non-joiner at the end keeps Office from trimming the padding.
         /// </summary>
+        private static readonly Dictionary<QuickKind, string> PaddedLabels = QuickLabels();
+
         private static Dictionary<QuickKind, string> QuickLabels()
         {
-            var kinds = QuickRows.SelectMany(r => r).ToArray();
+            var kinds = (QuickKind[])Enum.GetValues(typeof(QuickKind));
             char[] pads = { '\u2007', '\u2009', '\u200A' }; // figure, thin, hair space: widest first
             using (var font = new Font("Segoe UI", 9f))
             {
@@ -61,7 +61,7 @@ namespace tinykit.OutlookAddin.Ribbon
             }
         }
 
-        /// <summary>One-letter button label: F(rom), N(ame), S(ubject), D(omain).</summary>
+        /// <summary>One-letter button label: F(rom), N(ame), S(ubject), D(omain); F(ile As), E(mail), C(ompany), D(epartment).</summary>
         private static string QuickLabel(QuickKind kind)
         {
             return kind.ToString().Substring(0, 1);
@@ -80,9 +80,22 @@ namespace tinykit.OutlookAddin.Ribbon
                     return "Uses the subject: shows mail whose subject contains the value (RE:/FW: ignored when taken from a mail).";
                 case QuickKind.Domain:
                     return "Uses the domainRelated column: shows mail whose domainRelated contains the value "
-                         + "(the sender's domain label, e.g. gojek/invoicing; the first recipient's for mail you sent).";
+                         + "(the sender's domain label, e.g. fabrikam/billing; the first recipient's for mail you sent).";
+                case QuickKind.FileAs:
+                    return "Uses File As: shows contacts whose File As contains the value.";
+                case QuickKind.Email:
+                    return "Uses the e-mail addresses: shows contacts whose E-mail, E-mail 2 or E-mail 3 contains the value.";
+                case QuickKind.Company:
+                    return "Uses Company: shows contacts whose company contains the value.";
+                case QuickKind.Department:
+                    return "Uses Department: shows contacts whose department contains the value.";
             }
             return "";
+        }
+
+        private static string QuickName(QuickKind kind)
+        {
+            return kind == QuickKind.FileAs ? "File As" : kind.ToString();
         }
 
         private readonly FilterController _controller;
@@ -105,8 +118,8 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\" onLoad=\"OnLoad\">");
             sb.Append("<ribbon><tabs><tab id=\"tabOAFilter\" label=\"Tools\" insertAfterMso=\"TabMail\">");
 
-            // Custom fields (domainRelated, nameRelated, me, tos, ccs).
-            sb.Append("<group id=\"grpFields\" label=\"Custom Fields\">");
+            // Custom mail fields (domainRelated, nameRelated, me, tos, ccs): mail folders only.
+            sb.Append("<group id=\"grpFields\" label=\"Custom Mail Fields\" getVisible=\"GetMailVisible\">");
             sb.Append("<button id=\"cfFillSelected\" label=\"Fill Fields\" imageMso=\"PropertySheet\" onAction=\"OnFillSelected\"")
               .Append(" screentip=\"Fill Fields\" supertip=\"Fill domainRelated, nameRelated, me, tos and ccs of the selected items (recomputed).\"/>");
             sb.Append("<button id=\"cfFillMissing\" label=\"Fill Missing\" imageMso=\"FindDialog\" onAction=\"OnFillMissing\"")
@@ -115,18 +128,18 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" screentip=\"Auto-fill new mail\" supertip=\"Fill the fields of mail arriving in each account's Inbox and Sent Items.\"/>");
             sb.Append("</group>");
 
-            // Quick Filter: one input box, then F/N/S/D split buttons (filter | own history drop-down).
-            sb.Append("<group id=\"grpQuick\" label=\"Quick Filter\">");
+            // Quick Filter (mail and contact folders): one input box, then four buttons, each followed by its own
+            // history drop-down; what they filter by depends on the folder.
+            sb.Append("<group id=\"grpQuick\" label=\"Quick Filter\" getVisible=\"GetQuickVisible\">");
             sb.Append("<editBox id=\"qInput\" label=\"Value\" showLabel=\"false\" sizeString=\"WWWWWWWWWWm\"")
               .Append(" getText=\"GetInputText\" onChange=\"OnInputChange\" screentip=\"Quick filter value\"")
-              .Append(" supertip=\"Type a value, then press F, N, S or D to show mail whose field contains it. ")
-              .Append("Leave it empty to use the value of the first selected mail.\"/>");
-            var labels = QuickLabels();
-            foreach (var row in QuickRows)
+              .Append(" supertip=\"Type a value, then press a button below to show the items whose field contains it. ")
+              .Append("Leave it empty to use the value of the first selected mail or contact.\"/>");
+            for (int row = 0; row < QuickSlots / 2; row++)
             {
-                sb.Append("<box id=\"qRow").Append(row[0]).Append("\" boxStyle=\"horizontal\">");
-                foreach (var kind in row)
-                    AppendQuick(sb, kind, labels[kind]);
+                sb.Append("<box id=\"qRow").Append(row).Append("\" boxStyle=\"horizontal\">");
+                AppendQuick(sb, row * 2);
+                AppendQuick(sb, row * 2 + 1);
                 sb.Append("</box>");
             }
             sb.Append("</group>");
@@ -141,7 +154,7 @@ namespace tinykit.OutlookAddin.Ribbon
             // restart), formats of the applied one, Add to Delete/Issue, then the file and format management.
             var delete = FilterController.DeleteFilterName;
             var issue = FilterController.IssueFilterName;
-            sb.Append("<group id=\"grpSaved\" label=\"Saved Filters\">");
+            sb.Append("<group id=\"grpSaved\" label=\"Saved Filters\" getVisible=\"GetSavedGroupVisible\">");
             for (int i = 0; i < FilterController.MaxSavedFilters; i++)
             {
                 sb.Append("<toggleButton id=\"sf").Append(SlotSeparator).Append(i).Append("\" tag=\"").Append(i)
@@ -152,18 +165,18 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<toggleButton id=\"sfFormat\" label=\"Format\" imageMso=\"ConditionalFormattingMenu\"")
               .Append(" getPressed=\"GetApplyFormatPressed\" onAction=\"OnFormatToggle\" screentip=\"Format\" getSupertip=\"GetFormatSupertip\"/>");
             sb.Append("<button id=\"sfAddDelete\" label=\"Add to ").Append(delete).Append("\" imageMso=\"").Append(AddIcon)
-              .Append("\" onAction=\"OnAddToDelete\" screentip=\"Add to ").Append(delete)
+              .Append("\" getVisible=\"GetMailVisible\" onAction=\"OnAddToDelete\" screentip=\"Add to ").Append(delete)
               .Append("\" supertip=\"Adds the SUBJECT of each selected mail to the saved filter &quot;").Append(delete)
               .Append("&quot; (subject = ...), so mails with those subjects match it.\"/>");
             sb.Append("<button id=\"sfAddIssue\" label=\"Add to ").Append(issue).Append("\" imageMso=\"").Append(AddIcon)
-              .Append("\" onAction=\"OnAddToIssue\" screentip=\"Add to ").Append(issue)
+              .Append("\" getVisible=\"GetMailVisible\" onAction=\"OnAddToIssue\" screentip=\"Add to ").Append(issue)
               .Append("\" supertip=\"Adds the DOMAINRELATED value of each selected mail to the saved filter &quot;").Append(issue)
               .Append("&quot; (domainRelated = ...), so mails of those domains match it. The filter is created after &quot;")
               .Append(delete).Append("&quot; on first use.\"/>");
             sb.Append("<separator id=\"sepSaved2\"/>");
             sb.Append("<button id=\"mSettings\" label=\"Edit Saved Filters\" imageMso=\"").Append(XmlIcon)
-              .Append("\" onAction=\"OnOpenSettings\" screentip=\"Edit Saved Filters.xml\" getSupertip=\"GetSettingsSupertip\"/>");
-            sb.Append("<button id=\"mReload\" label=\"Reload\" imageMso=\"Refresh\" onAction=\"OnReload\" screentip=\"Reload Saved Filters.xml\"/>");
+              .Append("\" onAction=\"OnOpenSettings\" getScreentip=\"GetSettingsScreentip\" getSupertip=\"GetSettingsSupertip\"/>");
+            sb.Append("<button id=\"mReload\" label=\"Reload\" imageMso=\"Refresh\" onAction=\"OnReload\" getScreentip=\"GetReloadScreentip\"/>");
             sb.Append("<button id=\"mSaveView\" label=\"Save View as Filter...\" imageMso=\"FileSaveAs\" onAction=\"OnSaveViewFilter\"")
               .Append(" screentip=\"Save View as Filter\" supertip=\"Save the current view's filter (e.g. from View Settings &gt; Filter) as a saved filter.\"/>");
             sb.Append("<button id=\"mApplyFormats\" label=\"Refresh Formats\" imageMso=\"Refresh\" onAction=\"OnApplyFormats\"")
@@ -194,20 +207,18 @@ namespace tinykit.OutlookAddin.Ribbon
 
         /// <summary>
         /// A filter button followed by an arrow-only gallery of that field's recent values (a gallery placed directly
-        /// in the group opens in one click, and without item images it has no icon column).
+        /// in the group opens in one click, and without item images it has no icon column). Labels and tips come from
+        /// callbacks, because the field of a slot depends on the folder.
         /// </summary>
-        private static void AppendQuick(StringBuilder sb, QuickKind kind, string label)
+        private static void AppendQuick(StringBuilder sb, int slot)
         {
-            var k = kind.ToString();
-            var tip = SecurityElement.Escape(QuickTip(kind));
-            sb.Append("<button id=\"q").Append(k).Append("\" tag=\"").Append(k).Append("\" label=\"").Append(label)
-              .Append("\" imageMso=\"Filter\" onAction=\"OnQuick\" screentip=\"Filter by ").Append(k).Append("\" supertip=\"")
-              .Append(tip).Append(" Uses the text in the box; with the box empty, the value of the first selected mail. ")
-              .Append("The arrow next to it lists recent ").Append(k).Append(" values.\"/>");
-            sb.Append("<gallery id=\"qh").Append(k).Append("\" tag=\"").Append(k).Append("\" label=\"Recent ").Append(k)
-              .Append("\" showLabel=\"false\" columns=\"1\" showItemImage=\"false\" invalidateContentOnDrop=\"true\"")
+            sb.Append("<button id=\"q").Append(slot).Append("\" tag=\"").Append(slot)
+              .Append("\" getLabel=\"GetQuickLabel\" imageMso=\"Filter\" onAction=\"OnQuick\"")
+              .Append(" getScreentip=\"GetQuickScreentip\" getSupertip=\"GetQuickSupertip\"/>");
+            sb.Append("<gallery id=\"qh").Append(slot).Append("\" tag=\"").Append(slot).Append("\" label=\"Recent values\"")
+              .Append(" showLabel=\"false\" columns=\"1\" showItemImage=\"false\" invalidateContentOnDrop=\"true\"")
               .Append(" getItemCount=\"GetItemCount\" getItemLabel=\"GetItemLabel\" getItemID=\"GetItemID\" onAction=\"OnHistoryPick\"")
-              .Append(" screentip=\"Recent ").Append(k).Append(" values\" supertip=\"Click a value to filter by it (it also goes into the box). Ctrl+click removes it from this list.\"/>");
+              .Append(" getScreentip=\"GetHistoryScreentip\" supertip=\"Click a value to filter by it (it also goes into the box). Ctrl+click removes it from this list.\"/>");
         }
 
         // ---------- Callbacks ----------
@@ -217,9 +228,55 @@ namespace tinykit.OutlookAddin.Ribbon
             _ui = ribbonUI;
         }
 
+        public bool GetMailVisible(Office.IRibbonControl control)
+        {
+            return Safe(() => Focus(control) == ItemKind.Mail, true);
+        }
+
+        public bool GetQuickVisible(Office.IRibbonControl control)
+        {
+            return Safe(() => FilterController.QuickKindsFor(Focus(control)).Length > 0, true);
+        }
+
+        public bool GetSavedGroupVisible(Office.IRibbonControl control)
+        {
+            return Safe(() => Focus(control) != null, true);
+        }
+
+        public string GetQuickLabel(Office.IRibbonControl control)
+        {
+            return Safe(() => { var k = QuickKindOf(control); return k == null ? "" : PaddedLabels[k.Value]; }, "");
+        }
+
+        public string GetQuickScreentip(Office.IRibbonControl control)
+        {
+            return Safe(() => { var k = QuickKindOf(control); return k == null ? "" : "Filter by " + QuickName(k.Value); }, "");
+        }
+
+        public string GetQuickSupertip(Office.IRibbonControl control)
+        {
+            return Safe(() =>
+            {
+                var k = QuickKindOf(control);
+                return k == null ? "" : QuickTip(k.Value) + " Uses the text in the box; with the box empty, the value of the first selected "
+                    + (_controller.Kind == ItemKind.Contact ? "contact" : "mail") + ". The arrow next to it lists recent "
+                    + QuickName(k.Value) + " values.";
+            }, "");
+        }
+
+        public string GetHistoryScreentip(Office.IRibbonControl control)
+        {
+            return Safe(() => { var k = QuickKindOf(control); return k == null ? "" : "Recent " + QuickName(k.Value) + " values"; }, "");
+        }
+
         public void OnQuick(Office.IRibbonControl control)
         {
-            Run(control, ex => _controller.QuickButton(ex, KindOf(control)));
+            Run(control, ex =>
+            {
+                var k = QuickKindOf(control);
+                if (k != null)
+                    _controller.QuickButton(ex, k.Value);
+            });
         }
 
         public string GetInputText(Office.IRibbonControl control)
@@ -234,14 +291,17 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public int GetItemCount(Office.IRibbonControl control)
         {
-            return Safe(() => _controller.History.Get(KindOf(control)).Count, 0);
+            return Safe(() => { var k = QuickKindOf(control); return k == null ? 0 : _controller.History.Get(k.Value).Count; }, 0);
         }
 
         public string GetItemLabel(Office.IRibbonControl control, int index)
         {
             return Safe(() =>
             {
-                var list = _controller.History.Get(KindOf(control));
+                var k = QuickKindOf(control);
+                if (k == null)
+                    return "";
+                var list = _controller.History.Get(k.Value);
                 return index < list.Count ? list[index].Label : "";
             }, "");
         }
@@ -253,7 +313,12 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public void OnHistoryPick(Office.IRibbonControl control, string selectedId, int selectedIndex)
         {
-            Run(control, ex => _controller.QuickFromHistory(ex, KindOf(control), selectedIndex));
+            Run(control, ex =>
+            {
+                var k = QuickKindOf(control);
+                if (k != null)
+                    _controller.QuickFromHistory(ex, k.Value, selectedIndex);
+            });
         }
 
         public void OnClear(Office.IRibbonControl control)
@@ -263,25 +328,23 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public string GetSavedLabel(Office.IRibbonControl control)
         {
-            var f = _controller.FilterAt(SlotOf(control));
-            return f == null ? "" : f.Name;
+            return Safe(() => { Focus(control); var f = _controller.FilterAt(SlotOf(control)); return f == null ? "" : f.Name; }, "");
         }
 
         public bool GetSavedVisible(Office.IRibbonControl control)
         {
-            return _controller.FilterAt(SlotOf(control)) != null;
+            return Safe(() => { Focus(control); return _controller.FilterAt(SlotOf(control)) != null; }, false);
         }
 
         public string GetSavedSupertip(Office.IRibbonControl control)
         {
-            var f = _controller.FilterAt(SlotOf(control));
-            return f == null ? "" : FilterController.Truncate(f.Sql, 1000);
+            return Safe(() => { Focus(control); var f = _controller.FilterAt(SlotOf(control)); return f == null ? "" : FilterController.Truncate(f.Sql, 1000); }, "");
         }
 
         public bool GetSavedPressed(Office.IRibbonControl control)
         {
             var ex = control.Context as Outlook.Explorer;
-            return ex != null && Safe(() => _controller.IsSavedActive(ex, SlotOf(control)), false);
+            return ex != null && Safe(() => { Focus(control); return _controller.IsSavedActive(ex, SlotOf(control)); }, false);
         }
 
         public void OnSavedToggle(Office.IRibbonControl control, bool pressed)
@@ -292,7 +355,7 @@ namespace tinykit.OutlookAddin.Ribbon
         public string GetFormatSupertip(Office.IRibbonControl control)
         {
             var ex = control.Context as Outlook.Explorer;
-            var f = ex == null ? null : Safe(() => _controller.ActiveSavedFilter(ex), null);
+            var f = ex == null ? null : Safe(() => { Focus(control); return _controller.ActiveSavedFilter(ex); }, null);
             const string how = " Click: turn the format on/off in table views. Ctrl+click: edit it (style, strikeout, underline, color).";
             if (f == null)
                 return "Conditional formatting of the applied saved filter. Apply a saved filter first." + how;
@@ -305,7 +368,7 @@ namespace tinykit.OutlookAddin.Ribbon
         public bool GetApplyFormatPressed(Office.IRibbonControl control)
         {
             var ex = control.Context as Outlook.Explorer;
-            return ex != null && Safe(() => _controller.IsActiveFormatEnabled(ex), false);
+            return ex != null && Safe(() => { Focus(control); return _controller.IsActiveFormatEnabled(ex); }, false);
         }
 
         public void OnFormatToggle(Office.IRibbonControl control, bool pressed)
@@ -323,10 +386,31 @@ namespace tinykit.OutlookAddin.Ribbon
             Run(control, ex => _controller.AddSelectionToIssue(ex));
         }
 
+        public string GetSettingsScreentip(Office.IRibbonControl control)
+        {
+            return Safe(() => { Focus(control); return "Edit " + SettingsPaths.SavedFiltersName(_controller.Kind); }, "Edit Saved Filters");
+        }
+
+        public string GetReloadScreentip(Office.IRibbonControl control)
+        {
+            return Safe(() => { Focus(control); return "Reload " + SettingsPaths.SavedFiltersName(_controller.Kind); }, "Reload");
+        }
+
         public string GetSettingsSupertip(Office.IRibbonControl control)
         {
-            return Safe(() => "Open the saved filter definitions in VS Code (Notepad if VS Code is not installed). "
-                + "Saved changes are picked up automatically. " + Settings.SettingsPaths.Describe(), "");
+            return Safe(() =>
+            {
+                Focus(control);
+                return "Open the saved filters of " + FolderWord(_controller.Kind) + " folders ("
+                    + SettingsPaths.SavedFiltersName(_controller.Kind) + ") in VS Code (Notepad if VS Code is not installed). "
+                    + "Mail, contacts and tasks each have their own file. Saved changes are picked up automatically. "
+                    + SettingsPaths.Describe();
+            }, "");
+        }
+
+        private static string FolderWord(ItemKind kind)
+        {
+            return kind == ItemKind.Contact ? "contact" : kind == ItemKind.Task ? "task" : "mail";
         }
 
         public void OnOpenSettings(Office.IRibbonControl control)
@@ -366,9 +450,13 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public string GetViewColumnsSupertip(Office.IRibbonControl control)
         {
-            return Safe(() => "Replace the columns of the current table view with the ones in View Columns.txt "
-                + "(field, width, format, alignment, heading). Ctrl+click: edit the file. File: "
-                + Settings.SettingsPaths.ViewColumnsFile, "");
+            return Safe(() =>
+            {
+                var kind = Focus(control) ?? ItemKind.Mail;
+                return "Replace the columns of the current table view with the ones defined for " + FolderWord(kind)
+                    + " folders (field, width, format, alignment, heading). Mail, contacts and tasks each have their own file. "
+                    + "Ctrl+click: edit the file. File: " + SettingsPaths.ViewColumnsFile(kind);
+            }, "");
         }
 
         public void OnViewFont(Office.IRibbonControl control)
@@ -408,9 +496,18 @@ namespace tinykit.OutlookAddin.Ribbon
 
         // ---------- Helpers ----------
 
-        private static QuickKind KindOf(Office.IRibbonControl control)
+        /// <summary>Makes the kind of the control's explorer folder current in the controller; null for other folders.</summary>
+        private ItemKind? Focus(Office.IRibbonControl control)
         {
-            return (QuickKind)Enum.Parse(typeof(QuickKind), control.Tag);
+            return _controller.Focus(control.Context as Outlook.Explorer ?? Globals.ThisAddIn.Application.ActiveExplorer());
+        }
+
+        /// <summary>The field a quick filter slot filters by in the control's folder, or null if none.</summary>
+        private QuickKind? QuickKindOf(Office.IRibbonControl control)
+        {
+            var kinds = FilterController.QuickKindsFor(Focus(control));
+            int slot = SlotOf(control);
+            return slot >= 0 && slot < kinds.Length ? kinds[slot] : (QuickKind?)null;
         }
 
         private static int SlotOf(Office.IRibbonControl control)
@@ -426,6 +523,7 @@ namespace tinykit.OutlookAddin.Ribbon
             var explorer = control.Context as Outlook.Explorer ?? Globals.ThisAddIn.Application.ActiveExplorer();
             try
             {
+                _controller.Focus(explorer);
                 action(explorer);
             }
             catch (UserMessageException ex)
