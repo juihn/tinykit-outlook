@@ -80,37 +80,63 @@ namespace tinykit.OutlookAddin.Reports
             options.Controls.Add(_userBox);
 
             // Bottom: search, status and buttons.
-            var bottom = new Panel { Dock = DockStyle.Bottom, Height = 66, Padding = new Padding(8, 4, 8, 6) };
-            _search = new TextBox { Location = new Point(8, 6), Width = 150 };
-            var searchButton = new Button { Text = "Search", Location = new Point(162, 4), Size = new Size(70, 26) };
+            // Auto-sized rows and buttons, so the texts fit at any display scaling.
+            var bottom = new TableLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(6, 4, 6, 6),
+                ColumnCount = 3,
+                RowCount = 2,
+            };
+            bottom.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            bottom.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            _search = new TextBox { Width = 160, Anchor = AnchorStyles.Left, Margin = new Padding(2, 4, 4, 4) };
+            var searchButton = new Button { Text = "Search", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(8, 0, 8, 0) };
             _result = new TextBox
             {
-                Location = new Point(238, 8),
                 ReadOnly = true,
                 BorderStyle = BorderStyle.None,
                 BackColor = SystemColors.Control,
-                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right,
+                Margin = new Padding(8, 4, 2, 4),
             };
-            _status = new Label { UseMnemonic = false, Location = new Point(8, 40), AutoSize = false, Height = 20, ForeColor = Color.DimGray,
-                Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom, AutoEllipsis = true };
-            var copy = new Button { Text = "Copy Contents", Size = new Size(100, 26), Anchor = AnchorStyles.Right | AnchorStyles.Bottom };
-            var refresh = new Button { Text = "Refresh", Size = new Size(70, 26), Anchor = AnchorStyles.Right | AnchorStyles.Bottom };
-            var close = new Button { Text = "Close", Size = new Size(70, 26), Anchor = AnchorStyles.Right | AnchorStyles.Bottom };
+            _status = new Label { UseMnemonic = false, AutoSize = false, ForeColor = Color.DimGray, AutoEllipsis = true,
+                Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+            var buttons = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.RightToLeft,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = false,
+                Anchor = AnchorStyles.Right,
+                Margin = new Padding(0),
+            };
+            Func<string, Button> button = text => new Button { Text = text, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(8, 0, 8, 0), Margin = new Padding(6, 3, 0, 3) };
+            var copy = button("Copy Contents");
+            var refresh = button("Refresh");
+            var close = button("Close");
             searchButton.Click += (s, e) => Search();
             _search.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { Search(); e.SuppressKeyPress = true; } };
             copy.Click += (s, e) => { Clipboard.SetText(ContentsText()); _status.Text = "The report was copied to the clipboard."; };
             refresh.Click += (s, e) => Populate();
             close.Click += (s, e) => Close();
             CancelButton = close;
-            bottom.Controls.AddRange(new Control[] { _search, searchButton, _result, _status, copy, refresh, close });
-            bottom.Resize += (s, e) =>
-            {
-                _result.Width = Math.Max(50, bottom.ClientSize.Width - _result.Left - 8);
-                _status.Width = Math.Max(50, bottom.ClientSize.Width - 8 - 3 * 76 - 30 - 8);
-                close.Location = new Point(bottom.ClientSize.Width - 8 - close.Width, 36);
-                refresh.Location = new Point(close.Left - 6 - refresh.Width, 36);
-                copy.Location = new Point(refresh.Left - 6 - copy.Width, 36);
-            };
+            buttons.Controls.AddRange(new Control[] { close, refresh, copy }); // right to left
+            bottom.Controls.Add(_search, 0, 0);
+            bottom.Controls.Add(searchButton, 1, 0);
+            bottom.Controls.Add(_result, 2, 0);
+            var row2 = new TableLayoutPanel { ColumnCount = 2, RowCount = 1, Dock = DockStyle.Fill, AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0) };
+            row2.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            row2.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            row2.Controls.Add(_status, 0, 0);
+            row2.Controls.Add(buttons, 1, 0);
+            bottom.Controls.Add(row2, 0, 1);
+            bottom.SetColumnSpan(row2, 3);
 
             // Body: domains, departments and people.
             _body = new Panel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = SystemColors.Window };
