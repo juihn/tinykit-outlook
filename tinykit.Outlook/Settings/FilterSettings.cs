@@ -71,6 +71,9 @@ namespace tinykit.OutlookAddin.Settings
         /// <summary>Mail only: fill the custom mail fields of arriving mail.</summary>
         public bool AutoFillFields = true;
 
+        /// <summary>Mail only: when Outlook closes, clear the add-in's filters in every account's Inbox.</summary>
+        public bool ClearInboxFiltersOnExit = true;
+
         /// <summary>Global switch for the saved filters' formats: All Formats Off clears it, Refresh Formats sets it.
         /// Each filter's own formatEnabled is kept, so turning formats back on restores the same set.</summary>
         public bool FormatsOn = true;
@@ -84,6 +87,8 @@ namespace tinykit.OutlookAddin.Settings
                                                        each table view when you switch folders/views
                 autoFillFields=""true|false""           autoFillFields (Mail only): fill domainRelated/nameRelated/
                                                        me/tos/ccs of mail arriving in Inbox / Sent Items
+                clearInboxFiltersOnExit=""true|false""  clearInboxFiltersOnExit (Mail only): when Outlook closes,
+                                                       clear quick/saved filters in every account's Inbox
                 formatsOn=""true|false"">               formatsOn: all formats on/off (All Formats Off /
                                                        Refresh Formats); formatEnabled per filter is kept
     <Filter name=""Ribbon button label"" formatEnabled=""true|false"">
@@ -125,6 +130,7 @@ namespace tinykit.OutlookAddin.Settings
                 Kind = kind,
                 AutoApplyFormats = ParseBool(root.Attribute("autoApplyFormats"), true),
                 AutoFillFields = ParseBool(root.Attribute("autoFillFields"), true),
+                ClearInboxFiltersOnExit = ParseBool(root.Attribute("clearInboxFiltersOnExit"), true),
                 FormatsOn = ParseBool(root.Attribute("formatsOn"), true),
             };
             foreach (var e in root.Elements("Filter"))
@@ -159,6 +165,7 @@ namespace tinykit.OutlookAddin.Settings
                 new XElement("SavedFilters",
                     new XAttribute("autoApplyFormats", AutoApplyFormats ? "true" : "false"),
                     Kind == ItemKind.Mail ? new XAttribute("autoFillFields", AutoFillFields ? "true" : "false") : null,
+                    Kind == ItemKind.Mail ? new XAttribute("clearInboxFiltersOnExit", ClearInboxFiltersOnExit ? "true" : "false") : null,
                     new XAttribute("formatsOn", FormatsOn ? "true" : "false"),
                     Filters.Select(ToElement)));
             doc.Save(path);

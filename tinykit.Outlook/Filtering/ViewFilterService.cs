@@ -92,6 +92,49 @@ namespace tinykit.OutlookAddin.Filtering
         }
 
         /// <summary>
+        /// Clear for a folder, shown or not: every table view of <paramref name="folder"/> showing an add-in filter
+        /// gets its own filter back and is saved. When the explorer shows the folder, its live view is cleared the same
+        /// way as Clear Filter. Returns the number of views changed.
+        /// </summary>
+        public int ClearFolder(Outlook.MAPIFolder folder, Outlook.Explorer shownIn)
+        {
+            int changed = 0;
+            var entryId = folder.EntryID;
+            if (shownIn != null && string.Equals(shownIn.CurrentFolder.EntryID, entryId, StringComparison.Ordinal))
+            {
+                var live = GetTableView(shownIn);
+                if (live != null && (IsAddinFilter(live.Filter ?? "") || _originals.ContainsKey(ViewKey(shownIn, live))))
+                {
+                    Clear(shownIn);
+                    live.Save();
+                    changed++;
+                }
+            }
+            foreach (Outlook.View view in folder.Views)
+            {
+                if (view.ViewType != Outlook.OlViewType.olTableView)
+                    continue;
+                var key = entryId + "|" + view.Name;
+                var filter = view.Filter ?? "";
+                string original;
+                var recorded = _originals.TryGetValue(key, out original);
+                if (!recorded && !IsAddinFilter(filter))
+                    continue;
+                var restore = recorded && !IsAddinFilter(original) ? original : "";
+                if (!string.Equals(filter, restore, StringComparison.Ordinal))
+                {
+                    view.Filter = restore;
+                    view.Save();
+                    changed++;
+                }
+                _applied.Remove(key);
+                _originals.Remove(key);
+            }
+            SaveOriginals();
+            return changed;
+        }
+
+        /// <summary>
         /// Recognizes filters that are the add-in's own (e.g. a saved filter left on the view from an earlier
         /// session, or set by hand from its SQL). Those are never recorded or restored as the view's own filter.
         /// </summary>

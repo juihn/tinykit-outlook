@@ -1171,6 +1171,59 @@ namespace tinykit.OutlookAddin
             form.Show(WindowOwner.From(explorer));
         }
 
+        /// <summary>Kept in the mail saved filters file (clearInboxFiltersOnExit).</summary>
+        public bool ClearInboxFiltersOnExit
+        {
+            get { return State(ItemKind.Mail).Settings.ClearInboxFiltersOnExit; }
+        }
+
+        public void SetClearInboxFiltersOnExit(bool on)
+        {
+            ReloadIfChanged(ItemKind.Mail, _activeExplorer());
+            State(ItemKind.Mail).Settings.ClearInboxFiltersOnExit = on;
+            SaveSettings(ItemKind.Mail);
+        }
+
+        /// <summary>
+        /// Outlook is closing (its last window): clears the add-in's filters in the Inbox of every account, as Clear
+        /// Filter does, so Outlook opens with unfiltered Inboxes. Does nothing when the option is off.
+        /// </summary>
+        public void ClearInboxFiltersAtExit(Outlook.Application app, Outlook.Explorer closing)
+        {
+            if (!ClearInboxFiltersOnExit)
+                return;
+            var stores = new HashSet<string>(StringComparer.Ordinal);
+            int views = 0;
+            foreach (Outlook.Account account in app.Session.Accounts)
+            {
+                try
+                {
+                    var store = account.DeliveryStore;
+                    if (store == null || !stores.Add(store.StoreID))
+                        continue;
+                    views += Views.ClearFolder(store.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderInbox), closing);
+                }
+                catch (COMException ex)
+                {
+                    Log.Error("Clear Inbox filters at exit (" + SafeName(account) + ")", ex);
+                }
+            }
+            if (views > 0)
+                Log.Info("Cleared the filters of " + views + " Inbox view(s) at exit.");
+        }
+
+        private static string SafeName(Outlook.Account account)
+        {
+            try
+            {
+                return account.DisplayName;
+            }
+            catch (COMException)
+            {
+                return "?";
+            }
+        }
+
         /// <summary>Kept in the mail saved filters file (autoFillFields).</summary>
         public bool AutoFillFields
         {

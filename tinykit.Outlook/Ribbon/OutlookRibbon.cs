@@ -151,6 +151,9 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<group id=\"grpClear\" label=\"Clear\">");
             sb.Append("<button id=\"qClear\" label=\"Clear Filter\" size=\"large\" imageMso=\"FilterClearAllFilters\" onAction=\"OnClear\"")
               .Append(" screentip=\"Clear Filter\" supertip=\"Remove the quick or saved filter and restore the view's own filter.\"/>");
+            sb.Append("<checkBox id=\"qClearOnExit\" label=\"Clear Inboxes on exit\" getPressed=\"GetClearOnExitPressed\" onAction=\"OnClearOnExitToggle\"")
+              .Append(" screentip=\"Clear Inboxes on exit\" supertip=\"When Outlook closes, clear the quick, saved and Others filters in the ")
+              .Append("Inbox of every account (as Clear Filter does; the views' own filters stay), so Outlook opens with full Inboxes.\"/>");
             sb.Append("</group>");
 
             // Saved filters: a toggle per saved filter (fixed slots shown/hidden by callbacks, so edits need no
@@ -536,6 +539,16 @@ namespace tinykit.OutlookAddin.Ribbon
                 + "then refill unknownDomain of the selected mails and of this folder's mail from those domains. "
                 + "unknownDomain: * unknown sender domain, + known sender but an unknown recipient domain, - all known. "
                 + "Ctrl+click: edit the list. File: " + SettingsPaths.KnownDomainsFile, "");
+        }
+
+        public bool GetClearOnExitPressed(Office.IRibbonControl control)
+        {
+            return Safe(() => _controller.ClearInboxFiltersOnExit, true);
+        }
+
+        public void OnClearOnExitToggle(Office.IRibbonControl control, bool pressed)
+        {
+            Run(control, ex => _controller.SetClearInboxFiltersOnExit(pressed));
         }
 
         public bool GetAutoFillPressed(Office.IRibbonControl control)

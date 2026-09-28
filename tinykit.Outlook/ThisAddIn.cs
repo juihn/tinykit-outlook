@@ -113,6 +113,18 @@ namespace tinykit.OutlookAddin
 
             private void OnClose()
             {
+                // The last window closing means Outlook is exiting (Shutdown is no longer raised): folders are still
+                // reachable here, so clear the Inbox filters now if the option is on.
+                try
+                {
+                    if (_owner.Application.Explorers.Count <= 1)
+                        _owner.Controller.ClearInboxFiltersAtExit(_owner.Application, _explorer);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Clear Inbox filters at exit", ex);
+                }
+
                 var events = (Outlook.ExplorerEvents_10_Event)_explorer;
                 events.FolderSwitch -= OnChanged;
                 events.ViewSwitch -= OnChanged;

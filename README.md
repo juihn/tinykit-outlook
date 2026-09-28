@@ -95,6 +95,10 @@ The filter shows the items whose field *contains* the value (`LIKE '%value%'`):
 
 ### Clear group
 - **Clear Filter** removes the quick or saved filter and restores the view's own filter (recorded in `ViewState.xml`, so it survives a restart).
+- **Clear Inboxes on exit** (on by default): when Outlook closes (its last window), the quick, saved and Others filters are
+  cleared in every view of every account's Inbox, the same way as Clear Filter, so Outlook opens with full Inboxes.
+  Filters that are part of a view's own definition (View Settings > Filter) stay. Stored as `clearInboxFiltersOnExit` in
+  `Saved Filters - Mail.xml`.
 
 ### Custom Mail Fields group (mail folders)
 The add-in writes these text columns (user properties) on mail and meeting items:
