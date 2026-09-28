@@ -74,7 +74,28 @@ namespace tinykit.OutlookAddin.Formatting
             }
 
             ConditionalFormatService.SaveView(view, ownFilter);
+            Reselect(explorer, view, ownFilter);
             return problems;
+        }
+
+        /// <summary>
+        /// In some folders (seen in contact folders of a cached Exchange mailbox) View.Apply leaves the list showing rows
+        /// it did not read: dates "None", other cells empty, mail icons for contacts, until the list is sorted or the
+        /// folder is opened again. Selecting the (just saved) view again shows it properly. Skipped while a quick or
+        /// saved filter is shown, which re-selecting would drop (the saved view has the view's own filter).
+        /// </summary>
+        private static void Reselect(Outlook.Explorer explorer, Outlook.TableView view, string ownFilter)
+        {
+            if (ownFilter != null && ownFilter != (view.Filter ?? ""))
+                return;
+            try
+            {
+                explorer.CurrentView = view.Name;
+            }
+            catch (COMException ex)
+            {
+                Common.Log.Error("View Columns: reselect " + view.Name, ex);
+            }
         }
 
         private const string UserPropertyPrefix = "http://schemas.microsoft.com/mapi/string/{00020329-0000-0000-C000-000000000046}/";

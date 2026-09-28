@@ -83,7 +83,7 @@ The tab follows the kind of folder you are in:
 | Tasks | hidden | hidden | `- Tasks` files |
 | Other (calendar, notes, ...) | hidden | hidden | Saved Filters hidden |
 
-In calendar folders Clear, Mail Items and Table View are hidden too.
+In calendar folders Clear, Mail Items and Table View are hidden too, and Mail Items also in contact folders.
 
 Informational messages (results such as *Custom fields: 3 updated*, and hints such as *Select the mails first*) appear as
 Windows notifications under Outlook (classic), using the *urgent* scenario so they also show in Do Not Disturb. Errors,

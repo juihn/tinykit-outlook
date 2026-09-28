@@ -389,7 +389,7 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("</group>");
 
             // Items: tools for the selected items, in mail, contact and task folders alike.
-            sb.Append("<group id=\"grpItems\" label=\"Mail Items\" getVisible=\"GetNotCalendarVisible\">");
+            sb.Append("<group id=\"grpItems\" label=\"Mail Items\" getVisible=\"GetMailItemsVisible\">");
             sb.Append("<button id=\"cfRecipients\" label=\"Recipients Report\" imageMso=\"ContactProperties\" onAction=\"OnRecipientsReport\"")
               .Append(" screentip=\"Recipients Report\" supertip=\"Show the selected mail's sender and recipients grouped by domain and ")
               .Append("department (from Contacts). Blue: To, gray: Cc/Bcc; green: in Contacts. In the window, click a person to open the ")
@@ -625,6 +625,12 @@ namespace tinykit.OutlookAddin.Ribbon
         public bool GetNotCalendarVisible(Office.IRibbonControl control)
         {
             return Safe(() => !IsCalendar(control), true);
+        }
+
+        // Mail Items: not in calendar or contact folders.
+        public bool GetMailItemsVisible(Office.IRibbonControl control)
+        {
+            return Safe(() => !IsCalendar(control) && Focus(control) != ItemKind.Contact, true);
         }
 
         // Calendar Items: calendar folders only.
