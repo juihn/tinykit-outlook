@@ -98,6 +98,27 @@ namespace tinykit.OutlookAddin.Ribbon
             return kind == QuickKind.FileAs ? "File As" : kind.ToString();
         }
 
+        // Outlook's own commands shown in the Built-in group: one array per column, null = separator line.
+        // Only one of MarkAsRead / MarkAsUnread is visible at a time (Outlook shows the one that applies).
+        private static readonly string[][] BuiltInColumns =
+        {
+            new[] { "CategorizeMenu", "AllCategories", "MoveToOneNote" },
+            new[] { "AddressBook", "ShowRemindersWindow" },
+            null,
+            new[] { "FlagNoDate", "ClearFlag", "MoveToFolderGallery" },
+            new[] { "MarkAsRead", "MarkAsUnread", "ShowInConversations", "FindRelatedMessages" },
+        };
+
+        // Built-in commands that have no icon of their own (they live in menus), with the image to show instead.
+        private static readonly Dictionary<string, string> BuiltInImages = new Dictionary<string, string>
+        {
+            { "ClearFlag", "Delete" },
+            { "FindRelatedMessages", "GroupConversations" },
+        };
+
+        // Built-in check boxes: showLabel does not apply to them, so their label is replaced by a blank one.
+        private static readonly HashSet<string> BuiltInCheckBoxes = new HashSet<string> { "ShowInConversations" };
+
         private readonly FilterController _controller;
         private Office.IRibbonUI _ui;
 
@@ -117,6 +138,31 @@ namespace tinykit.OutlookAddin.Ribbon
             var sb = new StringBuilder();
             sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\" onLoad=\"OnLoad\">");
             sb.Append("<ribbon><tabs><tab id=\"tabOAFilter\" label=\"TinyKit\" insertAfterMso=\"TabMail\">");
+
+            // Built-in: frequently used Outlook commands, icon only, in columns.
+            sb.Append("<group id=\"grpBuiltIn\" label=\"Built-in\">");
+            int separators = 0;
+            foreach (var column in BuiltInColumns)
+            {
+                if (column == null)
+                {
+                    sb.Append("<separator id=\"biSep").Append(separators++).Append("\"/>");
+                    continue;
+                }
+                sb.Append("<box id=\"bi").Append(column[0]).Append("\" boxStyle=\"vertical\">");
+                foreach (var idMso in column)
+                {
+                    string image;
+                    if (BuiltInCheckBoxes.Contains(idMso))
+                        sb.Append("<checkBox idMso=\"").Append(idMso).Append("\" label=\" \"/>");
+                    else if (BuiltInImages.TryGetValue(idMso, out image))
+                        sb.Append("<button idMso=\"").Append(idMso).Append("\" imageMso=\"").Append(image).Append("\" showLabel=\"false\"/>");
+                    else
+                        sb.Append("<control idMso=\"").Append(idMso).Append("\" showLabel=\"false\"/>");
+                }
+                sb.Append("</box>");
+            }
+            sb.Append("</group>");
 
             // Custom mail fields (domainRelated, nameRelated, me, tos, ccs, unknownDomain): mail folders only.
             sb.Append("<group id=\"grpFields\" label=\"Custom Mail Fields\" getVisible=\"GetMailVisible\">");
@@ -149,12 +195,12 @@ namespace tinykit.OutlookAddin.Ribbon
 
             // Clear.
             sb.Append("<group id=\"grpClear\" label=\"Clear\">");
-            sb.Append("<button id=\"qClear\" label=\"Clear Filter\" size=\"large\" imageMso=\"FilterClearAllFilters\" onAction=\"OnClear\"")
-              .Append(" screentip=\"Clear Filter\" supertip=\"Remove the quick or saved filter and restore the view's own filter.\"/>");
             sb.Append("<toggleButton id=\"qClearOnExit\" label=\"Clear Inboxes on Exit\" size=\"large\" imageMso=\"FilterClearAllFilters\"")
               .Append(" getPressed=\"GetClearOnExitPressed\" onAction=\"OnClearOnExitToggle\"")
               .Append(" screentip=\"Clear Inboxes on exit\" supertip=\"When Outlook closes, clear the quick, saved and Others filters in the ")
               .Append("Inbox of every account (as Clear Filter does; the views' own filters stay), so Outlook opens with full Inboxes.\"/>");
+            sb.Append("<button id=\"qClear\" label=\"Clear Filter\" size=\"large\" imageMso=\"FilterClearAllFilters\" onAction=\"OnClear\"")
+              .Append(" screentip=\"Clear Filter\" supertip=\"Remove the quick or saved filter and restore the view's own filter.\"/>");
             sb.Append("</group>");
 
             // Saved filters: a toggle per saved filter (fixed slots shown/hidden by callbacks, so edits need no

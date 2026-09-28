@@ -58,7 +58,7 @@ The current local files are copied there; the local copies stay as a backup.
 
 ## **TinyKit** tab
 
-Groups, left to right: Custom Mail Fields · Quick Filter · Clear · Saved Filters · Items · View.
+Groups, left to right: Built-in · Custom Mail Fields · Quick Filter · Clear · Saved Filters · Items · View.
 The tab follows the kind of folder you are in:
 
 | Folder | Custom Mail Fields | Quick Filter | Saved Filters, View Columns |
@@ -72,6 +72,18 @@ Informational messages (results such as *Custom fields: 3 updated*, and hints su
 Windows notifications under Outlook (classic), using the *urgent* scenario so they also show in Do Not Disturb. Errors,
 warnings and questions stay message boxes. If Outlook's notifications are turned off in Windows Settings, message boxes
 are used instead.
+
+### Built-in group
+Frequently used Outlook commands, icons only, in columns (the list is `BuiltInColumns` in `OutlookRibbon.cs`):
+- Categorize, All Categories, Send to OneNote
+- Address Book, Reminders Window
+- *separator*
+- Flag (no date), Clear Flag, Move to Folder
+- Mark as Read / Mark as Unread (only the one that applies is shown), Show as Conversations (check box, no label),
+  Messages in this Conversation
+
+Outlook enables and disables them as on its own tabs. Clear Flag and Messages in this Conversation have no icon of
+their own (they live in menus), so they get Delete and GroupConversations.
 
 ### Quick Filter group
 One input box, then two rows of two buttons, each followed by a ▼ drop-down.
@@ -94,9 +106,9 @@ The filter shows the items whose field *contains* the value (`LIKE '%value%'`):
 - The box keeps its text after filtering, so the same word can be tried with another field. **Clear Filter** empties it.
 
 ### Clear group
-- **Clear Filter** removes the quick or saved filter and restores the view's own filter (recorded in `ViewState.xml`, so it survives a restart).
 - **Clear Inboxes on Exit** (toggle button, on by default): when Outlook closes (its last window), the quick, saved and Others filters are
   cleared in every view of every account's Inbox, the same way as Clear Filter, so Outlook opens with full Inboxes.
+- **Clear Filter** removes the quick or saved filter and restores the view's own filter (recorded in `ViewState.xml`, so it survives a restart).
   Filters that are part of a view's own definition (View Settings > Filter) stay. Stored as `clearInboxFiltersOnExit` in
   `Saved Filters - Mail.xml`.
 
