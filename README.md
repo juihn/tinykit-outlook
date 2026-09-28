@@ -100,6 +100,9 @@ In contact folders a last column adds two buttons of the add-in's own:
 - **Default Contact Form** sets the selected contacts' message class to `IPM.Contact`, so they open with Outlook's form.
 - **<custom form>** (e.g. *myContactForm*) sets it to the custom form that is the default form of this contact folder
   (or else of the default Contacts folder), e.g. `IPM.Contact.myContactForm`. Hidden when no such form is set.
+- Outlook keeps using the old form for an item it has in memory, so after a change both buttons clear the selection,
+  briefly switch to the Inbox (with the window's painting suspended, so it does not flicker), come back and select
+  the same contacts again. If a contact still opens with the old form, restart Outlook.
 
 Outlook enables and disables them as on its own tabs. Clear Flag and Messages in this Conversation have no icon of
 their own (they live in menus), so they get Delete and GroupConversations.
@@ -276,6 +279,27 @@ Columns that can't be added, or a Format that is not in a field's list, are repo
 
 Files: `Saved Filters - <kind>.xml`, `View Columns - <kind>.txt` and `History.xml` in the settings folder (see *Settings location*;
 older `Filters.xml`, `Saved Filters.xml` and `View Columns.txt` are renamed automatically); `ViewState.xml` and `OutlookAddin.log` (errors) in `%APPDATA%\tinykit\Outlook\`.
+
+## **TinyKit** tab in a received mail's window
+Before the window's Message tab, with one **Message** group:
+- Delete, Archive, Send to OneNote · Follow Up, Flag (no date), Clear Flag · Translate, Show Original, translation
+  preferences · Approve / Reject (approval requests only) · Find · Edit Message: Outlook's own commands.
+- **Recipients Report** of the open mail, as in the Items group.
+
+## **TinyKit** tab in a contact's window
+Before the window's Contact tab, with one **Built-in** group:
+- General, Details, All Fields (the window's pages).
+- **Open in Google Map** (the business address, or else home or other), Delete, Save & Close.
+- **Contact Picture** (large, shows the contact's picture): adds a picture, or changes it; **Shift+click** removes it.
+- **Default Message Class** / **Custom Message Class**: make this contact open with Outlook's form (`IPM.Contact`) or with
+  the Contacts folder's custom form (e.g. `IPM.Contact.myContactForm`); it takes effect when the contact is opened again.
+- **Copy to Clipboard**: `company / department / name (job title)`, e-mail, `T.`phone, `M.`mobile, tab-separated;
+  **Shift+click** keeps the clipboard's text after it.
+
+Other add-ins can add their own groups to this tab: declare `xmlns:tk="tinykit"` in their ribbon XML and use
+`<tab idQ="tk:ContactTab" label="TinyKit" insertBeforeMso="TabContact">`. To put a group right after Built-in, give it
+`idQ="tk:AfterBuiltIn"` and `insertAfterQ="tk:ContactBuiltIn"`: Outlook merges groups in load order and ignores a
+reference to a group not loaded yet, so Built-in also names `tk:AfterBuiltIn` in its `insertBeforeQ`.
 
 ## License
 

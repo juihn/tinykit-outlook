@@ -22,6 +22,12 @@ namespace tinykit.OutlookAddin.Ribbon
     public class OutlookRibbon : Office.IRibbonExtensibility
     {
         private const string ExplorerRibbonId = "Microsoft.Outlook.Explorer";
+        private const string ReadMailRibbonId = "Microsoft.Outlook.Mail.Read";
+        private const string ContactRibbonId = "Microsoft.Outlook.Contact";
+
+        // Namespace of the qualified ids (idQ) that other add-ins use to add groups to TinyKit's tabs:
+        // xmlns:tk="tinykit" and <tab idQ="tk:ContactTab"> (contact window), after <group idQ="tk:ContactBuiltIn">.
+        private const string SharedNamespace = "tinykit";
         private const string SlotSeparator = "_";
 
         // Quick filter slots: two rows of two; which field a slot filters by depends on the folder
@@ -121,6 +127,7 @@ namespace tinykit.OutlookAddin.Ribbon
 
         private readonly FilterController _controller;
         private Office.IRibbonUI _ui;
+        private Office.IRibbonUI _contactUi; // shared by all contact windows
 
         internal OutlookRibbon(FilterController controller)
         {
@@ -130,7 +137,91 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public string GetCustomUI(string ribbonID)
         {
-            return ribbonID == ExplorerRibbonId ? BuildXml() : null;
+            if (ribbonID == ExplorerRibbonId)
+                return BuildXml();
+            if (ribbonID == ReadMailRibbonId)
+                return BuildReadMailXml();
+            if (ribbonID == ContactRibbonId)
+                return BuildContactXml();
+            return null;
+        }
+
+        /// <summary>
+        /// A contact's window: a TinyKit tab before its Contact tab, with one Built-in group. The tab and group have
+        /// qualified ids (idQ, namespace <see cref="SharedNamespace"/>) so other add-ins can add groups to this tab.
+        /// </summary>
+        private static string BuildContactXml()
+        {
+            var sb = new StringBuilder();
+            sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\" xmlns:tk=\"")
+              .Append(SharedNamespace).Append("\" onLoad=\"OnContactLoad\">");
+            sb.Append("<ribbon><tabs><tab idQ=\"tk:ContactTab\" label=\"TinyKit\" insertBeforeMso=\"TabContact\">");
+            // insertBeforeQ: an add-in that loads before tinykit and wants its group after Built-in names it tk:AfterBuiltIn.
+            sb.Append("<group idQ=\"tk:ContactBuiltIn\" label=\"Built-in\" insertBeforeQ=\"tk:AfterBuiltIn\">");
+            sb.Append("<box id=\"ctPages\" boxStyle=\"vertical\">")
+              .Append("<toggleButton idMso=\"ShowContactPage\"/>")
+              .Append("<toggleButton idMso=\"ShowDetailsPage\"/>")
+              .Append("<toggleButton idMso=\"ShowAllFieldsPage\"/>")
+              .Append("</box>");
+            sb.Append("<box id=\"ctActions\" boxStyle=\"vertical\">")
+              .Append("<button id=\"ctMap\" label=\"Open in Google Map\" imageMso=\"MapContactAddress\" onAction=\"OnContactMap\"")
+              .Append(" screentip=\"Open in Google Map\" supertip=\"Search the contact's business address (or else home, other) in Google Maps.\"/>")
+              .Append("<button idMso=\"Delete\"/>")
+              .Append("<button idMso=\"SaveAndClose\"/>")
+              .Append("</box>");
+            sb.Append("<button id=\"ctPicture\" label=\"Contact Picture\" size=\"large\" getImage=\"GetContactPicture\" onAction=\"OnContactPicture\"")
+              .Append(" screentip=\"Contact Picture\" supertip=\"Add a picture, or change it. Shift+click removes it.\"/>");
+            sb.Append("<box id=\"ctForms\" boxStyle=\"vertical\">")
+              .Append("<button id=\"ctFormDefault\" label=\"Default Message Class\" imageMso=\"AccessListContacts\" onAction=\"OnContactDefaultForm\"")
+              .Append(" screentip=\"Default Message Class\" supertip=\"Make this contact open with Outlook's own contact form (IPM.Contact).\"/>")
+              .Append("<button id=\"ctFormCustom\" label=\"Custom Message Class\" imageMso=\"AccessTableContacts\" onAction=\"OnContactCustomForm\"")
+              .Append(" getEnabled=\"GetContactCustomEnabled\" screentip=\"Custom Message Class\" getSupertip=\"GetContactCustomSupertip\"/>")
+              .Append("<button id=\"ctCopy\" label=\"Copy to Clipboard\" imageMso=\"GroupClipboard\" onAction=\"OnContactCopy\"")
+              .Append(" screentip=\"Copy to Clipboard\" supertip=\"Copy company / department / name (job title), e-mail and phone numbers, ")
+              .Append("tab-separated. Shift+click keeps the clipboard's text after it.\"/>")
+              .Append("</box>");
+            sb.Append("</group>");
+            sb.Append("</tab></tabs></ribbon></customUI>");
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// The window of a received mail: a TinyKit tab before its Message tab, with a Message group of Outlook's own
+        /// commands plus Recipients Report.
+        /// </summary>
+        private static string BuildReadMailXml()
+        {
+            var sb = new StringBuilder();
+            sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\">");
+            sb.Append("<ribbon><tabs><tab id=\"tabReadTinyKit\" label=\"TinyKit\" insertBeforeMso=\"TabReadMessage\">");
+            sb.Append("<group id=\"grpReadMessage\" label=\"Message\">");
+            sb.Append("<box id=\"rmDelete\" boxStyle=\"vertical\">")
+              .Append("<button idMso=\"Delete\"/>")
+              .Append("<button idMso=\"MoveToArchiveFolder\"/>")
+              .Append("<button idMso=\"MoveToOneNote\"/>")
+              .Append("</box>");
+            sb.Append("<box id=\"rmFlag\" boxStyle=\"vertical\">")
+              .Append("<menu idMso=\"FollowUpReadMenu\"/>")
+              .Append("<toggleButton idMso=\"FlagNoDate\"/>")
+              .Append("<button idMso=\"ClearFlag\" imageMso=\"Delete\"/>")
+              .Append("</box>");
+            sb.Append("<box id=\"rmTranslate\" boxStyle=\"vertical\">")
+              .Append("<button idMso=\"TranslateMessage\"/>")
+              .Append("<button idMso=\"ShowOriginalMessage\"/>")
+              .Append("<button idMso=\"InlineTranslationRibbonPreferences\" imageMso=\"TranslateMenu\"/>")
+              .Append("</box>");
+            sb.Append("<box id=\"rmApproval\">")
+              .Append("<button idMso=\"ApproveApprovalRequest\" size=\"large\"/>")
+              .Append("<button idMso=\"RejectApprovalRequest\" size=\"large\"/>")
+              .Append("</box>");
+            sb.Append("<button idMso=\"FindDialog\" showLabel=\"false\"/>");
+            sb.Append("<button id=\"rmRecipients\" label=\"Recipients Report\" showLabel=\"false\" imageMso=\"ContactCardViewMySite\"")
+              .Append(" onAction=\"OnReadRecipientsReport\" screentip=\"Recipients Report\" supertip=\"Show this mail's sender and ")
+              .Append("recipients grouped by domain and department (from Contacts).\"/>");
+            sb.Append("<button idMso=\"EditMessage\" imageMso=\"EditPage\" showLabel=\"false\"/>");
+            sb.Append("</group>");
+            sb.Append("</tab></tabs></ribbon></customUI>");
+            return sb.ToString();
         }
 
         private static string BuildXml()
@@ -305,6 +396,122 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnLoad(Office.IRibbonUI ribbonUI)
         {
             _ui = ribbonUI;
+        }
+
+        // ---------- Contact window ----------
+
+        public void OnContactLoad(Office.IRibbonUI ribbonUI)
+        {
+            _contactUi = ribbonUI;
+        }
+
+        public Bitmap GetContactPicture(Office.IRibbonControl control)
+        {
+            return Safe(() =>
+            {
+                var inspector = control.Context as Outlook.Inspector;
+                return Contacts.ContactCommands.PictureOf(inspector == null ? null : inspector.CurrentItem as Outlook.ContactItem)
+                    ?? PictureFromMso(inspector, "OrgChartPictureInsert");
+            }, null);
+        }
+
+        // An Office icon as a bitmap (a picture-less contact shows this instead).
+        private static Bitmap PictureFromMso(Outlook.Inspector inspector, string imageMso)
+        {
+            if (inspector == null)
+                return null;
+            var picture = inspector.CommandBars.GetImageMso(imageMso, 32, 32);
+            return picture == null ? null : new Bitmap(PictureConverter.ToImage(picture));
+        }
+
+        private sealed class PictureConverter : AxHost
+        {
+            private PictureConverter() : base("") { }
+
+            public static Image ToImage(object picture)
+            {
+                return GetPictureFromIPicture(picture);
+            }
+        }
+
+        private void RunContact(Office.IRibbonControl control, Action<Outlook.Inspector, Outlook.ContactItem> action)
+        {
+            var inspector = control.Context as Outlook.Inspector;
+            try
+            {
+                action(inspector, Contacts.ContactCommands.ContactOf(inspector));
+            }
+            catch (UserMessageException ex)
+            {
+                Notifier.Info(null, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(control.Id, ex);
+                MessageBox.Show(WindowOwner.From(inspector), ex.Message, ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        public void OnContactMap(Office.IRibbonControl control)
+        {
+            RunContact(control, (i, c) => Contacts.ContactCommands.OpenInGoogleMaps(c));
+        }
+
+        public void OnContactPicture(Office.IRibbonControl control)
+        {
+            bool shift = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
+            RunContact(control, (i, c) =>
+            {
+                Contacts.ContactCommands.EditPicture(i, c, shift);
+                if (_contactUi != null)
+                    _contactUi.InvalidateControl("ctPicture");
+            });
+        }
+
+        public void OnContactDefaultForm(Office.IRibbonControl control)
+        {
+            RunContact(control, (i, c) => Notifier.Info(null, Contacts.ContactCommands.SetForm(c, FilterController.DefaultContactForm)));
+        }
+
+        public void OnContactCustomForm(Office.IRibbonControl control)
+        {
+            RunContact(control, (i, c) =>
+            {
+                var form = Contacts.ContactCommands.CustomForm(c);
+                if (form == null)
+                    throw new UserMessageException("The Contacts folder has no custom form (its default form is Outlook's own).");
+                Notifier.Info(null, Contacts.ContactCommands.SetForm(c, form));
+            });
+        }
+
+        public bool GetContactCustomEnabled(Office.IRibbonControl control)
+        {
+            return Safe(() =>
+            {
+                var inspector = control.Context as Outlook.Inspector;
+                return Contacts.ContactCommands.CustomForm(inspector == null ? null : inspector.CurrentItem as Outlook.ContactItem) != null;
+            }, true);
+        }
+
+        public string GetContactCustomSupertip(Office.IRibbonControl control)
+        {
+            return Safe(() =>
+            {
+                var inspector = control.Context as Outlook.Inspector;
+                var form = Contacts.ContactCommands.CustomForm(inspector == null ? null : inspector.CurrentItem as Outlook.ContactItem);
+                return form == null ? "The Contacts folder has no custom form (Folder Properties > When posting to this folder, use)."
+                    : "Make this contact open with the Contacts folder's form (" + form + ").";
+            }, "");
+        }
+
+        public void OnContactCopy(Office.IRibbonControl control)
+        {
+            bool shift = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
+            RunContact(control, (i, c) =>
+            {
+                Contacts.ContactCommands.CopyToClipboard(c, shift);
+                Notifier.Info(null, "Copied " + c.Subject + " to the clipboard" + (shift ? ", before its previous text." : "."));
+            });
         }
 
         public bool GetMailVisible(Office.IRibbonControl control)
@@ -628,6 +835,26 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnRecipientsReport(Office.IRibbonControl control)
         {
             Run(control, ex => _controller.ShowRecipientsReport(ex));
+        }
+
+        public void OnReadRecipientsReport(Office.IRibbonControl control)
+        {
+            var inspector = control.Context as Outlook.Inspector;
+            try
+            {
+                if (inspector == null)
+                    throw new UserMessageException("Open a mail first.");
+                _controller.ShowRecipientsReport(inspector.CurrentItem, inspector);
+            }
+            catch (UserMessageException ex)
+            {
+                Notifier.Info(null, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(control.Id, ex);
+                MessageBox.Show(WindowOwner.From(inspector), ex.Message, ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         public void OnCopyItems(Office.IRibbonControl control)

@@ -1158,17 +1158,28 @@ namespace tinykit.OutlookAddin
         /// <summary>Recipients Report: the first selected mail's recipients by domain and department, in a window.</summary>
         public void ShowRecipientsReport(Outlook.Explorer explorer)
         {
-            var item = FirstSelected(explorer);
+            ShowRecipientsReport(FirstSelected(explorer), explorer);
+        }
+
+        /// <summary>Recipients Report of the given item, owned by the given Explorer or Inspector.</summary>
+        public void ShowRecipientsReport(object item, object ownerWindow)
+        {
             if (item == null || ItemView.From(item) == null)
                 throw new UserMessageException("Select a mail (or meeting request) first.");
             dynamic d = item;
             string entryId = d.EntryID;
-            string storeId = ((Outlook.MAPIFolder)d.Parent).StoreID;
             var app = Globals.ThisAddIn.Application;
+            Func<object> read;
+            if (string.IsNullOrEmpty(entryId))
+                read = () => item; // not in a store (e.g. a .msg file opened from disk)
+            else
+            {
+                string storeId = ((Outlook.MAPIFolder)d.Parent).StoreID;
+                read = () => app.Session.GetItemFromID(entryId, storeId);
+            }
             // Refresh re-reads the item, so edits (e.g. a contact added meanwhile) show up.
-            var form = new Reports.RecipientsReportForm(app,
-                () => Reports.RecipientsReport.Build(app.Session.GetItemFromID(entryId, storeId), Fields.Calculator));
-            form.Show(WindowOwner.From(explorer));
+            var form = new Reports.RecipientsReportForm(app, () => Reports.RecipientsReport.Build(read(), Fields.Calculator));
+            form.Show(WindowOwner.From(ownerWindow));
         }
 
         public const string DefaultContactForm = "IPM.Contact";
@@ -1201,7 +1212,7 @@ namespace tinykit.OutlookAddin
                 ?? CustomFormOf(Globals.ThisAddIn.Application.Session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderContacts));
         }
 
-        private static string CustomFormOf(Outlook.MAPIFolder folder)
+        internal static string CustomFormOf(Outlook.MAPIFolder folder)
         {
             if (folder == null || folder.DefaultItemType != Outlook.OlItemType.olContactItem)
                 return null;
@@ -1232,6 +1243,8 @@ namespace tinykit.OutlookAddin
                 throw new UserMessageException("Select the contacts first.");
 
             int changed = 0, already = 0, skipped = 0;
+            var selected = new List<string>(); // entry IDs, to select them again after the refresh
+            string storeId = null;
             var cursor = Cursor.Current;
             Cursor.Current = Cursors.WaitCursor;
             try
@@ -1244,13 +1257,19 @@ namespace tinykit.OutlookAddin
                         var contact = item as Outlook.ContactItem;
                         if (contact == null)
                             skipped++;
-                        else if (string.Equals(contact.MessageClass, messageClass, StringComparison.OrdinalIgnoreCase))
-                            already++;
                         else
                         {
-                            contact.MessageClass = messageClass;
-                            contact.Save();
-                            changed++;
+                            selected.Add(contact.EntryID);
+                            if (storeId == null)
+                                storeId = ((Outlook.MAPIFolder)contact.Parent).StoreID;
+                            if (string.Equals(contact.MessageClass, messageClass, StringComparison.OrdinalIgnoreCase))
+                                already++;
+                            else
+                            {
+                                contact.MessageClass = messageClass;
+                                contact.Save();
+                                changed++;
+                            }
                         }
                     }
                     finally
@@ -1262,9 +1281,72 @@ namespace tinykit.OutlookAddin
             finally
             {
                 Cursor.Current = cursor;
+                Marshal.ReleaseComObject(selection);
             }
+            if (changed > 0)
+                RefreshForms(explorer, selected, storeId);
             Notifier.Info(explorer, FormName(messageClass) + " form: " + changed + (changed == 1 ? " contact" : " contacts") + " changed"
                 + (already > 0 ? ", " + already + " already had it" : "") + (skipped > 0 ? ", " + skipped + " other items skipped" : "") + ".");
+        }
+
+        /// <summary>
+        /// Outlook keeps its in-memory copy of an item, with the form it was opened with, while anything refers to it
+        /// (the reading pane, the selection), so a changed message class shows only after a restart. Dropping the
+        /// selection and visiting a mail folder (other folder types do not always do it) lets Outlook reload the items;
+        /// a moment later this comes back and selects the same items again. The window does not paint meanwhile.
+        /// </summary>
+        private static void RefreshForms(Outlook.Explorer explorer, List<string> entryIds, string storeId)
+        {
+            Outlook.MAPIFolder folder;
+            var noPaint = RedrawLock.Suspend(explorer);
+            try
+            {
+                folder = explorer.CurrentFolder;
+                explorer.ClearSelection();
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                explorer.CurrentFolder = Globals.ThisAddIn.Application.Session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderInbox);
+            }
+            catch (COMException ex)
+            {
+                if (noPaint != null)
+                    noPaint.Dispose();
+                Log.Info("Contact form refresh: could not leave the folder: " + ex.Message);
+                return;
+            }
+
+            var back = new Timer { Interval = 300 };
+            back.Tick += (s, e) =>
+            {
+                back.Stop();
+                back.Dispose();
+                try
+                {
+                    explorer.CurrentFolder = folder;
+                    var session = Globals.ThisAddIn.Application.Session;
+                    foreach (var id in entryIds)
+                    {
+                        try
+                        {
+                            explorer.AddToSelection(session.GetItemFromID(id, storeId));
+                        }
+                        catch (COMException)
+                        {
+                            // filtered out of the view, or deleted meanwhile
+                        }
+                    }
+                }
+                catch (COMException ex)
+                {
+                    Log.Info("Contact form refresh: could not come back: " + ex.Message);
+                }
+                finally
+                {
+                    if (noPaint != null)
+                        noPaint.Dispose();
+                }
+            };
+            back.Start();
         }
 
         /// <summary>
