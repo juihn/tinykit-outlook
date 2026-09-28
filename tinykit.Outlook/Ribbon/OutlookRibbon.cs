@@ -253,6 +253,9 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" screentip=\"Recipients Report\" supertip=\"Show the selected mail's sender and recipients grouped by domain and ")
               .Append("department (from Contacts). Blue: To, gray: Cc/Bcc; green: in Contacts. In the window, click a person to open the ")
               .Append("contact (or search LinkedIn), Ctrl+click for a new contact, Shift+click to add the address to the clipboard.\"/>");
+            sb.Append("<button id=\"cfCopyItems\" label=\"Copy Items\" imageMso=\"GroupClipboard\" onAction=\"OnCopyItems\"")
+              .Append(" screentip=\"Copy Items\" supertip=\"Copy one line per selected mail to the clipboard: ")
+              .Append("'yy.MM.dd요일 HH:mm &lt;sender&gt; subject. Shift+click: put the new lines before the clipboard's current text.\"/>");
             sb.Append("</group>");
 
             // View.
@@ -573,6 +576,11 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnRecipientsReport(Office.IRibbonControl control)
         {
             Run(control, ex => _controller.ShowRecipientsReport(ex));
+        }
+
+        public void OnCopyItems(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.CopySelectedItems(ex));
         }
 
         public void OnAddKnownDomain(Office.IRibbonControl control)

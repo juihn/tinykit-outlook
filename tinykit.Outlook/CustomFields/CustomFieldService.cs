@@ -238,6 +238,7 @@ namespace tinykit.OutlookAddin.CustomFields
         private static bool Write(ItemView view, CustomFieldValues values, bool alwaysSave)
         {
             bool changed = false;
+            var props = new List<KeyValuePair<Outlook.UserProperty, string>>();
             foreach (var pair in values.Pairs)
             {
                 var prop = view.UserProperties.Find(pair.Key);
@@ -251,6 +252,18 @@ namespace tinykit.OutlookAddin.CustomFields
                 {
                     prop.Value = pair.Value;
                     changed = true;
+                }
+                props.Add(new KeyValuePair<Outlook.UserProperty, string>(prop, pair.Value));
+            }
+            if (!changed && alwaysSave)
+            {
+                // Save() writes nothing for an unmodified item, and a cached copy can hold values the store lacks
+                // (seen with outlook.com mail: views and IS NULL searches find no fields, the item itself has them).
+                // Setting each value away and back marks them modified, so Save() writes them to the store.
+                foreach (var pair in props)
+                {
+                    pair.Key.Value = "";
+                    pair.Key.Value = pair.Value;
                 }
             }
             if (changed || alwaysSave)

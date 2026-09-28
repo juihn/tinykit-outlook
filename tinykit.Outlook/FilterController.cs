@@ -1171,6 +1171,66 @@ namespace tinykit.OutlookAddin
             form.Show(WindowOwner.From(explorer));
         }
 
+        /// <summary>
+        /// Copy Items: one line per selected mail, <c>'yy.MM.dd요일 HH:mm &lt;sender&gt; subject</c>, to the clipboard.
+        /// Shift+click appends the clipboard's current text after the new lines.
+        /// </summary>
+        public void CopySelectedItems(Outlook.Explorer explorer)
+        {
+            Outlook.Selection selection;
+            try
+            {
+                selection = explorer.Selection;
+            }
+            catch (COMException)
+            {
+                selection = null;
+            }
+            if (selection == null || selection.Count == 0)
+                throw new UserMessageException("Select the mails to copy first.");
+
+            var text = new System.Text.StringBuilder();
+            int copied = 0, skipped = 0;
+            for (int i = 1; i <= selection.Count; i++)
+            {
+                object item = selection[i];
+                try
+                {
+                    var line = ItemLine(item);
+                    if (line == null) skipped++;
+                    else { text.Append(line).Append(Environment.NewLine); copied++; }
+                }
+                finally
+                {
+                    Marshal.ReleaseComObject(item);
+                }
+            }
+            if (copied == 0)
+                throw new UserMessageException("Select the mails to copy first. (Contacts and tasks are skipped.)");
+
+            bool append = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
+            if (append && Clipboard.ContainsText())
+                text.Append(Clipboard.GetText()).Append(Environment.NewLine);
+            Clipboard.SetText(text.ToString());
+            Notifier.Info(explorer, copied + (copied == 1 ? " mail" : " mails") + " copied to the clipboard"
+                + (append ? ", before its previous text" : "") + (skipped > 0 ? " (" + skipped + " other items skipped)" : "") + ".");
+        }
+
+        // A mail or meeting request: 'yy.MM.dd요일 HH:mm <sender> subject; null for other items.
+        private static string ItemLine(object item)
+        {
+            if (ItemView.From(item) == null)
+                return null;
+            dynamic d = item;
+            DateTime received = d.ReceivedTime;
+            string sender = d.SenderName;
+            string subject = d.Subject;
+            return "'" + received.ToString("yy.MM.dd", System.Globalization.CultureInfo.InvariantCulture)
+                + received.ToString("ddd", System.Globalization.CultureInfo.GetCultureInfo("ko-KR"))
+                + " " + received.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)
+                + " <" + sender + "> " + subject;
+        }
+
         /// <summary>Kept in the mail saved filters file (clearInboxFiltersOnExit).</summary>
         public bool ClearInboxFiltersOnExit
         {
