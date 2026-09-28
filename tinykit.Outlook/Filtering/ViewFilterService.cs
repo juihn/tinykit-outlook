@@ -100,7 +100,16 @@ namespace tinykit.OutlookAddin.Filtering
         {
             int changed = 0;
             var entryId = folder.EntryID;
-            if (shownIn != null && string.Equals(shownIn.CurrentFolder.EntryID, entryId, StringComparison.Ordinal))
+            bool shown;
+            try
+            {
+                shown = shownIn != null && string.Equals(shownIn.CurrentFolder.EntryID, entryId, StringComparison.Ordinal);
+            }
+            catch (System.Runtime.InteropServices.COMException)
+            {
+                shown = false; // the explorer is already closed (Outlook exiting): the folder's views below still work
+            }
+            if (shown)
             {
                 var live = GetTableView(shownIn);
                 if (live != null && (IsAddinFilter(live.Filter ?? "") || _originals.ContainsKey(ViewKey(shownIn, live))))
