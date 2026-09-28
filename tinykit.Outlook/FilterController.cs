@@ -566,19 +566,24 @@ namespace tinykit.OutlookAddin
         }
 
         /// <summary>
-        /// Add to &gt; filter: a dialog chooses domainRelated, subject, or both; subjects become patterns in which numbers,
-        /// dates and month/weekday names are % (editable), and each line is added to the saved filter as a condition
-        /// (both: domainRelated = ... AND the subject pattern). The first time in a session "Issue" starts with
+        /// Add to &gt; filter: a dialog chooses domainRelated, From address, subject, or several of them; subjects become
+        /// patterns in which numbers, dates and month/weekday names are % (editable), and each line is added to the saved
+        /// filter as a condition (several fields: all of them must match). The first time in a session "Issue" starts with
         /// domainRelated and every other filter with Subject; later the last choice for that filter.
         /// </summary>
         public void AddSelectionToFilter(Outlook.Explorer explorer, string filterName)
         {
             if (_kind != ItemKind.Mail)
                 throw new UserMessageException("\"Add to\" works in mail folders.");
-            var mails = SelectedValues(explorer, item => DomainRelatedOf(item) + "\t" + Dasl.SubjectPattern(SubjectOf(item)))
-                .Select(v => v.Split(new[] { '\t' }, 2))
-                .Select(p => new MailKey { Domain = p[0].Trim(), Pattern = p.Length > 1 ? p[1].Trim() : "" })
-                .Where(m => m.Domain.Length > 0 || m.Pattern.Length > 0).ToList();
+            var mails = SelectedValues(explorer, item => DomainRelatedOf(item) + "\t" + SenderAddressOf(item) + "\t" + Dasl.SubjectPattern(SubjectOf(item)))
+                .Select(v => v.Split(new[] { '\t' }, 3))
+                .Select(p => new MailKey
+                {
+                    Domain = p[0].Trim(),
+                    From = p.Length > 1 ? p[1].Trim() : "",
+                    Pattern = p.Length > 2 ? p[2].Trim() : "",
+                })
+                .Where(m => m.Domain.Length > 0 || m.From.Length > 0 || m.Pattern.Length > 0).ToList();
             if (mails.Count == 0)
                 throw new UserMessageException("Select the mails to add to \"" + filterName + "\" first.");
 
@@ -593,16 +598,51 @@ namespace tinykit.OutlookAddin
                 field = dialog.Field;
                 values = dialog.Values;
             }
-            if (field == ConditionField.Subject)
-                AddSelectionTo(explorer, filterName, "subject", values,
-                    v => Dasl.PropertyMatches(SubjectProperty, v.Pattern), null);
-            else if (field == ConditionField.DomainRelated)
-                AddSelectionTo(explorer, filterName, "domainRelated", values,
-                    v => Dasl.PropertyEquals(DomainRelatedProperty, v.Domain), null);
-            else
-                AddSelectionTo(explorer, filterName, "domainRelated and subject", values,
-                    v => "(" + Dasl.PropertyEquals(DomainRelatedProperty, v.Domain) + " AND "
-                         + Dasl.PropertyMatches(SubjectProperty, v.Pattern) + ")", null);
+            var fields = AddConditionsDialog.Fields.Where(f => (field & f) != 0).ToList();
+            var what = string.Join(" and ", fields.Select(f => f == ConditionField.DomainRelated ? "domainRelated" : f == ConditionField.From ? "From address" : "subject"));
+            AddSelectionTo(explorer, filterName, what, values, v =>
+            {
+                var parts = fields.Select(f => ConditionFor(f, v)).ToList();
+                return parts.Count == 1 ? parts[0] : "(" + string.Join(" AND ", parts) + ")";
+            }, null);
+        }
+
+        private static string ConditionFor(ConditionField field, MailKey v)
+        {
+            switch (field)
+            {
+                case ConditionField.DomainRelated:
+                    return Dasl.PropertyEquals(DomainRelatedProperty, v.Domain);
+                case ConditionField.From:
+                    // the sender's SMTP address, or its raw address (SMTP, or an Exchange DN) as the F quick filter does
+                    return "(" + Dasl.PropertyEquals(Dasl.SenderSmtp, v.From) + " OR " + Dasl.PropertyEquals(Dasl.SenderEmail, v.From) + ")";
+                default:
+                    return Dasl.PropertyMatches(SubjectProperty, v.Pattern);
+            }
+        }
+
+        /// <summary>The sender's SMTP address (PR_SENDER_SMTP_ADDRESS), else the raw sender address; "" if none.</summary>
+        private static string SenderAddressOf(object item)
+        {
+            dynamic d = item;
+            try
+            {
+                var smtp = ((Outlook.PropertyAccessor)d.PropertyAccessor).GetProperty(Dasl.SenderSmtp) as string;
+                if (!string.IsNullOrWhiteSpace(smtp))
+                    return smtp.Trim();
+            }
+            catch (COMException)
+            {
+                // property not present
+            }
+            try
+            {
+                return ((string)d.SenderEmailAddress ?? "").Trim();
+            }
+            catch (Exception)
+            {
+                return "";
+            }
         }
 
         /// <summary>

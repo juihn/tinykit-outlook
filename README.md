@@ -149,11 +149,13 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
   - **Ctrl+click:** opens the Format dialog to edit it (font style, strikeout, underline, color). Font name and size follow the view (View Font).
 - **Add to** (menu, mail) lists the saved filters except `Flagged`, `Sent` and `Unknown` (the first-install filters that
   are computed from the mail itself), including ones added to the file later and ones that have a name and format but no
-  SQL yet (they are filled in place). Picking one opens a small window with two check boxes:
-  - **domainRelated** only: `domainRelated = '...'` for each selected mail's domain.
-  - **Subject** only: a subject pattern for each selected mail.
-  - **both**: `(domainRelated = '...' AND subject pattern)`, one line per mail as `domainRelated <Tab> subject`; e.g. only
-    the invoices of one company sent through a shared billing service.
+  SQL yet (they are filled in place). Picking one opens a small window with three check boxes:
+  - **domainRelated**: `domainRelated = '...'` for each selected mail's domain.
+  - **From address**: the sender's address (`PR_SENDER_SMTP_ADDRESS` or the raw sender address, as the **F** quick filter).
+  - **Subject**: a subject pattern for each selected mail.
+  - **several**: all of them together, e.g. `(From = '...' AND subject pattern)`, one line per mail with the values in that
+    order separated by tabs (`domainRelated <Tab> from <Tab> subject`); e.g. only the invoices of one company sent through
+    a shared billing service.
 
   The first time in a session `Issue` starts with domainRelated and every other filter with Subject; afterwards the
   last choice for that filter. Subjects become patterns in which numbers (dates, times, amounts, ids, `9월 27일`,
