@@ -137,7 +137,7 @@ namespace tinykit.OutlookAddin.Ribbon
         {
             var sb = new StringBuilder();
             sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\" onLoad=\"OnLoad\">");
-            sb.Append("<ribbon><tabs><tab id=\"tabOAFilter\" label=\"TinyKit\" insertAfterMso=\"TabMail\">");
+            sb.Append("<ribbon><tabs><tab id=\"tabOAFilter\" label=\"TinyKit\" insertBeforeMso=\"TabMail\">");
 
             // Built-in: frequently used Outlook commands, icon only, in columns.
             sb.Append("<group id=\"grpBuiltIn\" label=\"Built-in\">");
