@@ -1,6 +1,6 @@
 # tinykit for Outlook
 
-A small VSTO add-in (C#, .NET Framework 4.8) for **Outlook Classic** on Windows. It adds a **Tools** ribbon tab with:
+A small VSTO add-in (C#, .NET Framework 4.8) for **Outlook Classic** on Windows. It adds a **TinyKit** ribbon tab with:
 
 - **Quick filters** by From, Name, Subject and Domain, with recent values.
 - **Saved filters** (DASL/SQL) kept in an XML file, each with an optional conditional format (style, strikeout, underline, color).
@@ -56,9 +56,9 @@ The current local files are copied there; the local copies stay as a backup.
    The script also sets `.config` hidden, because OneDrive syncs the folder but not its Hidden attribute.
 2. Make sure OneDrive has synced `.config\tinykit\Outlook\`, then start Outlook and accept the VSTO trust prompt once.
 
-## **Tools** tab
+## **TinyKit** tab
 
-Groups, left to right: Custom Mail Fields · Quick Filter · Clear · Saved Filters · View.
+Groups, left to right: Custom Mail Fields · Quick Filter · Clear · Saved Filters · Items · View.
 The tab follows the kind of folder you are in:
 
 | Folder | Custom Mail Fields | Quick Filter | Saved Filters, View Columns |
@@ -118,13 +118,6 @@ The add-in writes these text columns (user properties) on mail and meeting items
   `Known Domains.txt`, then refills the selected mails and this folder's mail from those domains that is still marked `*` or `+`.
   **Ctrl+click** opens `Known Domains.txt` in VS Code (Notepad if not installed).
 
-**Recipients Report** opens a window for the selected mail: the sender, then the recipients grouped by **domain** and by
-the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background: in Contacts. The check boxes add each
-person's display name and user name. Click a person to open the contact (or search LinkedIn when there is none),
-**Ctrl+click** for a new contact with the name and address filled in, **Shift+click** to add the address to the
-addresses on the clipboard. **Search** finds people by name or user name and lists their addresses; **Copy Contents**
-copies the report as text; **Refresh** reads the mail and Contacts again. The subject opens the mail.
-
 `Known Domains.txt` (in the settings folder) has one domain per line after the date it was added and a tab, e.g.
 `'26.09.07월 15:42:39 +08<Tab>fabrikam.com` (date, Korean day of week, time, UTC offset); a line may also be just a domain, and `#` lines are comments. A domain covers
 its subdomains. My own addresses among the recipients are ignored. Edits apply to the next mail filled; Shift+click
@@ -181,12 +174,22 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
 The rules are written to the view's *View Settings > Conditional Formatting* and named `[TK] <filter name> #<SQL hash>`.
 Rules without that prefix are never changed. Color is limited to the 16 colors Outlook's conditional formatting supports.
 
+### Items group
+Tools for the selected items, shown in every folder.
+- **Recipients Report** opens a window for the selected mail: the sender, then the recipients grouped by **domain** and
+  by the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background: in Contacts. The check boxes add each
+  person's display name and user name. Click a person to open the contact (or search LinkedIn when there is none),
+  **Ctrl+click** for a new contact with the name and address filled in, **Shift+click** to add the address to the
+  addresses on the clipboard. **Search** finds people by name or user name and lists their addresses; **Copy Contents**
+  copies the report as text; **Refresh** reads the mail and Contacts again. The subject opens the mail.
+
 ### View group
 - **View Columns** replaces the columns of the current table view with the ones in the View Columns file of the folder's
   kind (`View Columns - Mail.txt`, `- Contacts.txt`, `- Tasks.txt`), in that order. **Ctrl+click** opens that file in
   VS Code (Notepad if not installed). Each file is created with default columns on first use.
-- **View Font...** sets the font and size for the whole current table view: rows, and optionally column headers and all conditional
-  formatting rules, which keep their own style and color.
+- **View Font...** sets the font and size (9, 10, 11 or 12) for the whole current table view: rows, and optionally column
+  headers and all conditional formatting rules, which keep their own style and color. Table views store whole point sizes
+  only (9.5pt is saved as 9pt), so there are no half sizes.
 
 ### Saved Filters - Mail.xml / - Contacts.xml / - Tasks.xml
 ```xml

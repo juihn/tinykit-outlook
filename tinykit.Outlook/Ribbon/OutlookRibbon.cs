@@ -15,7 +15,7 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 namespace tinykit.OutlookAddin.Ribbon
 {
     /// <summary>
-    /// Ribbon XML for the Outlook explorer: a "Tools" tab with Custom Fields, Quick Filter, Clear, Saved Filters
+    /// Ribbon XML for the Outlook explorer: a "TinyKit" tab with Custom Mail Fields, Quick Filter, Clear, Saved Filters, Items
     /// (a toggle per saved filter, formats and the file/format management buttons) and View groups.
     /// </summary>
     [ComVisible(true)]
@@ -116,7 +116,7 @@ namespace tinykit.OutlookAddin.Ribbon
         {
             var sb = new StringBuilder();
             sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\" onLoad=\"OnLoad\">");
-            sb.Append("<ribbon><tabs><tab id=\"tabOAFilter\" label=\"Tools\" insertAfterMso=\"TabMail\">");
+            sb.Append("<ribbon><tabs><tab id=\"tabOAFilter\" label=\"TinyKit\" insertAfterMso=\"TabMail\">");
 
             // Custom mail fields (domainRelated, nameRelated, me, tos, ccs, unknownDomain): mail folders only.
             sb.Append("<group id=\"grpFields\" label=\"Custom Mail Fields\" getVisible=\"GetMailVisible\">");
@@ -127,10 +127,6 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("values (e.g. after editing Known Domains.txt or adding a contact).\"/>");
             sb.Append("<button id=\"cfAddKnown\" label=\"Add Known Domain\" imageMso=\"AddToFavorites\" onAction=\"OnAddKnownDomain\"")
               .Append(" screentip=\"Add Known Domain\" getSupertip=\"GetAddKnownSupertip\"/>");
-            sb.Append("<button id=\"cfRecipients\" label=\"Recipients Report\" imageMso=\"ContactProperties\" onAction=\"OnRecipientsReport\"")
-              .Append(" screentip=\"Recipients Report\" supertip=\"Show the selected mail's sender and recipients grouped by domain and ")
-              .Append("department (from Contacts). Blue: To, gray: Cc/Bcc; green: in Contacts. In the window, click a person to open the ")
-              .Append("contact (or search LinkedIn), Ctrl+click for a new contact, Shift+click to add the address to the clipboard.\"/>");
             sb.Append("<checkBox id=\"cfAutoFill\" label=\"Auto-fill new mail\" getPressed=\"GetAutoFillPressed\" onAction=\"OnAutoFillToggle\"")
               .Append(" screentip=\"Auto-fill new mail\" supertip=\"Fill the fields of mail arriving in each account's Inbox and Sent Items.\"/>");
             sb.Append("</group>");
@@ -199,6 +195,14 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<checkBox id=\"mAutoApply\" label=\"Auto-apply formats\" getPressed=\"GetAutoApplyPressed\" onAction=\"OnAutoApplyToggle\"")
               .Append(" screentip=\"Auto-apply formats\" supertip=\"Sync the formats into each table view when switching folders or views.\"/>");
             sb.Append("</menu>");
+            sb.Append("</group>");
+
+            // Items: tools for the selected items, in mail, contact and task folders alike.
+            sb.Append("<group id=\"grpItems\" label=\"Items\">");
+            sb.Append("<button id=\"cfRecipients\" label=\"Recipients Report\" imageMso=\"ContactProperties\" onAction=\"OnRecipientsReport\"")
+              .Append(" screentip=\"Recipients Report\" supertip=\"Show the selected mail's sender and recipients grouped by domain and ")
+              .Append("department (from Contacts). Blue: To, gray: Cc/Bcc; green: in Contacts. In the window, click a person to open the ")
+              .Append("contact (or search LinkedIn), Ctrl+click for a new contact, Shift+click to add the address to the clipboard.\"/>");
             sb.Append("</group>");
 
             // View.

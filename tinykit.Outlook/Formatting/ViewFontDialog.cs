@@ -10,14 +10,18 @@ namespace tinykit.OutlookAddin.Formatting
     /// <summary>Picks the font name and size for a whole table view.</summary>
     internal sealed class ViewFontDialog : Form
     {
-        private static readonly int[] Sizes = { 7, 8, 9, 10, 11, 12, 14, 16, 18, 20 };
+        // Table views store whole point sizes only (9.5pt is saved as 9pt), so the choices are whole sizes.
+        private static readonly int[] Sizes = { 9, 10, 11, 12 };
 
         private readonly ComboBox _font = new ComboBox
         {
             DropDownStyle = ComboBoxStyle.DropDown, AutoCompleteMode = AutoCompleteMode.SuggestAppend,
             AutoCompleteSource = AutoCompleteSource.ListItems, Width = 220,
         };
-        private readonly ComboBox _size = new ComboBox { DropDownStyle = ComboBoxStyle.DropDown, Width = 60 };
+        private readonly RadioButton[] _sizes = Sizes.Select(s => new RadioButton
+        {
+            Text = s.ToString(CultureInfo.InvariantCulture), Tag = s, AutoSize = true, Margin = new Padding(0, 0, 14, 0),
+        }).ToArray();
         private readonly CheckBox _headers = new CheckBox { Text = "Column headers", AutoSize = true, Checked = true };
         private readonly CheckBox _rules = new CheckBox { Text = "Conditional formatting rules (unread, etc.)", AutoSize = true, Checked = true };
         private readonly Label _preview = new Label
@@ -45,11 +49,15 @@ namespace tinykit.OutlookAddin.Formatting
             using (var installed = new InstalledFontCollection())
                 _font.Items.AddRange(installed.Families.Select(f => f.Name).Where(n => !n.StartsWith("@")).Cast<object>().ToArray());
             _font.Text = fontName;
-            _size.Items.AddRange(Sizes.Cast<object>().ToArray());
-            _size.Text = fontSize.ToString(CultureInfo.InvariantCulture);
+            // The view's current size, or the nearest choice when it is not one of them.
+            var nearest = Sizes.OrderBy(s => Math.Abs(s - fontSize)).First();
+            foreach (var radio in _sizes)
+            {
+                radio.Checked = (int)radio.Tag == nearest;
+                radio.CheckedChanged += (s, e) => UpdatePreview();
+            }
 
             _font.TextChanged += (s, e) => UpdatePreview();
-            _size.TextChanged += (s, e) => UpdatePreview();
 
             var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, AutoSize = true, MinimumSize = new Size(80, 0) };
             AcceptButton = _ok;
@@ -59,7 +67,13 @@ namespace tinykit.OutlookAddin.Formatting
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             AddRow(grid, "Font", _font);
-            AddRow(grid, "Size", _size);
+            var sizeRow = new FlowLayoutPanel
+            {
+                AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false, Margin = new Padding(0),
+            };
+            sizeRow.Controls.AddRange(_sizes);
+            AddRow(grid, "Size", sizeRow);
             AddRow(grid, "Also apply to", Stack(_headers, _rules));
             AddRow(grid, "Preview", _preview);
             _preview.MinimumSize = new Size(0, Font.Height * 3);
@@ -88,8 +102,8 @@ namespace tinykit.OutlookAddin.Formatting
         {
             get
             {
-                int size;
-                return int.TryParse(_size.Text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out size) ? size : 0;
+                var chosen = _sizes.FirstOrDefault(r => r.Checked);
+                return chosen == null ? 0 : (int)chosen.Tag;
             }
         }
 
