@@ -16,7 +16,7 @@ namespace tinykit.OutlookAddin.Ribbon
 {
     /// <summary>
     /// Ribbon XML for the Outlook explorer: a "TinyKit" tab with Custom Mail Fields, Quick Filter, Clear, Saved Filters, Items
-    /// (a toggle per saved filter, formats and the file/format management buttons) and View groups.
+    /// (a toggle per saved filter, formats and the file/format management buttons) and Table View groups.
     /// </summary>
     [ComVisible(true)]
     public class OutlookRibbon : Office.IRibbonExtensibility
@@ -297,6 +297,12 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" getVisible=\"GetCustomFormVisible\" onAction=\"OnSetCustomContactForm\" getScreentip=\"GetCustomFormLabel\"")
               .Append(" getSupertip=\"GetCustomFormSupertip\"/>");
             sb.Append("</box>");
+            // Calendar views and Go To Date, with labels.
+            sb.Append("<box id=\"biCalendar\" boxStyle=\"vertical\">");
+            sb.Append("<toggleButton idMso=\"MonthlyView\"/>");
+            sb.Append("<toggleButton idMso=\"WeeklyView\"/>");
+            sb.Append("<button idMso=\"GoToDate\" imageMso=\"DateInsert\"/>");
+            sb.Append("</box>");
             sb.Append("</group>");
 
             // Custom mail fields (domainRelated, nameRelated, me, tos, ccs, unknownDomain): mail folders only.
@@ -329,7 +335,7 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("</group>");
 
             // Clear.
-            sb.Append("<group id=\"grpClear\" label=\"Clear\">");
+            sb.Append("<group id=\"grpClear\" label=\"Clear\" getVisible=\"GetNotCalendarVisible\">");
             sb.Append("<toggleButton id=\"qClearOnExit\" label=\"Clear Inboxes on Exit\" size=\"large\" imageMso=\"FilterClearAllFilters\"")
               .Append(" getPressed=\"GetClearOnExitPressed\" onAction=\"OnClearOnExitToggle\"")
               .Append(" screentip=\"Clear Inboxes on exit\" supertip=\"When Outlook closes, clear the quick, saved and Others filters in the ")
@@ -383,7 +389,7 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("</group>");
 
             // Items: tools for the selected items, in mail, contact and task folders alike.
-            sb.Append("<group id=\"grpItems\" label=\"Items\">");
+            sb.Append("<group id=\"grpItems\" label=\"Mail Items\" getVisible=\"GetNotCalendarVisible\">");
             sb.Append("<button id=\"cfRecipients\" label=\"Recipients Report\" imageMso=\"ContactProperties\" onAction=\"OnRecipientsReport\"")
               .Append(" screentip=\"Recipients Report\" supertip=\"Show the selected mail's sender and recipients grouped by domain and ")
               .Append("department (from Contacts). Blue: To, gray: Cc/Bcc; green: in Contacts. In the window, click a person to open the ")
@@ -393,8 +399,15 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("'yy.MM.dd요일 HH:mm &lt;sender&gt; subject. Shift+click: put the new lines before the clipboard's current text.\"/>");
             sb.Append("</group>");
 
-            // View.
-            sb.Append("<group id=\"grpView\" label=\"View\">");
+            // Calendar Items: calendar folders only (where Mail Items is hidden).
+            sb.Append("<group id=\"grpCalendarItems\" label=\"Calendar Items\" getVisible=\"GetCalendarVisible\">");
+            sb.Append("<button id=\"caRecipients\" label=\"Recipients Report\" imageMso=\"ContactCardViewMySite\" onAction=\"OnRecipientsReport\"")
+              .Append(" screentip=\"Recipients Report\" supertip=\"Show the selected calendar item's organizer and attendees grouped by ")
+              .Append("domain and department (from Contacts). Blue: required, gray: optional/resources; green: in Contacts.\"/>");
+            sb.Append("</group>");
+
+            // Table View.
+            sb.Append("<group id=\"grpView\" label=\"Table View\" getVisible=\"GetNotCalendarVisible\">");
             sb.Append("<button id=\"mViewColumns\" label=\"View Columns\" imageMso=\"TableInsert\" onAction=\"OnViewColumns\"")
               .Append(" screentip=\"View Columns\" getSupertip=\"GetViewColumnsSupertip\"/>");
             sb.Append("<button id=\"mViewFont\" label=\"View Font...\" imageMso=\"FontDialog\" onAction=\"OnViewFont\"")
@@ -606,6 +619,25 @@ namespace tinykit.OutlookAddin.Ribbon
         public bool GetMailVisible(Office.IRibbonControl control)
         {
             return Safe(() => Focus(control) == ItemKind.Mail, true);
+        }
+
+        // Clear, Mail Items and Table View: not in calendar folders (no table view filters there).
+        public bool GetNotCalendarVisible(Office.IRibbonControl control)
+        {
+            return Safe(() => !IsCalendar(control), true);
+        }
+
+        // Calendar Items: calendar folders only.
+        public bool GetCalendarVisible(Office.IRibbonControl control)
+        {
+            return Safe(() => IsCalendar(control), false);
+        }
+
+        private static bool IsCalendar(Office.IRibbonControl control)
+        {
+            var explorer = control.Context as Outlook.Explorer ?? Globals.ThisAddIn.Application.ActiveExplorer();
+            var folder = explorer == null ? null : explorer.CurrentFolder;
+            return folder != null && folder.DefaultItemType == Outlook.OlItemType.olAppointmentItem;
         }
 
         public bool GetContactVisible(Office.IRibbonControl control)

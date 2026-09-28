@@ -51,5 +51,29 @@ namespace tinykit.OutlookAddin.CustomFields
             }
             return null;
         }
+
+        /// <summary>
+        /// For the Recipients Report: mail and meeting requests as <see cref="From"/>, and also appointments (calendar
+        /// items), whose sender is the organizer.
+        /// </summary>
+        public static ItemView ForReport(object item)
+        {
+            var view = From(item);
+            if (view != null)
+                return view;
+            var appointment = item as Outlook.AppointmentItem;
+            if (appointment == null)
+                return null;
+            return new ItemView
+            {
+                Item = appointment,
+                Recipients = appointment.Recipients,
+                Props = appointment.PropertyAccessor,
+                UserProperties = appointment.UserProperties,
+                SenderName = appointment.Organizer,
+                Sender = appointment.GetOrganizer,
+                Save = appointment.Save,
+            };
+        }
     }
 }

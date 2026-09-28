@@ -1164,8 +1164,8 @@ namespace tinykit.OutlookAddin
         /// <summary>Recipients Report of the given item, owned by the given Explorer or Inspector.</summary>
         public void ShowRecipientsReport(object item, object ownerWindow)
         {
-            if (item == null || ItemView.From(item) == null)
-                throw new UserMessageException("Select a mail (or meeting request) first.");
+            if (item == null || ItemView.ForReport(item) == null)
+                throw new UserMessageException("Select a mail, meeting request or calendar item first.");
             dynamic d = item;
             string entryId = d.EntryID;
             var app = Globals.ThisAddIn.Application;

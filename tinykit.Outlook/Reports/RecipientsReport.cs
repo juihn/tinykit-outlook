@@ -59,12 +59,13 @@ namespace tinykit.OutlookAddin.Reports
 
         public static RecipientsReport Build(object item, CustomFieldCalculator calc)
         {
-            var view = ItemView.From(item);
+            var view = ItemView.ForReport(item);
             if (view == null)
                 return null;
             var report = new RecipientsReport { Item = item, Subject = ((dynamic)item).Subject as string ?? "" };
+            bool appointment = item is Outlook.AppointmentItem;
 
-            var senderSmtp = calc.FromSmtpOf(view);
+            var senderSmtp = appointment ? OrganizerSmtp(view) : calc.FromSmtpOf(view);
             var senderContact = calc.Contacts.Lookup(senderSmtp);
             var senderName = TrimQuotes(view.SenderName);
             report.Sender = Person(senderSmtp, senderName, senderContact);
@@ -96,9 +97,11 @@ namespace tinykit.OutlookAddin.Reports
                     continue;
 
                 var person = Person(smtp, TrimQuotes(r.Name), calc.Contacts.Lookup(smtp));
+                // Appointments: required (1) shows as To, optional (2) as Cc, resources (3) as Resource.
                 person.IsTo = r.Type == (int)Outlook.OlMailRecipientType.olTo;
-                person.Type = r.Type == (int)Outlook.OlMailRecipientType.olCC ? "Cc"
-                            : r.Type == (int)Outlook.OlMailRecipientType.olBCC ? "Bcc" : "To";
+                person.Type = r.Type == (int)Outlook.OlMailRecipientType.olCC ? (appointment ? "Optional" : "Cc")
+                            : r.Type == (int)Outlook.OlMailRecipientType.olBCC ? (appointment ? "Resource" : "Bcc")
+                            : appointment ? "Required" : "To";
 
                 var domainName = smtp.Substring(smtp.LastIndexOf('@') + 1).ToLowerInvariant();
                 ReportDomain domain;
@@ -142,6 +145,26 @@ namespace tinykit.OutlookAddin.Reports
                 UserName = at > 0 ? smtp.Substring(0, at) : smtp,
                 Contact = contact,
             };
+        }
+
+        // The organizer's SMTP address (an Exchange organizer through its Exchange user); null when unknown.
+        private static string OrganizerSmtp(ItemView view)
+        {
+            try
+            {
+                var entry = view.Sender();
+                if (entry == null)
+                    return null;
+                var address = entry.Address;
+                if (!string.IsNullOrEmpty(address) && address.IndexOf('@') > 0)
+                    return address;
+                var user = entry.GetExchangeUser();
+                return user == null ? null : user.PrimarySmtpAddress;
+            }
+            catch (COMException)
+            {
+                return null;
+            }
         }
 
         private static string TrimQuotes(string s)

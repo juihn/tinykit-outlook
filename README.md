@@ -72,7 +72,8 @@ The current local files are copied there; the local copies stay as a backup.
 
 ## **TinyKit** tab
 
-Groups, left to right: Built-in · Custom Mail Fields · Quick Filter · Clear · Saved Filters · Items · View.
+Groups, left to right: Built-in · Custom Mail Fields · Quick Filter · Clear · Saved Filters · Mail Items (Calendar Items
+in calendar folders) · Table View.
 The tab follows the kind of folder you are in:
 
 | Folder | Custom Mail Fields | Quick Filter | Saved Filters, View Columns |
@@ -81,6 +82,8 @@ The tab follows the kind of folder you are in:
 | Contacts | hidden | F E / C D | `- Contacts` files |
 | Tasks | hidden | hidden | `- Tasks` files |
 | Other (calendar, notes, ...) | hidden | hidden | Saved Filters hidden |
+
+In calendar folders Clear, Mail Items and Table View are hidden too.
 
 Informational messages (results such as *Custom fields: 3 updated*, and hints such as *Select the mails first*) appear as
 Windows notifications under Outlook (classic), using the *urgent* scenario so they also show in Do Not Disturb. Errors,
@@ -103,6 +106,8 @@ In contact folders a last column adds two buttons of the add-in's own:
 - Outlook keeps using the old form for an item it has in memory, so after a change both buttons clear the selection,
   briefly switch to the Inbox (with the window's painting suspended, so it does not flicker), come back and select
   the same contacts again. If a contact still opens with the old form, restart Outlook.
+
+The rightmost column has Outlook's **Month**, **Week** and **Go To Date**, with labels.
 
 Outlook enables and disables them as on its own tabs. Clear Flag and Messages in this Conversation have no icon of
 their own (they live in menus), so they get Delete and GroupConversations.
@@ -214,7 +219,11 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
 The rules are written to the view's *View Settings > Conditional Formatting* and named `[TK] <filter name> #<SQL hash>`.
 Rules without that prefix are never changed. Color is limited to the 16 colors Outlook's conditional formatting supports.
 
-### Items group
+### Calendar Items group (calendar folders)
+- **Recipients Report** of the selected calendar item: the organizer, then the attendees grouped by domain and by the
+  contacts' department, as for a mail (required attendees as To, optional ones and resources as Cc).
+
+### Mail Items group
 Tools for the selected items, shown in every folder.
 - **Recipients Report** opens a window for the selected mail: the sender, then the recipients grouped by **domain** and
   by the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background: in Contacts. The check boxes add each
@@ -226,7 +235,7 @@ Tools for the selected items, shown in every folder.
   `'26.09.28월 17:01 <The Mulia Bali> Ultimate Getaway`, in the order the view shows them. **Shift+click** puts the new lines before the clipboard's
   current text, to collect mails from several folders. Other items (contacts, tasks) are skipped.
 
-### View group
+### Table View group
 - **View Columns** replaces the columns of the current table view with the ones in the View Columns file of the folder's
   kind (`View Columns - Mail.txt`, `- Contacts.txt`, `- Tasks.txt`), in that order. **Ctrl+click** opens that file in
   VS Code (Notepad if not installed). Each file is created with default columns on first use.
@@ -284,7 +293,7 @@ older `Filters.xml`, `Saved Filters.xml` and `View Columns.txt` are renamed auto
 Before the window's Message tab, with one **Message** group:
 - Delete, Archive, Send to OneNote · Follow Up, Flag (no date), Clear Flag · Translate, Show Original, translation
   preferences · Approve / Reject (approval requests only) · Find · Edit Message: Outlook's own commands.
-- **Recipients Report** of the open mail, as in the Items group.
+- **Recipients Report** of the open mail, as in the Mail Items group.
 
 ## **TinyKit** tab in a mail being written
 Before the window's Message tab, with a **Recipients** group:
@@ -293,7 +302,7 @@ Before the window's Message tab, with a **Recipients** group:
   with that contact entry, so it shows with the name set in Contacts; its type (To/Cc/Bcc) is kept. The replaced
   recipients move after the others, those in the sender's own domain (base domain, e.g. `contoso.com` for
   `a@mail.contoso.com`) last. Then Outlook's Check Names runs.
-- **Recipients Report** of this mail, as in the Items group.
+- **Recipients Report** of this mail, as in the Mail Items group.
 
 and a **Compose** group of Outlook's own commands: theme Fonts, Ruler, Bcc.
 
