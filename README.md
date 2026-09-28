@@ -205,16 +205,19 @@ Tools for the selected items, shown in every folder.
 The file is rewritten when you change settings from the ribbon, so comments you add will not be kept.
 
 ### View Columns - Mail.txt / - Contacts.txt / - Tasks.txt
-One column per line. The fields are aligned with tabs (tab width 4); an empty field is just more tabs, and `#` lines are skipped:
+One column per line; `#` lines are skipped. The values are separated by tabs, and several tabs in a row count as one,
+so the lines can be lined up freely. After the field name, each value goes to the next field whose format it fits,
+so fields can be left out (`me⇥Center` is a centered column with no width; `unknownDomain⇥4⇥Center⇥ud` skips Type and
+Format):
 
-| Field | Starts at column | Meaning |
+| Field (in order) | Format | Meaning |
 |---|---|---|
-| FieldName | 0 | a field as named in View Settings > Columns (`Received`, `Flag Status`, ...) or a user-defined field |
-| Width | 16 | width in characters |
-| Type | 20 | `olText`, `olDateTime`, `olInteger`, `olNumber`, `olYesNo`: creates a missing user-defined field in the folder |
-| Format | 32 | position (1, 2, ...) in the column's Format drop-down of View Settings |
-| Alignment | 36 | `Left`, `Center` or `Right` |
-| Alias | 44 | column heading, when it should differ from the field name |
+| FieldName | first value | a field as named in View Settings > Columns (`Received`, `Flag Status`, ...) or a user-defined field |
+| Width | a number | width in characters |
+| Type | `ol` + capital letter | `olText`, `olDateTime`, `olInteger`, `olNumber`, `olYesNo`: creates a missing user-defined field in the folder (others, e.g. `olSize`, are allowed and ignored) |
+| Format | a number (after Width) | position (1, 2, ...) in the column's Format drop-down of View Settings |
+| Alignment | `Left`, `Center`, `Right` | column alignment |
+| Alias | any other text | column heading, when it should differ from the field name |
 
 ```
 #FieldName		Width
