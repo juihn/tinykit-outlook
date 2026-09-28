@@ -242,6 +242,8 @@ Tools for the selected items, shown in every folder.
 - **View Font...** sets the font and size (9, 10, 11 or 12) for the whole current table view: rows, and optionally column
   headers and all conditional formatting rules, which keep their own style and color. Table views store whole point sizes
   only (9.5pt is saved as 9pt), so there are no half sizes.
+- **Sort by Company/Dept** (contact folders) sorts the view by Company, and within a company by Department, both A to Z;
+  the view keeps this sort (its grouping, if any, stays).
 
 ### Saved Filters - Mail.xml / - Contacts.xml / - Tasks.xml
 ```xml

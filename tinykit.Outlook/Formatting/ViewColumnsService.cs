@@ -78,6 +78,28 @@ namespace tinykit.OutlookAddin.Formatting
             return problems;
         }
 
+        /// <summary>Replaces the current table view's sort with the given fields, all ascending, and saves the view.</summary>
+        public static void SortBy(Outlook.Explorer explorer, string ownFilter, params string[] fieldNames)
+        {
+            var view = (Outlook.TableView)ViewFilterService.RequireTableView(explorer);
+            var sort = view.SortFields;
+            while (sort.Count > 0)
+                sort.Remove(1);
+            foreach (var name in fieldNames)
+            {
+                try
+                {
+                    sort.Add(name, false);
+                }
+                catch (COMException)
+                {
+                    throw new Common.UserMessageException("This view cannot be sorted by \"" + name + "\".");
+                }
+            }
+            ConditionalFormatService.SaveView(view, ownFilter);
+            Reselect(explorer, view, ownFilter);
+        }
+
         /// <summary>
         /// In some folders (seen in contact folders of a cached Exchange mailbox) View.Apply leaves the list showing rows
         /// it did not read: dates "None", other cells empty, mail icons for contacts, until the list is sorted or the

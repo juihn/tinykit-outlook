@@ -904,6 +904,12 @@ namespace tinykit.OutlookAddin
             }
         }
 
+        /// <summary>Sort by Company/Dept (contact folders): Company, then Department, both ascending; saved in the view.</summary>
+        public void SortByCompany(Outlook.Explorer explorer)
+        {
+            KeepSelection(explorer, () => ViewColumnsService.SortBy(explorer, Views.OwnFilter(explorer), "Company", "Department"));
+        }
+
         /// <summary>
         /// View Columns button: replaces the current table view's columns with the View Columns file of the folder's kind
         /// (mail, contacts, tasks; created with defaults on first use). Ctrl+click opens that file for editing instead.

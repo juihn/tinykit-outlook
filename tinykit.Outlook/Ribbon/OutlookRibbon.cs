@@ -412,6 +412,9 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" screentip=\"View Columns\" getSupertip=\"GetViewColumnsSupertip\"/>");
             sb.Append("<button id=\"mViewFont\" label=\"View Font...\" imageMso=\"FontDialog\" onAction=\"OnViewFont\"")
               .Append(" screentip=\"View Font\" supertip=\"Choose the font and size of the whole table view: rows, column headers and conditional formatting.\"/>");
+            sb.Append("<button id=\"mSortCompany\" label=\"Sort by Company/Dept\" imageMso=\"SortDialog\" onAction=\"OnSortByCompany\"")
+              .Append(" getVisible=\"GetContactVisible\" screentip=\"Sort by Company/Dept\" supertip=\"Sort the contacts by Company, and ")
+              .Append("within a company by Department (both A to Z). The view keeps this sort.\"/>");
             sb.Append("</group>");
 
             sb.Append("</tab></tabs></ribbon></customUI>");
@@ -952,6 +955,11 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnViewFont(Office.IRibbonControl control)
         {
             Run(control, ex => _controller.EditViewFont(ex));
+        }
+
+        public void OnSortByCompany(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.SortByCompany(ex));
         }
 
         public void OnFillFields(Office.IRibbonControl control)
