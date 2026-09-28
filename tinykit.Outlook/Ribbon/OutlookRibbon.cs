@@ -424,7 +424,7 @@ namespace tinykit.OutlookAddin.Ribbon
                 {
                     var name = SecurityElement.Escape(targets[i]);
                     sb.Append("<button id=\"addTo").Append(SlotSeparator).Append(i).Append("\" label=\"").Append(name)
-                      .Append("\" tag=\"").Append(name).Append("\" onAction=\"OnAddToFilter\"/>");
+                      .Append("\" tag=\"").Append(name).Append("\" imageMso=\"").Append(AddIcon).Append("\" onAction=\"OnAddToFilter\"/>");
                 }
                 if (targets.Count == 0)
                     sb.Append("<button id=\"addToNone\" label=\"(no saved filters to add to)\" enabled=\"false\"/>");
