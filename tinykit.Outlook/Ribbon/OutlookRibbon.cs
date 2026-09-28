@@ -162,6 +162,15 @@ namespace tinykit.OutlookAddin.Ribbon
                 }
                 sb.Append("</box>");
             }
+            // Contact folders: switch the selected contacts between Outlook's form and the folder's custom form.
+            sb.Append("<box id=\"biForms\" boxStyle=\"vertical\">");
+            sb.Append("<button id=\"cfFormDefault\" label=\"Default Contact Form\" showLabel=\"false\" imageMso=\"NewContact\"")
+              .Append(" getVisible=\"GetContactVisible\" onAction=\"OnSetDefaultContactForm\" screentip=\"Default Contact Form\"")
+              .Append(" supertip=\"Set the selected contacts to open with Outlook's own contact form (message class IPM.Contact).\"/>");
+            sb.Append("<button id=\"cfFormCustom\" getLabel=\"GetCustomFormLabel\" showLabel=\"false\" imageMso=\"ChooseForm\"")
+              .Append(" getVisible=\"GetCustomFormVisible\" onAction=\"OnSetCustomContactForm\" getScreentip=\"GetCustomFormLabel\"")
+              .Append(" getSupertip=\"GetCustomFormSupertip\"/>");
+            sb.Append("</box>");
             sb.Append("</group>");
 
             // Custom mail fields (domainRelated, nameRelated, me, tos, ccs, unknownDomain): mail folders only.
@@ -301,6 +310,49 @@ namespace tinykit.OutlookAddin.Ribbon
         public bool GetMailVisible(Office.IRibbonControl control)
         {
             return Safe(() => Focus(control) == ItemKind.Mail, true);
+        }
+
+        public bool GetContactVisible(Office.IRibbonControl control)
+        {
+            return Safe(() => Focus(control) == ItemKind.Contact, false);
+        }
+
+        public bool GetCustomFormVisible(Office.IRibbonControl control)
+        {
+            return Safe(() => Focus(control) == ItemKind.Contact && CustomForm(control) != null, false);
+        }
+
+        public string GetCustomFormLabel(Office.IRibbonControl control)
+        {
+            return Safe(() => FilterController.FormName(CustomForm(control) ?? "IPM.Contact"), "Custom Contact Form");
+        }
+
+        public string GetCustomFormSupertip(Office.IRibbonControl control)
+        {
+            return Safe(() => "Set the selected contacts to open with the Contacts folder's form (message class "
+                + (CustomForm(control) ?? "?") + ").", "");
+        }
+
+        private string CustomForm(Office.IRibbonControl control)
+        {
+            var explorer = control.Context as Outlook.Explorer ?? Globals.ThisAddIn.Application.ActiveExplorer();
+            return explorer == null ? null : _controller.CustomContactForm(explorer);
+        }
+
+        public void OnSetDefaultContactForm(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.SetContactForm(ex, FilterController.DefaultContactForm));
+        }
+
+        public void OnSetCustomContactForm(Office.IRibbonControl control)
+        {
+            Run(control, ex =>
+            {
+                var form = _controller.CustomContactForm(ex);
+                if (form == null)
+                    throw new UserMessageException("The Contacts folder has no custom form (its default form is Outlook's own).");
+                _controller.SetContactForm(ex, form);
+            });
         }
 
         public bool GetQuickVisible(Office.IRibbonControl control)

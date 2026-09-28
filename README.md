@@ -82,6 +82,11 @@ Frequently used Outlook commands, icons only, in columns (the list is `BuiltInCo
 - Mark as Read / Mark as Unread (only the one that applies is shown), Show as Conversations (check box, no label),
   Messages in this Conversation
 
+In contact folders a last column adds two buttons of the add-in's own:
+- **Default Contact Form** sets the selected contacts' message class to `IPM.Contact`, so they open with Outlook's form.
+- **<custom form>** (e.g. *myContactForm*) sets it to the custom form that is the default form of this contact folder
+  (or else of the default Contacts folder), e.g. `IPM.Contact.myContactForm`. Hidden when no such form is set.
+
 Outlook enables and disables them as on its own tabs. Clear Flag and Messages in this Conversation have no icon of
 their own (they live in menus), so they get Delete and GroupConversations.
 
@@ -201,7 +206,7 @@ Tools for the selected items, shown in every folder.
   addresses on the clipboard. **Search** finds people by name or user name and lists their addresses; **Copy Contents**
   copies the report as text; **Refresh** reads the mail and Contacts again. The subject opens the mail.
 - **Copy Items** copies one line per selected mail (or meeting request) to the clipboard, e.g.
-  `'26.09.28월 17:01 <The Mulia Bali> Ultimate Getaway`. **Shift+click** puts the new lines before the clipboard's
+  `'26.09.28월 17:01 <The Mulia Bali> Ultimate Getaway`, in the order the view shows them. **Shift+click** puts the new lines before the clipboard's
   current text, to collect mails from several folders. Other items (contacts, tasks) are skipped.
 
 ### View group

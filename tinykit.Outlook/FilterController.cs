@@ -1171,12 +1171,110 @@ namespace tinykit.OutlookAddin
             form.Show(WindowOwner.From(explorer));
         }
 
+        public const string DefaultContactForm = "IPM.Contact";
+
+        // PR_DEF_POST_MSGCLASS: the form a folder's "New" uses (Properties > General > "When posting to this folder, use").
+        private const string DefaultPostClassProp = "http://schemas.microsoft.com/mapi/proptag/0x36E5001F";
+
+        /// <summary>"myContactForm" for IPM.Contact.myContactForm; "Contact" for IPM.Contact.</summary>
+        public static string FormName(string messageClass)
+        {
+            int dot = messageClass.LastIndexOf('.');
+            return dot < 0 ? messageClass : messageClass.Substring(dot + 1);
+        }
+
+        /// <summary>
+        /// The custom contact form (IPM.Contact.*) set as the default form of the current contact folder, or else of
+        /// the default Contacts folder; null when neither uses one.
+        /// </summary>
+        public string CustomContactForm(Outlook.Explorer explorer)
+        {
+            Outlook.MAPIFolder current = null;
+            try
+            {
+                current = explorer.CurrentFolder;
+            }
+            catch (COMException)
+            {
+            }
+            return CustomFormOf(current)
+                ?? CustomFormOf(Globals.ThisAddIn.Application.Session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderContacts));
+        }
+
+        private static string CustomFormOf(Outlook.MAPIFolder folder)
+        {
+            if (folder == null || folder.DefaultItemType != Outlook.OlItemType.olContactItem)
+                return null;
+            try
+            {
+                var form = folder.PropertyAccessor.GetProperty(DefaultPostClassProp) as string;
+                return form != null && form.StartsWith(DefaultContactForm + ".", StringComparison.OrdinalIgnoreCase) ? form : null;
+            }
+            catch (COMException)
+            {
+                return null; // not set: the folder uses IPM.Contact
+            }
+        }
+
+        /// <summary>Sets the message class of the selected contacts, so they open with that form.</summary>
+        public void SetContactForm(Outlook.Explorer explorer, string messageClass)
+        {
+            Outlook.Selection selection;
+            try
+            {
+                selection = explorer.Selection;
+            }
+            catch (COMException)
+            {
+                selection = null;
+            }
+            if (selection == null || selection.Count == 0)
+                throw new UserMessageException("Select the contacts first.");
+
+            int changed = 0, already = 0, skipped = 0;
+            var cursor = Cursor.Current;
+            Cursor.Current = Cursors.WaitCursor;
+            try
+            {
+                for (int i = 1; i <= selection.Count; i++)
+                {
+                    object item = selection[i];
+                    try
+                    {
+                        var contact = item as Outlook.ContactItem;
+                        if (contact == null)
+                            skipped++;
+                        else if (string.Equals(contact.MessageClass, messageClass, StringComparison.OrdinalIgnoreCase))
+                            already++;
+                        else
+                        {
+                            contact.MessageClass = messageClass;
+                            contact.Save();
+                            changed++;
+                        }
+                    }
+                    finally
+                    {
+                        Marshal.ReleaseComObject(item);
+                    }
+                }
+            }
+            finally
+            {
+                Cursor.Current = cursor;
+            }
+            Notifier.Info(explorer, FormName(messageClass) + " form: " + changed + (changed == 1 ? " contact" : " contacts") + " changed"
+                + (already > 0 ? ", " + already + " already had it" : "") + (skipped > 0 ? ", " + skipped + " other items skipped" : "") + ".");
+        }
+
         /// <summary>
         /// Copy Items: one line per selected mail, <c>'yy.MM.dd요일 HH:mm &lt;sender&gt; subject</c>, to the clipboard.
+        /// The lines follow the order of the view (Outlook's Selection comes in its own order).
         /// Shift+click appends the clipboard's current text after the new lines.
         /// </summary>
         public void CopySelectedItems(Outlook.Explorer explorer)
         {
+            bool append = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
             Outlook.Selection selection;
             try
             {
@@ -1189,8 +1287,8 @@ namespace tinykit.OutlookAddin
             if (selection == null || selection.Count == 0)
                 throw new UserMessageException("Select the mails to copy first.");
 
-            var text = new System.Text.StringBuilder();
-            int copied = 0, skipped = 0;
+            var lines = new List<KeyValuePair<string, string>>(); // record key, line
+            int skipped = 0;
             for (int i = 1; i <= selection.Count; i++)
             {
                 object item = selection[i];
@@ -1198,22 +1296,81 @@ namespace tinykit.OutlookAddin
                 {
                     var line = ItemLine(item);
                     if (line == null) skipped++;
-                    else { text.Append(line).Append(Environment.NewLine); copied++; }
+                    else
+                        lines.Add(new KeyValuePair<string, string>(RecordKeyOf(item), line));
                 }
                 finally
                 {
                     Marshal.ReleaseComObject(item);
                 }
             }
+            int copied = lines.Count;
             if (copied == 0)
                 throw new UserMessageException("Select the mails to copy first. (Contacts and tasks are skipped.)");
 
-            bool append = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
+            var order = ViewOrder(explorer, lines.Select(l => l.Key));
+            if (order != null)
+                lines = lines.Select((l, i) => new { l, i })
+                    .OrderBy(x => { int at; return x.l.Key != null && order.TryGetValue(x.l.Key, out at) ? at : int.MaxValue; })
+                    .ThenBy(x => x.i).Select(x => x.l).ToList();
+            var text = new System.Text.StringBuilder();
+            foreach (var l in lines)
+                text.Append(l.Value).Append(Environment.NewLine);
             if (append && Clipboard.ContainsText())
                 text.Append(Clipboard.GetText()).Append(Environment.NewLine);
             Clipboard.SetText(text.ToString());
             Notifier.Info(explorer, copied + (copied == 1 ? " mail" : " mails") + " copied to the clipboard"
                 + (append ? ", before its previous text" : "") + (skipped > 0 ? " (" + skipped + " other items skipped)" : "") + ".");
+        }
+
+        // PR_RECORD_KEY: the same in a view's table and on the item. (A table's EntryID column can be the short-term
+        // ID, e.g. in outlook.com stores, which never equals the item's EntryID.)
+        private const string RecordKeyProp = "http://schemas.microsoft.com/mapi/proptag/0x0FF90102";
+
+        private static string RecordKeyOf(object item)
+        {
+            try
+            {
+                var props = ((dynamic)item).PropertyAccessor as Outlook.PropertyAccessor;
+                return props == null ? null : props.BinaryToString(props.GetProperty(RecordKeyProp)) as string;
+            }
+            catch (COMException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// The position of each wanted record key in the current view (its sort and filter), reading the view's rows
+        /// until all are found; null when the view has no table.
+        /// </summary>
+        private static Dictionary<string, int> ViewOrder(Outlook.Explorer explorer, IEnumerable<string> recordKeys)
+        {
+            var wanted = new HashSet<string>(recordKeys.Where(k => k != null), StringComparer.OrdinalIgnoreCase);
+            if (wanted.Count == 0)
+                return null;
+            try
+            {
+                var view = explorer.CurrentView as Outlook.TableView;
+                if (view == null)
+                    return null;
+                var table = view.GetTable();
+                table.Columns.RemoveAll();
+                table.Columns.Add(RecordKeyProp);
+                var order = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                for (int at = 0; !table.EndOfTable && order.Count < wanted.Count; at++)
+                {
+                    var key = table.GetNextRow().BinaryToString(RecordKeyProp);
+                    if (key != null && wanted.Contains(key) && !order.ContainsKey(key))
+                        order[key] = at;
+                }
+                return order;
+            }
+            catch (COMException ex)
+            {
+                Log.Info("Copy Items: view order unavailable, using the selection's order: " + ex.Message);
+                return null;
+            }
         }
 
         // A mail or meeting request: 'yy.MM.dd요일 HH:mm <sender> subject; null for other items.
