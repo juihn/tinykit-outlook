@@ -27,6 +27,9 @@ namespace tinykit.OutlookAddin.Formatting
             var view = (Outlook.TableView)ViewFilterService.RequireTableView(explorer);
             var folder = explorer.CurrentFolder;
             var problems = new List<string>();
+            // A view can show user-defined columns the folder does not define (e.g. a new folder whose view was copied
+            // from the Inbox); Outlook refuses to remove those ("Field does not exist in this folder"), so define them first.
+            DefineViewUserFields(view, folder);
             var fields = view.ViewFields;
 
             // A table view always keeps at least one column, so keep the first one until another has been added.
@@ -72,6 +75,54 @@ namespace tinykit.OutlookAddin.Formatting
 
             ConditionalFormatService.SaveView(view, ownFilter);
             return problems;
+        }
+
+        private const string UserPropertyPrefix = "http://schemas.microsoft.com/mapi/string/{00020329-0000-0000-C000-000000000046}/";
+
+        /// <summary>
+        /// Defines in the folder every user-defined field that a column of the view shows but the folder lacks, with the
+        /// column's type (string → text, datetime → date/time, i4 → integer, r8 → number, boolean → yes/no).
+        /// </summary>
+        private static void DefineViewUserFields(Outlook.TableView view, Outlook.MAPIFolder folder)
+        {
+            System.Xml.Linq.XDocument xml;
+            try
+            {
+                xml = System.Xml.Linq.XDocument.Parse(view.XML);
+            }
+            catch (Exception ex) when (ex is COMException || ex is System.Xml.XmlException)
+            {
+                return;
+            }
+            foreach (var column in xml.Descendants("column"))
+            {
+                var prop = (string)column.Element("prop") ?? "";
+                if (!prop.StartsWith(UserPropertyPrefix, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                var name = prop.Substring(UserPropertyPrefix.Length);
+                try
+                {
+                    if (name.Length == 0 || folder.UserDefinedProperties.Find(name) != null)
+                        continue;
+                    folder.UserDefinedProperties.Add(name, TypeOf((string)column.Element("type")));
+                }
+                catch (COMException ex)
+                {
+                    Common.Log.Error("Define user field " + name + " in " + folder.Name, ex);
+                }
+            }
+        }
+
+        private static Outlook.OlUserPropertyType TypeOf(string viewType)
+        {
+            switch ((viewType ?? "").ToLowerInvariant())
+            {
+                case "datetime": return Outlook.OlUserPropertyType.olDateTime;
+                case "i4": return Outlook.OlUserPropertyType.olInteger;
+                case "r8": return Outlook.OlUserPropertyType.olNumber;
+                case "boolean": return Outlook.OlUserPropertyType.olYesNo;
+                default: return Outlook.OlUserPropertyType.olText;
+            }
         }
 
         private static Outlook.ViewField TryAdd(Outlook.ViewFields fields, string name)
