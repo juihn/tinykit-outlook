@@ -26,6 +26,20 @@ self-signed publisher; choose **Install**.
 The namespace is `tinykit.OutlookAddin` (not `tinykit.Outlook`) so the usual
 `using Outlook = Microsoft.Office.Interop.Outlook;` alias doesn't collide.
 
+## Contact form (`Forms\`)
+
+`Forms\myContactForm.fdm` (and the same form as `Forms\myContactForm.oft`) is a custom contact form,
+message class `IPM.Contact.myContactForm`. To use it:
+
+1. **Install:** *File > Options > Advanced > Custom Forms… > Manage Forms…*, choose *Personal Forms* on the right,
+   **Install…**, pick `myContactForm.fdm`, OK.
+2. **Make it the Contacts folder's form:** right-click *Contacts* > *Properties* > *When posting to this folder, use:*
+   **myContactForm**. New contacts then open with it, and the Built-in group shows a **myContactForm** button that
+   switches selected contacts to it (**Default Contact Form** switches them back).
+
+The files had their author details (name, e-mail, Exchange address, message IDs) replaced with neutral values of the
+same length; the form itself is unchanged.
+
 ## Settings location (sharing across PCs)
 
 Shared settings files are kept in the personal OneDrive when this folder exists:
