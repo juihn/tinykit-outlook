@@ -24,6 +24,7 @@ namespace tinykit.OutlookAddin.Ribbon
         private const string ExplorerRibbonId = "Microsoft.Outlook.Explorer";
         private const string ReadMailRibbonId = "Microsoft.Outlook.Mail.Read";
         private const string ContactRibbonId = "Microsoft.Outlook.Contact";
+        private const string ComposeMailRibbonId = "Microsoft.Outlook.Mail.Compose";
 
         // Namespace of the qualified ids (idQ) that other add-ins use to add groups to TinyKit's tabs:
         // xmlns:tk="tinykit" and <tab idQ="tk:ContactTab"> (contact window), after <group idQ="tk:ContactBuiltIn">.
@@ -143,7 +144,41 @@ namespace tinykit.OutlookAddin.Ribbon
                 return BuildReadMailXml();
             if (ribbonID == ContactRibbonId)
                 return BuildContactXml();
+            if (ribbonID == ComposeMailRibbonId)
+                return BuildComposeMailXml();
             return null;
+        }
+
+        /// <summary>
+        /// A mail being written: a TinyKit tab before its Message tab, with a Recipients group (qualified ids, like the
+        /// contact window, so other add-ins can add groups: tk:ComposeTab, tk:ComposeRecipients, before tk:AfterRecipients).
+        /// </summary>
+        private static string BuildComposeMailXml()
+        {
+            var sb = new StringBuilder();
+            sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\" xmlns:tk=\"")
+              .Append(SharedNamespace).Append("\">");
+            sb.Append("<ribbon><tabs><tab idQ=\"tk:ComposeTab\" label=\"TinyKit\" insertBeforeMso=\"TabNewMailMessage\">");
+            sb.Append("<group idQ=\"tk:ComposeRecipients\" label=\"Recipients\" insertBeforeQ=\"tk:AfterRecipients\">");
+            sb.Append("<button id=\"cmRemoveSender\" label=\"Remove Sender from Recipients\" imageMso=\"_1\" onAction=\"OnRemoveSender\"")
+              .Append(" screentip=\"Remove Sender from Recipients\" supertip=\"Remove the sending account's own address from To, Cc and Bcc ")
+              .Append("(e.g. after Reply All).\"/>");
+            sb.Append("<button id=\"cmRestate\" label=\"Restate Recipients\" imageMso=\"_2\" onAction=\"OnRestateRecipients\"")
+              .Append(" screentip=\"Restate Recipients\" supertip=\"Replace each recipient found in Contacts (by address, or by the ")
+              .Append("contact's e-mail display name) with that contact entry, so it shows with the name set in Contacts. The type ")
+              .Append("(To/Cc/Bcc) is kept; the replaced recipients move after the others, those in the sender's own domain last. ")
+              .Append("Then Check Names.\"/>");
+            sb.Append("<button id=\"cmRecipients\" label=\"Recipients Report\" imageMso=\"ContactCardViewMySite\" onAction=\"OnComposeRecipientsReport\"")
+              .Append(" screentip=\"Recipients Report\" supertip=\"Show this mail's recipients grouped by domain and department (from Contacts).\"/>");
+            sb.Append("</group>");
+            // Outlook's own commands: theme fonts, ruler, Bcc field.
+            sb.Append("<group idQ=\"tk:ComposeCompose\" label=\"Compose\">");
+            sb.Append("<gallery idMso=\"ThemeFontsGallery\"/>");
+            sb.Append("<button idMso=\"ViewRulerWord\"/>");
+            sb.Append("<toggleButton idMso=\"ShowBcc\"/>");
+            sb.Append("</group>");
+            sb.Append("</tab></tabs></ribbon></customUI>");
+            return sb.ToString();
         }
 
         /// <summary>
@@ -396,6 +431,60 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnLoad(Office.IRibbonUI ribbonUI)
         {
             _ui = ribbonUI;
+        }
+
+        // ---------- Mail compose window ----------
+
+        private void RunCompose(Office.IRibbonControl control, Action<Outlook.Inspector, Outlook.MailItem> action)
+        {
+            var inspector = control.Context as Outlook.Inspector;
+            try
+            {
+                var mail = inspector == null ? null : inspector.CurrentItem as Outlook.MailItem;
+                if (mail == null)
+                    throw new UserMessageException("Open a mail being written first.");
+                action(inspector, mail);
+            }
+            catch (UserMessageException ex)
+            {
+                Notifier.Info(null, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(control.Id, ex);
+                MessageBox.Show(WindowOwner.From(inspector), ex.Message, ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private Compose.RecipientCommands Recipients
+        {
+            get { return new Compose.RecipientCommands(_controller.Fields.Calculator); }
+        }
+
+        public void OnRemoveSender(Office.IRibbonControl control)
+        {
+            RunCompose(control, (i, m) =>
+            {
+                int n = Recipients.RemoveSender(m);
+                if (n == 0)
+                    Notifier.Info(null, "The sender (" + Compose.RecipientCommands.SenderSmtp(m) + ") is not among the recipients.");
+            });
+        }
+
+        public void OnRestateRecipients(Office.IRibbonControl control)
+        {
+            RunCompose(control, (i, m) =>
+            {
+                int n = Recipients.Restate(m);
+                i.CommandBars.ExecuteMso("CheckNames");
+                if (n == 0)
+                    Notifier.Info(null, "No recipient was found in Contacts.");
+            });
+        }
+
+        public void OnComposeRecipientsReport(Office.IRibbonControl control)
+        {
+            RunCompose(control, (i, m) => _controller.ShowRecipientsReport(m, i));
         }
 
         // ---------- Contact window ----------

@@ -286,6 +286,20 @@ Before the window's Message tab, with one **Message** group:
   preferences · Approve / Reject (approval requests only) · Find · Edit Message: Outlook's own commands.
 - **Recipients Report** of the open mail, as in the Items group.
 
+## **TinyKit** tab in a mail being written
+Before the window's Message tab, with a **Recipients** group:
+- **Remove Sender from Recipients** removes the sending account's own address from To, Cc and Bcc (e.g. after Reply All).
+- **Restate Recipients** replaces each recipient found in Contacts (by address, or by the contact's e-mail display name)
+  with that contact entry, so it shows with the name set in Contacts; its type (To/Cc/Bcc) is kept. The replaced
+  recipients move after the others, those in the sender's own domain (base domain, e.g. `contoso.com` for
+  `a@mail.contoso.com`) last. Then Outlook's Check Names runs.
+- **Recipients Report** of this mail, as in the Items group.
+
+and a **Compose** group of Outlook's own commands: theme Fonts, Ruler, Bcc.
+
+The tab and group have qualified ids (`tk:ComposeTab`, `tk:ComposeRecipients`, before `tk:AfterRecipients`) so other
+add-ins can add groups, as in the contact window.
+
 ## **TinyKit** tab in a contact's window
 Before the window's Contact tab, with one **Built-in** group:
 - General, Details, All Fields (the window's pages).

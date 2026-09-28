@@ -68,6 +68,29 @@ namespace tinykit.OutlookAddin.CustomFields
             return _entries.TryGetValue(smtp.Trim(), out entry) ? entry : null;
         }
 
+        /// <summary>
+        /// The address whose contact name (e-mail display name, else File As) is exactly <paramref name="name"/>, ignoring
+        /// case; null when none or when several addresses have that name.
+        /// </summary>
+        public string AddressNamed(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+            if (_entries == null)
+                Build();
+            name = name.Trim();
+            string found = null;
+            foreach (var pair in _entries)
+            {
+                if (!string.Equals(pair.Value.Name, name, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (found != null)
+                    return null; // ambiguous
+                found = pair.Key;
+            }
+            return found;
+        }
+
         private void Build()
         {
             var entries = new Dictionary<string, ContactEntry>(StringComparer.OrdinalIgnoreCase);
