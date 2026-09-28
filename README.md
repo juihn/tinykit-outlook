@@ -154,14 +154,18 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
   - **Click:** turns its format on or off as conditional formatting.
   - **No format defined yet:** opens the Format dialog first, and the new format is turned on.
   - **Ctrl+click:** opens the Format dialog to edit it (font style, strikeout, underline, color). Font name and size follow the view (View Font).
-- **Add to Delete**, **Add to Issue**, **Add to Transaction**, **Add to Tentative** (mail) add the selected mails to the
-  saved filter of that name. A small window asks whether by **domainRelated** or by **Subject** (first time in a session:
-  Subject for Delete, Transactions and Tentative, domainRelated for Issue; afterwards the last choice for that filter).
-  Subjects become patterns in which numbers (dates, times, amounts, ids, `9월 27일`, `1,234원`) and month/weekday names
-  are `%` (`Your trip with Gojek on Friday, 26 September` → `Your trip with Gojek on %`); a subject without them is
-  matched exactly. The list can be edited before adding.
-  A filter that does not exist yet is created: `Delete` at the end, `Issue` after `Delete`, `Transactions` after `Issue`,
-  `Tentative` after `Transactions`. A filter with a name and format but no SQL yet is filled in place.
+- **Add to** (menu, mail) lists the saved filters except `Flagged`, `Sent` and `Unknown` (the first-install filters that
+  are computed from the mail itself), including ones added to the file later and ones that have a name and format but no
+  SQL yet (they are filled in place). Picking one opens a small window with two check boxes:
+  - **domainRelated** only: `domainRelated = '...'` for each selected mail's domain.
+  - **Subject** only: a subject pattern for each selected mail.
+  - **both**: `(domainRelated = '...' AND subject pattern)`, one line per mail as `domainRelated <Tab> subject`; e.g. only
+    the invoices of one company sent through a shared billing service.
+
+  The first time in a session `Issue` starts with domainRelated and every other filter with Subject; afterwards the
+  last choice for that filter. Subjects become patterns in which numbers (dates, times, amounts, ids, `9월 27일`,
+  `1,234원`) and month/weekday names are `%` (`Your trip with Gojek on Friday, 26 September` → `Your trip with Gojek on %`);
+  a subject without them is matched exactly. The list can be edited before adding.
   DASL `LIKE` only honours `%` at the start or end, so a pattern with `%` in the middle is added as prefix/middle/suffix
   conditions joined with `AND`.
   Each value is added as one condition per line (`... OR` + new line); values the filter already covers are skipped.

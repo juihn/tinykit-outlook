@@ -390,17 +390,25 @@ namespace tinykit.OutlookAddin
 
         // ---------- Saved filters ----------
 
-        /// <summary>Saved filter that "Add to Delete" extends with subjects (created on first use).</summary>
-        public const string DeleteFilterName = "Delete";
+        /// <summary>
+        /// Saved filters left out of the Add to menu: the first-install mail filters, which are computed from the mail
+        /// itself (flag status, me, nameRelated) rather than lists of domains or subjects.
+        /// </summary>
+        private static readonly HashSet<string> NotAddTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Flagged", "Sent", "Unknown",
+        };
 
-        /// <summary>Saved filter that "Add to Issue" extends with domainRelated values (created after Delete).</summary>
-        public const string IssueFilterName = "Issue";
-
-        /// <summary>Saved filter that "Add to Transaction" extends with subject patterns or domainRelated values.</summary>
-        public const string TransactionFilterName = "Transactions";
-
-        /// <summary>Saved filter that "Add to Tentative" extends the same way (created after "Transactions").</summary>
-        public const string TentativeFilterName = "Tentative";
+        /// <summary>The saved filters the Add to menu lists (placeholders without SQL included), in file order.</summary>
+        public List<string> AddToTargets
+        {
+            get
+            {
+                return _kind != ItemKind.Mail ? new List<string>()
+                    : Settings.Filters.Select(f => f.Name).Where(n => !NotAddTargets.Contains(n))
+                        .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            }
+        }
 
         private static readonly string DomainRelatedProperty = CustomFieldNames.Dasl(CustomFieldNames.DomainRelated);
 
@@ -557,48 +565,28 @@ namespace tinykit.OutlookAddin
             }
         }
 
-        /// <summary>Add to Delete: see <see cref="AddSelectionByDialog"/>; subject first; "Delete" is added at the end.</summary>
-        public void AddSelectionToDelete(Outlook.Explorer explorer)
-        {
-            AddSelectionByDialog(explorer, DeleteFilterName, null, ConditionField.Subject);
-        }
-
-        /// <summary>Add to Issue: see <see cref="AddSelectionByDialog"/>; domainRelated first; "Issue" is created after "Delete".</summary>
-        public void AddSelectionToIssue(Outlook.Explorer explorer)
-        {
-            AddSelectionByDialog(explorer, IssueFilterName, DeleteFilterName, ConditionField.DomainRelated);
-        }
-
-        /// <summary>Add to Transaction: see <see cref="AddSelectionByDialog"/>; "Transactions" is created after "Issue".</summary>
-        public void AddSelectionToTransaction(Outlook.Explorer explorer)
-        {
-            AddSelectionByDialog(explorer, TransactionFilterName, IssueFilterName, ConditionField.Subject);
-        }
-
-        /// <summary>Add to Tentative: see <see cref="AddSelectionByDialog"/>; "Tentative" is created after "Transactions".</summary>
-        public void AddSelectionToTentative(Outlook.Explorer explorer)
-        {
-            AddSelectionByDialog(explorer, TentativeFilterName, TransactionFilterName, ConditionField.Subject);
-        }
-
         /// <summary>
-        /// A dialog chooses domainRelated or subject; subjects become patterns in which numbers, dates and month/weekday
-        /// names are % (editable), and each line is added to the saved filter <paramref name="filterName"/> as a condition.
-        /// <paramref name="defaultField"/> is preselected the first time in a session; later the last choice for that filter.
+        /// Add to &gt; filter: a dialog chooses domainRelated, subject, or both; subjects become patterns in which numbers,
+        /// dates and month/weekday names are % (editable), and each line is added to the saved filter as a condition
+        /// (both: domainRelated = ... AND the subject pattern). The first time in a session "Issue" starts with
+        /// domainRelated and every other filter with Subject; later the last choice for that filter.
         /// </summary>
-        private void AddSelectionByDialog(Outlook.Explorer explorer, string filterName, string insertAfter, ConditionField defaultField)
+        public void AddSelectionToFilter(Outlook.Explorer explorer, string filterName)
         {
             if (_kind != ItemKind.Mail)
-                throw new UserMessageException("\"Add to " + filterName + "\" works in mail folders.");
-            var domains = SelectedValues(explorer, DomainRelatedOf);
-            var patterns = SelectedValues(explorer, SubjectOf).Select(Dasl.SubjectPattern)
-                .Where(p => p.Length > 0).Distinct(StringComparer.Ordinal).ToList();
-            if (domains.Count == 0 && patterns.Count == 0)
+                throw new UserMessageException("\"Add to\" works in mail folders.");
+            var mails = SelectedValues(explorer, item => DomainRelatedOf(item) + "\t" + Dasl.SubjectPattern(SubjectOf(item)))
+                .Select(v => v.Split(new[] { '\t' }, 2))
+                .Select(p => new MailKey { Domain = p[0].Trim(), Pattern = p.Length > 1 ? p[1].Trim() : "" })
+                .Where(m => m.Domain.Length > 0 || m.Pattern.Length > 0).ToList();
+            if (mails.Count == 0)
                 throw new UserMessageException("Select the mails to add to \"" + filterName + "\" first.");
 
+            var defaultField = string.Equals(filterName, "Issue", StringComparison.OrdinalIgnoreCase)
+                ? ConditionField.DomainRelated : ConditionField.Subject;
             ConditionField field;
-            List<string> values;
-            using (var dialog = new AddConditionsDialog(filterName, domains, patterns, defaultField))
+            List<MailKey> values;
+            using (var dialog = new AddConditionsDialog(filterName, mails, defaultField))
             {
                 if (dialog.ShowDialog(WindowOwner.From(explorer)) != DialogResult.OK)
                     return;
@@ -607,18 +595,22 @@ namespace tinykit.OutlookAddin
             }
             if (field == ConditionField.Subject)
                 AddSelectionTo(explorer, filterName, "subject", values,
-                    v => Dasl.PropertyMatches(SubjectProperty, v), insertAfter);
-            else
+                    v => Dasl.PropertyMatches(SubjectProperty, v.Pattern), null);
+            else if (field == ConditionField.DomainRelated)
                 AddSelectionTo(explorer, filterName, "domainRelated", values,
-                    v => Dasl.PropertyEquals(DomainRelatedProperty, v), insertAfter);
+                    v => Dasl.PropertyEquals(DomainRelatedProperty, v.Domain), null);
+            else
+                AddSelectionTo(explorer, filterName, "domainRelated and subject", values,
+                    v => "(" + Dasl.PropertyEquals(DomainRelatedProperty, v.Domain) + " AND "
+                         + Dasl.PropertyMatches(SubjectProperty, v.Pattern) + ")", null);
         }
 
         /// <summary>
         /// Appends one OR-ed condition per value to the saved filter <paramref name="filterName"/> (created if missing,
         /// right after <paramref name="insertAfter"/> when given). Values the filter already covers are skipped.
         /// </summary>
-        private void AddSelectionTo(Outlook.Explorer explorer, string filterName, string what, List<string> values,
-            Func<string, string> clauseFor, string insertAfter)
+        private void AddSelectionTo<T>(Outlook.Explorer explorer, string filterName, string what, List<T> values,
+            Func<T, string> clauseFor, string insertAfter)
         {
             if (_kind != ItemKind.Mail)
                 throw new UserMessageException("\"Add to " + filterName + "\" works in mail folders.");

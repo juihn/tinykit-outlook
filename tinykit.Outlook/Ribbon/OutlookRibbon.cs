@@ -158,9 +158,7 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("</group>");
 
             // Saved filters: a toggle per saved filter (fixed slots shown/hidden by callbacks, so edits need no
-            // restart), formats of the applied one, Add to Delete/Issue, then the file and format management.
-            var delete = FilterController.DeleteFilterName;
-            var issue = FilterController.IssueFilterName;
+            // restart), formats of the applied one, the Add to menu, then the file and format management.
             sb.Append("<group id=\"grpSaved\" label=\"Saved Filters\" getVisible=\"GetSavedGroupVisible\">");
             for (int i = 0; i < FilterController.MaxSavedFilters; i++)
             {
@@ -174,11 +172,12 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<separator id=\"sepSaved1\"/>");
             sb.Append("<toggleButton id=\"sfFormat\" label=\"Format\" imageMso=\"ConditionalFormattingMenu\"")
               .Append(" getPressed=\"GetApplyFormatPressed\" onAction=\"OnFormatToggle\" screentip=\"Format\" getSupertip=\"GetFormatSupertip\"/>");
-            AppendAddByDialog(sb, "sfAddDelete", "Add to " + delete, "OnAddToDelete", delete, null);
-            AppendAddByDialog(sb, "sfAddIssue", "Add to " + issue, "OnAddToIssue", issue, delete);
-            var transaction = FilterController.TransactionFilterName;
-            AppendAddByDialog(sb, "sfAddTransaction", "Add to Transaction", "OnAddToTransaction", transaction, issue);
-            AppendAddByDialog(sb, "sfAddTentative", "Add to Tentative", "OnAddToTentative", FilterController.TentativeFilterName, transaction);
+            sb.Append("<dynamicMenu id=\"sfAddTo\" label=\"Add to\" imageMso=\"").Append(AddIcon)
+              .Append("\" getVisible=\"GetMailVisible\" getContent=\"GetAddToContent\" invalidateContentOnDrop=\"true\" screentip=\"Add to\"")
+              .Append(" supertip=\"Add the selected mails to a saved filter (all except Flagged, Sent and Unknown). A small window asks ")
+              .Append("whether by DOMAINRELATED, by SUBJECT, or by both together (domainRelated = ... AND subject); subjects become ")
+              .Append("patterns in which numbers, dates and month/weekday names are % (e.g. Your trip with Gojek on %), which you can ")
+              .Append("edit before adding.\"/>");
             sb.Append("<separator id=\"sepSaved2\"/>");
             sb.Append("<button id=\"mSettings\" label=\"Edit Saved Filters\" imageMso=\"").Append(XmlIcon)
               .Append("\" onAction=\"OnOpenSettings\" getScreentip=\"GetSettingsScreentip\" getSupertip=\"GetSettingsSupertip\"/>");
@@ -212,18 +211,6 @@ namespace tinykit.OutlookAddin.Ribbon
 
             sb.Append("</tab></tabs></ribbon></customUI>");
             return sb.ToString();
-        }
-
-        /// <summary>An "Add to ..." button that asks (domainRelated or subject pattern) before adding to a saved filter.</summary>
-        private static void AppendAddByDialog(StringBuilder sb, string id, string label, string onAction, string filter, string after)
-        {
-            sb.Append("<button id=\"").Append(id).Append("\" label=\"").Append(label).Append("\" imageMso=\"").Append(AddIcon)
-              .Append("\" getVisible=\"GetMailVisible\" onAction=\"").Append(onAction).Append("\" screentip=\"").Append(label).Append("\"")
-              .Append(" supertip=\"Adds the selected mails to the saved filter &quot;").Append(filter)
-              .Append("&quot;. A small window asks whether by DOMAINRELATED or by SUBJECT; subjects become patterns in which numbers, ")
-              .Append("dates and month/weekday names are % (e.g. Your trip with Gojek on %), which you can edit before adding. ")
-              .Append(after == null ? "The filter is created on first use." : "The filter is created after &quot;" + after + "&quot; on first use.")
-              .Append("\"/>");
         }
 
         private const string AddIcon = "OutlineExpand";
@@ -418,24 +405,32 @@ namespace tinykit.OutlookAddin.Ribbon
             Run(control, ex => _controller.FormatButton(ex, pressed));
         }
 
-        public void OnAddToDelete(Office.IRibbonControl control)
+        /// <summary>
+        /// Items of the Add to menu: one per saved filter it lists (see FilterController.AddToTargets), built each time
+        /// the menu opens, so filters added to the file later show up too. The tag carries the filter name.
+        /// </summary>
+        public string GetAddToContent(Office.IRibbonControl control)
         {
-            Run(control, ex => _controller.AddSelectionToDelete(ex));
+            return Safe(() =>
+            {
+                Focus(control);
+                var sb = new StringBuilder("<menu xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\">");
+                var targets = _controller.AddToTargets;
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    var name = SecurityElement.Escape(targets[i]);
+                    sb.Append("<button id=\"addTo").Append(SlotSeparator).Append(i).Append("\" label=\"").Append(name)
+                      .Append("\" tag=\"").Append(name).Append("\" onAction=\"OnAddToFilter\"/>");
+                }
+                if (targets.Count == 0)
+                    sb.Append("<button id=\"addToNone\" label=\"(no saved filters to add to)\" enabled=\"false\"/>");
+                return sb.Append("</menu>").ToString();
+            }, "<menu xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\"/>");
         }
 
-        public void OnAddToIssue(Office.IRibbonControl control)
+        public void OnAddToFilter(Office.IRibbonControl control)
         {
-            Run(control, ex => _controller.AddSelectionToIssue(ex));
-        }
-
-        public void OnAddToTransaction(Office.IRibbonControl control)
-        {
-            Run(control, ex => _controller.AddSelectionToTransaction(ex));
-        }
-
-        public void OnAddToTentative(Office.IRibbonControl control)
-        {
-            Run(control, ex => _controller.AddSelectionToTentative(ex));
+            Run(control, ex => _controller.AddSelectionToFilter(ex, control.Tag));
         }
 
         public string GetSettingsScreentip(Office.IRibbonControl control)

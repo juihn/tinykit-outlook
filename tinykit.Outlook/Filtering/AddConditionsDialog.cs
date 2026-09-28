@@ -6,16 +6,27 @@ using System.Windows.Forms;
 
 namespace tinykit.OutlookAddin.Filtering
 {
-    /// <summary>What the selected mails are added to a saved filter by.</summary>
+    /// <summary>What the selected mails are added to a saved filter by; both = the two conditions together (AND).</summary>
+    [Flags]
     internal enum ConditionField
     {
-        DomainRelated,
-        Subject,
+        None = 0,
+        DomainRelated = 1,
+        Subject = 2,
+        Both = DomainRelated | Subject,
+    }
+
+    /// <summary>One selected mail: its domainRelated and its subject pattern (either may be null).</summary>
+    internal sealed class MailKey
+    {
+        public string Domain;
+        public string Pattern;
     }
 
     /// <summary>
-    /// Asks whether the selected mails go into a saved filter by domainRelated or by subject, and shows the conditions
-    /// (one per line, % = any text) so they can be edited before they are added.
+    /// Asks whether the selected mails go into a saved filter by domainRelated, by subject, or by both together, and shows
+    /// the conditions (one per line, % = any text; domainRelated and subject separated by a tab when both are checked) so
+    /// they can be edited before they are added.
     /// </summary>
     internal sealed class AddConditionsDialog : Form
     {
@@ -23,15 +34,16 @@ namespace tinykit.OutlookAddin.Filtering
         private static readonly Dictionary<string, ConditionField> LastField = new Dictionary<string, ConditionField>(StringComparer.OrdinalIgnoreCase);
 
         private readonly string _filterName;
-
-        private readonly RadioButton _byDomain;
-        private readonly RadioButton _bySubject;
+        private readonly CheckBox _byDomain;
+        private readonly CheckBox _bySubject;
+        private readonly Label _hint;
         private readonly TextBox _values;
+        private readonly Button _ok;
         private readonly Dictionary<ConditionField, string> _texts = new Dictionary<ConditionField, string>();
         private ConditionField _shown;
 
-        /// <param name="defaultField">The field chosen the first time for this filter in a session.</param>
-        public AddConditionsDialog(string filterName, IList<string> domains, IList<string> subjectPatterns, ConditionField defaultField)
+        /// <param name="defaultField">The choice the first time for this filter in a session.</param>
+        public AddConditionsDialog(string filterName, IList<MailKey> mails, ConditionField defaultField)
         {
             _filterName = filterName;
             Text = "Add to " + filterName;
@@ -42,79 +54,98 @@ namespace tinykit.OutlookAddin.Filtering
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterParent;
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(520, 300);
+            ClientSize = new Size(560, 300);
 
+            var domains = mails.Select(m => m.Domain).Where(d => !string.IsNullOrEmpty(d)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var patterns = mails.Select(m => m.Pattern).Where(p => !string.IsNullOrEmpty(p)).Distinct(StringComparer.Ordinal).ToList();
+            var pairs = mails.Where(m => !string.IsNullOrEmpty(m.Domain) && !string.IsNullOrEmpty(m.Pattern))
+                .Select(m => m.Domain + "\t" + m.Pattern).Distinct(StringComparer.Ordinal).ToList();
             _texts[ConditionField.DomainRelated] = string.Join(Environment.NewLine, domains);
-            _texts[ConditionField.Subject] = string.Join(Environment.NewLine, subjectPatterns);
+            _texts[ConditionField.Subject] = string.Join(Environment.NewLine, patterns);
+            _texts[ConditionField.Both] = string.Join(Environment.NewLine, pairs);
+            _texts[ConditionField.None] = "";
 
             var intro = new Label
             {
                 Text = "Add the selected mails to the saved filter \"" + filterName + "\" by:",
                 Location = new Point(12, 12),
                 AutoSize = true,
+                UseMnemonic = false,
             };
-            _byDomain = new RadioButton
+            _byDomain = new CheckBox
             {
                 Text = "domainRelated  (mail from these domains)",
                 Location = new Point(24, 38),
                 AutoSize = true,
                 Enabled = domains.Count > 0,
             };
-            _bySubject = new RadioButton
+            _bySubject = new CheckBox
             {
                 Text = "Subject  (numbers, dates, month and weekday names become %)",
                 Location = new Point(24, 62),
                 AutoSize = true,
-                Enabled = subjectPatterns.Count > 0,
+                Enabled = patterns.Count > 0,
             };
-            var hint = new Label
-            {
-                Text = "One condition per line; edit as needed.  % = any text.",
-                Location = new Point(12, 94),
-                AutoSize = true,
-                ForeColor = SystemColors.GrayText,
-            };
+            _hint = new Label { Location = new Point(12, 94), AutoSize = true, ForeColor = SystemColors.GrayText };
             _values = new TextBox
             {
                 Location = new Point(12, 116),
-                Size = new Size(496, 136),
+                Size = new Size(536, 136),
                 Multiline = true,
                 ScrollBars = ScrollBars.Both,
                 WordWrap = false,
                 AcceptsReturn = true,
+                AcceptsTab = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
             };
-            var ok = new Button { Text = "Add", DialogResult = DialogResult.OK, Location = new Point(352, 264), Size = new Size(75, 26) };
-            var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(433, 264), Size = new Size(75, 26) };
-            AcceptButton = ok;
+            _ok = new Button { Text = "Add", DialogResult = DialogResult.OK, Location = new Point(392, 264), Size = new Size(75, 26) };
+            var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(473, 264), Size = new Size(75, 26) };
+            AcceptButton = _ok;
             CancelButton = cancel;
-            Controls.AddRange(new Control[] { intro, _byDomain, _bySubject, hint, _values, ok, cancel });
+            Controls.AddRange(new Control[] { intro, _byDomain, _bySubject, _hint, _values, _ok, cancel });
 
             ConditionField start;
             if (!LastField.TryGetValue(filterName, out start))
                 start = defaultField;
-            if (start == ConditionField.Subject && subjectPatterns.Count == 0) start = ConditionField.DomainRelated;
-            if (start == ConditionField.DomainRelated && domains.Count == 0) start = ConditionField.Subject;
-            _shown = start;
-            _values.Text = _texts[start];
-            (start == ConditionField.Subject ? _bySubject : _byDomain).Checked = true;
+            if (domains.Count == 0) start &= ~ConditionField.DomainRelated;
+            if (patterns.Count == 0) start &= ~ConditionField.Subject;
+            if (start == ConditionField.None)
+                start = domains.Count > 0 ? ConditionField.DomainRelated : ConditionField.Subject;
+            _byDomain.Checked = (start & ConditionField.DomainRelated) != 0;
+            _bySubject.Checked = (start & ConditionField.Subject) != 0;
+            _shown = Field;
+            Show(_shown);
             _byDomain.CheckedChanged += (s, e) => Switch();
             _bySubject.CheckedChanged += (s, e) => Switch();
         }
 
-        /// <summary>The field chosen.</summary>
+        /// <summary>What was chosen: domainRelated, Subject, or Both.</summary>
         public ConditionField Field
-        {
-            get { return _bySubject.Checked ? ConditionField.Subject : ConditionField.DomainRelated; }
-        }
-
-        /// <summary>The non-empty, distinct lines of the box.</summary>
-        public List<string> Values
         {
             get
             {
-                return _values.Lines.Select(l => l.Trim()).Where(l => l.Length > 0)
-                    .Distinct(StringComparer.Ordinal).ToList();
+                return (_byDomain.Checked ? ConditionField.DomainRelated : ConditionField.None)
+                     | (_bySubject.Checked ? ConditionField.Subject : ConditionField.None);
+            }
+        }
+
+        /// <summary>
+        /// The conditions: for domainRelated or Subject, one value per line; for Both, (domainRelated, subject pattern)
+        /// from lines split at their first tab (lines without one are left out).
+        /// </summary>
+        public List<MailKey> Values
+        {
+            get
+            {
+                var lines = _values.Lines.Select(l => l.Trim()).Where(l => l.Length > 0).Distinct(StringComparer.Ordinal);
+                var field = Field;
+                if (field == ConditionField.DomainRelated)
+                    return lines.Select(l => new MailKey { Domain = l }).ToList();
+                if (field == ConditionField.Subject)
+                    return lines.Select(l => new MailKey { Pattern = l }).ToList();
+                return lines.Select(l => l.Split(new[] { '\t' }, 2))
+                    .Where(p => p.Length == 2 && p[0].Trim().Length > 0 && p[1].Trim().Length > 0)
+                    .Select(p => new MailKey { Domain = p[0].Trim(), Pattern = p[1].Trim() }).ToList();
             }
         }
 
@@ -125,7 +156,7 @@ namespace tinykit.OutlookAddin.Filtering
             base.OnFormClosed(e);
         }
 
-        /// <summary>Keeps each field's (possibly edited) text when switching between them.</summary>
+        /// <summary>Keeps each choice's (possibly edited) text when switching between them.</summary>
         private void Switch()
         {
             var now = Field;
@@ -133,7 +164,19 @@ namespace tinykit.OutlookAddin.Filtering
                 return;
             _texts[_shown] = _values.Text;
             _shown = now;
-            _values.Text = _texts[now];
+            Show(now);
+        }
+
+        private void Show(ConditionField field)
+        {
+            _values.Text = _texts[field];
+            _values.Enabled = field != ConditionField.None;
+            _ok.Enabled = field != ConditionField.None;
+            _hint.Text = field == ConditionField.Both
+                ? "One mail per line: domainRelated <Tab> subject; both must match.  % = any text."
+                : field == ConditionField.None
+                    ? "Check domainRelated, Subject, or both."
+                    : "One condition per line; edit as needed.  % = any text.";
         }
     }
 }
