@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -418,11 +418,11 @@ namespace tinykit.OutlookAddin
                     if (Views.HasAddinFilter(explorer, true))
                         Views.Clear(explorer, true);
                     Invalidate();
-                    return "No conditions: all items are shown (" + DateTime.Now.ToString("HH:mm:ss") + ").";
+                    return "all items shown " + DateTime.Now.ToString("HH:mm:ss");
                 }
                 Views.Apply(explorer, sql, CustomSource, true);
                 Invalidate();
-                return "Applied to \"" + folderName + "\" (" + DateTime.Now.ToString("HH:mm:ss") + "). Clear Filter or Apply with no conditions shows all items again.";
+                return "applied " + DateTime.Now.ToString("HH:mm:ss");
             });
             _customFilter.Show(WindowOwner.From(explorer));
         }

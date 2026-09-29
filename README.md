@@ -213,11 +213,13 @@ Rules without that prefix are never changed. Color is limited to the 16 colors O
 
 ### Items group (mail, calendar, contact and task folders)
 Tools for the selected items; each button shows only in the folders where it applies.
-- **Custom Filter** (mail, calendar, contact and task folders) opens a resizable window: the text to find, a check box
-  per field, the filter it makes (shown as you type or tick) and **Clear All Conditions** / **Apply**. The item shows
-  when the text appears in any ticked field (`LIKE '%text%'`, fields joined with OR). **Apply** with no text or no field
-  ticked shows all items again (so does Clear Filter in table views). The window stays open and filters the folder it
-  was opened in; it remembers the text and ticks per kind of folder until Outlook closes. Fields:
+- **Custom Filter** (mail, calendar, contact and task folders) opens a resizable window: the text to find with
+  **Clear All Conditions** / **Apply** beside it, a check box per field, and the filter it makes (shown as you type or
+  tick). The item shows when the text appears in any ticked field (`LIKE '%text%'`, fields joined with OR). **Enter**
+  applies, **Esc** empties the text; the title bar shows when it was applied. **Apply** with no text or no field ticked
+  shows all items again (so does Clear Filter in table views). The window stays open and filters the folder it was
+  opened in; it remembers the text and ticks per kind of folder until Outlook closes, and opens at its last size
+  (`Custom Filter Size.txt` in `%APPDATA%\tinykit\Outlook\`). Fields:
 
   | Folder | Check boxes (a field with several properties matches if any of them does) |
   |---|---|

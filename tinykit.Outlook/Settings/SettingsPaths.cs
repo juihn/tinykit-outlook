@@ -103,6 +103,9 @@ namespace tinykit.OutlookAddin.Settings
 
         public static string LogFile { get { return Path.Combine(LocalFolder, "OutlookAddin.log"); } }
 
+        /// <summary>The Custom Filter window's last size (this PC's screen): "width height" in pixels.</summary>
+        public static string CustomFilterSizeFile { get { return Path.Combine(LocalFolder, "Custom Filter Size.txt"); } }
+
         /// <summary>
         /// One-time moves at startup: older file names (Filters.xml, then Saved Filters.xml and View Columns.txt from before
         /// the per-kind files, which were for mail), and — when the OneDrive folder has just been created — copies of
