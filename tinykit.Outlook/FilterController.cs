@@ -380,6 +380,53 @@ namespace tinykit.OutlookAddin
             Invalidate();
         }
 
+        private const string CustomSource = "custom";
+        private CustomFilterForm _customFilter;
+
+        /// <summary>
+        /// Custom Filter: a window (one at a time) for the text to find and the fields to look in, for the current
+        /// mail, calendar, contact or task folder. It filters the view it was opened for; Apply with no conditions
+        /// restores the view's own filter.
+        /// </summary>
+        public void ShowCustomFilter(Outlook.Explorer explorer)
+        {
+            var folder = explorer.CurrentFolder;
+            var kind = CustomFilter.KindOf(folder);
+            if (kind == null)
+                throw new UserMessageException("Custom Filter works in mail, calendar, contact and task folders.");
+            if (_customFilter != null && !_customFilter.IsDisposed)
+                _customFilter.Close(); // opened for another folder: start again for this one
+
+            var entryId = folder.EntryID;
+            var folderName = folder.Name;
+            _customFilter = new CustomFilterForm(kind.Value, folderName, sql =>
+            {
+                Outlook.MAPIFolder current;
+                try
+                {
+                    current = explorer.CurrentFolder;
+                }
+                catch (COMException)
+                {
+                    throw new UserMessageException("The Outlook window this filter belongs to is closed.");
+                }
+                if (current == null || current.EntryID != entryId)
+                    throw new UserMessageException("This filter is for \"" + folderName + "\": go back there to apply it, "
+                        + "or press Custom Filter again in this folder.");
+                if (sql.Length == 0)
+                {
+                    if (Views.HasAddinFilter(explorer, true))
+                        Views.Clear(explorer, true);
+                    Invalidate();
+                    return "No conditions: all items are shown (" + DateTime.Now.ToString("HH:mm:ss") + ").";
+                }
+                Views.Apply(explorer, sql, CustomSource, true);
+                Invalidate();
+                return "Applied to \"" + folderName + "\" (" + DateTime.Now.ToString("HH:mm:ss") + "). Clear Filter or Apply with no conditions shows all items again.";
+            });
+            _customFilter.Show(WindowOwner.From(explorer));
+        }
+
         public void Clear(Outlook.Explorer explorer)
         {
             if (!Views.Clear(explorer))

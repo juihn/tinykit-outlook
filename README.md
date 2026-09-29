@@ -82,8 +82,8 @@ The tab follows the kind of folder you are in:
 | Tasks | hidden | hidden | `- Tasks` files |
 | Other (calendar, notes, ...) | hidden | hidden | Saved Filters hidden |
 
-In calendar folders Clear and Table View are hidden too. Items shows in mail, calendar and contact folders, each button
-only where it applies.
+In calendar folders Clear and Table View are hidden too. Items shows in mail, calendar, contact and task folders, each
+button only where it applies.
 
 Informational messages (results such as *Custom fields: 3 updated*, and hints such as *Select the mails first*) appear as
 Windows notifications under Outlook (classic), using the *urgent* scenario so they also show in Do Not Disturb. Errors,
@@ -211,8 +211,23 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
 The rules are written to the view's *View Settings > Conditional Formatting* and named `[TK] <filter name> #<SQL hash>`.
 Rules without that prefix are never changed. Color is limited to the 16 colors Outlook's conditional formatting supports.
 
-### Items group (mail, calendar and contact folders)
+### Items group (mail, calendar, contact and task folders)
 Tools for the selected items; each button shows only in the folders where it applies.
+- **Custom Filter** (mail, calendar, contact and task folders) opens a resizable window: the text to find, a check box
+  per field, the filter it makes (shown as you type or tick) and **Clear All Conditions** / **Apply**. The item shows
+  when the text appears in any ticked field (`LIKE '%text%'`, fields joined with OR). **Apply** with no text or no field
+  ticked shows all items again (so does Clear Filter in table views). The window stays open and filters the folder it
+  was opened in; it remembers the text and ticks per kind of folder until Outlook closes. Fields:
+
+  | Folder | Check boxes (a field with several properties matches if any of them does) |
+  |---|---|
+  | Mail | Sender Name, From Address, nameRelated, domainRelated, Recipient Name (To, Cc, Bcc), Subject, Message Body |
+  | Calendar | Sender Name and From Address (the organizer), Subject, Message Body |
+  | Contacts | Company, Department, Name (first, last, middle, nickname, e-mail 1/2 display names), Email Address (1, 2), Phone Number (business, mobile, home, other, pager, ...), Notes |
+  | Tasks | Subject, Message Body |
+
+  Message Body and Notes start unticked (searching bodies is slower). Calendar, card and other views can be filtered
+  too, not only table views.
 - **Recipients Report** (mail and calendar folders) opens a window for the selected mail: the sender, then the
   recipients grouped by **domain** and by the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background:
   in Contacts. The check boxes add each person's display name and user name. Click a person to open the contact (or

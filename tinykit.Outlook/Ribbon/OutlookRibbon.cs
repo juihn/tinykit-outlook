@@ -392,6 +392,11 @@ namespace tinykit.OutlookAddin.Ribbon
 
             // Items: tools for the selected items of any kind; each button shows where it applies.
             sb.Append("<group id=\"grpItems\" label=\"Items\" getVisible=\"GetItemsVisible\">");
+            sb.Append("<button id=\"cfCustomFilter\" label=\"Custom Filter\" imageMso=\"Filter\" onAction=\"OnCustomFilter\"")
+              .Append(" screentip=\"Custom Filter\" supertip=\"Open a window to find text in the fields you tick (any of them), with the ")
+              .Append("filter shown as you type. Mail: sender name and address, nameRelated, domainRelated, recipient names, subject, body. ")
+              .Append("Calendar: organizer name and address, subject, body. Contacts: company, department, names, e-mail addresses, ")
+              .Append("phone numbers, notes. Tasks: subject, body.\"/>");
             sb.Append("<button id=\"cfRecipients\" label=\"Recipients Report\" imageMso=\"ContactCardViewMySite\" onAction=\"OnRecipientsReport\"")
               .Append(" getVisible=\"GetReportVisible\" screentip=\"Recipients Report\" supertip=\"Show the selected mail's sender and ")
               .Append("recipients, or the selected calendar item's organizer and attendees, grouped by domain and department (from ")
@@ -623,10 +628,15 @@ namespace tinykit.OutlookAddin.Ribbon
             return Safe(() => !IsCalendar(control), true);
         }
 
-        // Items: in mail, calendar and contact folders (where it has buttons).
+        // Items: in mail, calendar, contact and task folders (Custom Filter works in all four).
         public bool GetItemsVisible(Office.IRibbonControl control)
         {
-            return Safe(() => IsCalendar(control) || Focus(control) == ItemKind.Mail || Focus(control) == ItemKind.Contact, true);
+            return Safe(() => IsCalendar(control) || Focus(control) != null, true);
+        }
+
+        public void OnCustomFilter(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.ShowCustomFilter(ex));
         }
 
         // Recipients Report: mail and calendar folders.

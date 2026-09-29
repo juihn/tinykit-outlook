@@ -148,6 +148,10 @@
     <Compile Include="Filtering\AddConditionsDialog.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Filtering\CustomFilter.cs" />
+    <Compile Include="Filtering\CustomFilterForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Filtering\Dasl.cs" />
     <Compile Include="Filtering\MailInfo.cs" />
     <Compile Include="Filtering\QuickKind.cs" />

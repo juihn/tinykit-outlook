@@ -54,10 +54,28 @@ namespace tinykit.OutlookAddin.Filtering
             return view;
         }
 
-        /// <summary>Applies <paramref name="dasl"/>; <paramref name="source"/> identifies who applied it (for pressed states).</summary>
-        public void Apply(Outlook.Explorer explorer, string dasl, string source)
+        /// <summary>The current view of any type (table, calendar, card, ...); all of them take a Filter.</summary>
+        public static Outlook.View GetAnyView(Outlook.Explorer explorer)
         {
-            var view = RequireTableView(explorer);
+            try
+            {
+                return explorer.CurrentView as Outlook.View;
+            }
+            catch (System.Runtime.InteropServices.COMException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Applies <paramref name="dasl"/>; <paramref name="source"/> identifies who applied it (for pressed states).
+        /// <paramref name="anyView"/>: also calendar, card and other views (Custom Filter), not only table views.
+        /// </summary>
+        public void Apply(Outlook.Explorer explorer, string dasl, string source, bool anyView = false)
+        {
+            var view = anyView ? GetAnyView(explorer) : RequireTableView(explorer);
+            if (view == null)
+                throw new UserMessageException("The current folder has no view to filter.");
             var key = ViewKey(explorer, view);
             if (!_originals.ContainsKey(key))
             {
@@ -73,9 +91,16 @@ namespace tinykit.OutlookAddin.Filtering
         }
 
         /// <summary>Restores the view's own filter (empty if none was recorded). Returns false if not a table view.</summary>
-        public bool Clear(Outlook.Explorer explorer)
+        /// <summary>Whether an add-in filter is on the current view (its own filter has been recorded to restore).</summary>
+        public bool HasAddinFilter(Outlook.Explorer explorer, bool anyView = false)
         {
-            var view = GetTableView(explorer);
+            var view = anyView ? GetAnyView(explorer) : GetTableView(explorer);
+            return view != null && _originals.ContainsKey(ViewKey(explorer, view));
+        }
+
+        public bool Clear(Outlook.Explorer explorer, bool anyView = false)
+        {
+            var view = anyView ? GetAnyView(explorer) : GetTableView(explorer);
             if (view == null)
                 return false;
             var key = ViewKey(explorer, view);
