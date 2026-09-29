@@ -12,7 +12,7 @@ namespace tinykit.OutlookAddin.Filtering
     /// <summary>
     /// Custom Filter window (resizable, stays open): the text to find with Clear All Conditions and Apply beside it,
     /// a check box per field of this kind of folder, then the filter it makes (updated as you type or tick), filling
-    /// the rest. Enter applies, Esc empties the text; the window opens at its last size.
+    /// the rest. Enter applies, Esc empties the text (and closes the window when it is empty); the window opens at its last size.
     /// </summary>
     internal sealed class CustomFilterForm : Form
     {
@@ -155,8 +155,14 @@ namespace tinykit.OutlookAddin.Filtering
             }
             else if (e.KeyCode == Keys.Escape)
             {
-                _text.Text = "";
-                _text.Focus();
+                // Esc empties the text; with the text already empty it closes the window.
+                if (_text.Text.Length == 0)
+                    Close();
+                else
+                {
+                    _text.Text = "";
+                    _text.Focus();
+                }
                 e.Handled = e.SuppressKeyPress = true;
             }
             base.OnKeyDown(e);

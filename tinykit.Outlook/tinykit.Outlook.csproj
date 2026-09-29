@@ -134,6 +134,7 @@
     <Compile Include="Common\Log.cs" />
     <Compile Include="Common\Notifier.cs" />
     <Compile Include="Common\UserMessageException.cs" />
+    <Compile Include="Common\KeyboardShortcuts.cs" />
     <Compile Include="Common\RedrawLock.cs" />
     <Compile Include="Compose\RecipientCommands.cs" />
     <Compile Include="Contacts\ContactCommands.cs" />

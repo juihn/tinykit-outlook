@@ -393,7 +393,7 @@ namespace tinykit.OutlookAddin.Ribbon
             // Items: tools for the selected items of any kind; each button shows where it applies.
             sb.Append("<group id=\"grpItems\" label=\"Items\" getVisible=\"GetItemsVisible\">");
             sb.Append("<button id=\"cfCustomFilter\" label=\"Custom Filter\" imageMso=\"Filter\" onAction=\"OnCustomFilter\"")
-              .Append(" screentip=\"Custom Filter\" supertip=\"Open a window to find text in the fields you tick (any of them), with the ")
+              .Append(" screentip=\"Custom Filter (Ctrl+Alt+2)\" supertip=\"Open a window to find text in the fields you tick (any of them), with the ")
               .Append("filter shown as you type. Mail: sender name and address, nameRelated, domainRelated, recipient names, subject, body. ")
               .Append("Calendar: organizer name and address, subject, body. Contacts: company, department, names, e-mail addresses, ")
               .Append("phone numbers, notes. Tasks: subject, body.\"/>");

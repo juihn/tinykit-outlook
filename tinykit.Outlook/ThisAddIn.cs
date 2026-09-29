@@ -53,7 +53,35 @@ namespace tinykit.OutlookAddin
             {
                 Log.Error("CustomFieldService.Start", ex);
             }
+
+            try
+            {
+                _shortcuts = new KeyboardShortcuts();
+                // Ctrl+Alt+2: Custom Filter, in the main window only (mail and item windows keep theirs, e.g. Heading 2).
+                _shortcuts.Add(System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.D2,
+                    () => Application.ActiveWindow() is Outlook.Explorer,
+                    () =>
+                    {
+                        var explorer = Application.ActiveWindow() as Outlook.Explorer;
+                        if (explorer == null)
+                            return;
+                        try
+                        {
+                            Controller.ShowCustomFilter(explorer);
+                        }
+                        catch (UserMessageException ex)
+                        {
+                            Notifier.Info(explorer, ex.Message);
+                        }
+                    });
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Keyboard shortcuts", ex);
+            }
         }
+
+        private KeyboardShortcuts _shortcuts;
 
         private void ThisAddIn_Shutdown(object sender, EventArgs e)
         {
