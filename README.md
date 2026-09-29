@@ -31,8 +31,8 @@ The namespace is `tinykit.OutlookAddin` (not `tinykit.Outlook`) so the usual
 `Forms\myContactForm.fdm` (and the same form as `Forms\myContactForm.oft`) is a custom contact form,
 message class `IPM.Contact.myContactForm`. To use it:
 
-1. **Install:** *File > Options > Advanced > Custom Forms… > Manage Forms…*, choose *Personal Forms* on the right,
-   **Install…**, pick `myContactForm.fdm`, OK.
+1. **Install:** *File > Options > Advanced > Custom Forms??> Manage Forms??, choose *Personal Forms* on the right,
+   **Install??*, pick `myContactForm.fdm`, OK.
 2. **Make it the Contacts folder's form:** right-click *Contacts* > *Properties* > *When posting to this folder, use:*
    **myContactForm**. New contacts then open with it, and the Built-in group shows a **myContactForm** button that
    switches selected contacts to it (**Default Contact Form** switches them back).
@@ -72,8 +72,7 @@ The current local files are copied there; the local copies stay as a backup.
 
 ## **TinyKit** tab
 
-Groups, left to right: Built-in · Custom Mail Fields · Quick Filter · Clear · Saved Filters · Mail Items (Calendar Items
-in calendar folders) · Table View.
+Groups, left to right: Built-in 쨌 Custom Mail Fields 쨌 Table View 쨌 Quick Filter 쨌 Clear 쨌 Saved Filters 쨌 Items.
 The tab follows the kind of folder you are in:
 
 | Folder | Custom Mail Fields | Quick Filter | Saved Filters, View Columns |
@@ -83,7 +82,8 @@ The tab follows the kind of folder you are in:
 | Tasks | hidden | hidden | `- Tasks` files |
 | Other (calendar, notes, ...) | hidden | hidden | Saved Filters hidden |
 
-In calendar folders Clear, Mail Items and Table View are hidden too, and Mail Items also in contact folders.
+In calendar folders Clear and Table View are hidden too. Items shows in mail, calendar and contact folders, each button
+only where it applies.
 
 Informational messages (results such as *Custom fields: 3 updated*, and hints such as *Select the mails first*) appear as
 Windows notifications under Outlook (classic), using the *urgent* scenario so they also show in Do Not Disturb. Errors,
@@ -99,28 +99,20 @@ Frequently used Outlook commands, icons only, in columns (the list is `BuiltInCo
 - Mark as Read / Mark as Unread (only the one that applies is shown), Show as Conversations (check box, no label),
   Messages in this Conversation
 
-In contact folders a last column adds two buttons of the add-in's own:
-- **Default Contact Form** sets the selected contacts' message class to `IPM.Contact`, so they open with Outlook's form.
-- **<custom form>** (e.g. *myContactForm*) sets it to the custom form that is the default form of this contact folder
-  (or else of the default Contacts folder), e.g. `IPM.Contact.myContactForm`. Hidden when no such form is set.
-- Outlook keeps using the old form for an item it has in memory, so after a change both buttons clear the selection,
-  briefly switch to the Inbox (with the window's painting suspended, so it does not flicker), come back and select
-  the same contacts again. If a contact still opens with the old form, restart Outlook.
-
 The rightmost column has Outlook's **Month**, **Week** and **Go To Date**, with labels.
 
 Outlook enables and disables them as on its own tabs. Clear Flag and Messages in this Conversation have no icon of
 their own (they live in menus), so they get Delete and GroupConversations.
 
 ### Quick Filter group
-One input box, then two rows of two buttons, each followed by a ▼ drop-down.
+One input box, then two rows of two buttons, each followed by a ??drop-down.
 The filter shows the items whose field *contains* the value (`LIKE '%value%'`):
 
 | Folder | Button | Column used |
 |---|---|---|
 | Mail | **F** | the From (sender) e-mail address |
 | Mail | **S** | the subject (RE:/FW: ignored when taken from a mail) |
-| Mail | **N** | `nameRelated` (taken from a mail without `▶ `, ` (+)`, `[ ]`/`( )`, so received and sent mail of the same person match) |
+| Mail | **N** | `nameRelated` (taken from a mail without `??`, ` (+)`, `[ ]`/`( )`, so received and sent mail of the same person match) |
 | Mail | **D** | `domainRelated` |
 | Contacts | **F** | File As |
 | Contacts | **E** | E-mail, E-mail 2 or E-mail 3 |
@@ -128,7 +120,7 @@ The filter shows the items whose field *contains* the value (`LIKE '%value%'`):
 | Contacts | **D** | Department |
 
 - **Button:** uses the text in the input box. If the box is empty, it uses the value of the first selected mail or contact.
-- **▼:** opens a one-level list of that field's last 19 values as `[short date] value`. Clicking one filters by it and puts it in the box.
+- **??** opens a one-level list of that field's last 19 values as `[short date] value`. Clicking one filters by it and puts it in the box.
   **Ctrl+click** removes it from the list. Every field keeps its own list, so mail and contact values never mix.
 - The box keeps its text after filtering, so the same word can be tried with another field. **Clear Filter** empties it.
 
@@ -144,11 +136,11 @@ The add-in writes these text columns (user properties) on mail and meeting items
 
 | Column | Received mail | Mail I sent |
 |---|---|---|
-| `domainRelated` | sender's domain label, then its subdomains nearest first: `a@billing.fabrikam.com` → `fabrikam/billing` (for *on behalf of*, the principal's) | same, for the first To recipient (no To: first Cc) |
-| `nameRelated` | `[contact name]` if the sender is in Contacts, else the sender display name; `(local part)` when that is just the address | `▶ ` + first recipient + ` (+)` when there are several recipients |
-| `me` | `●` I am in To · `○` I am in Cc · `-` | `▶` |
+| `domainRelated` | sender's domain label, then its subdomains nearest first: `a@billing.fabrikam.com` ??`fabrikam/billing` (for *on behalf of*, the principal's) | same, for the first To recipient (no To: first Cc) |
+| `nameRelated` | `[contact name]` if the sender is in Contacts, else the sender display name; `(local part)` when that is just the address | `??` + first recipient + ` (+)` when there are several recipients |
+| `me` | `?? I am in To 쨌 `?? I am in Cc 쨌 `-` | `?? |
 | `tos` / `ccs` | number of To / Cc recipients (`-` for 0) | same |
-| `unknownDomain` | `*` the sender's domain is not in *Known Domains.txt* · `+` it is, but a recipient's is not · `-` all known | `+` / `-` for the recipients (I am a known sender) |
+| `unknownDomain` | `*` the sender's domain is not in *Known Domains.txt* 쨌 `+` it is, but a recipient's is not 쨌 `-` all known | `+` / `-` for the recipients (I am a known sender) |
 
 - For mail I sent, the first recipient is shown as follows. If it was picked from an address book (contact or GAL), it shows the name Outlook displayed. If an address was typed or pasted (`Name <address>`), it shows `[contact name]` when the address is in Contacts, otherwise the address itself.
 - Contact name means the contact's e-mail display name for that address, or File As if that is empty. Contacts are looked up in every store's Contacts folder and its subfolders (e.g. `olk/family`), skipping system folders such as Recipient Cache and GAL Contacts.
@@ -157,12 +149,12 @@ The add-in writes these text columns (user properties) on mail and meeting items
 - **Fill Fields** fills the current folder's items that have no `domainRelated` or `unknownDomain` yet, e.g. mail that arrived
   while Outlook was closed or in folders other than Inbox and Sent Items.
   **Shift+click** recomputes the selected items instead, even if they already have values (e.g. after editing Known Domains.txt).
-- **Add Known Domain** adds the base domain of each selected mail's sender (`a@billing.fabrikam.com` → `fabrikam.com`) to
+- **Add Known Domain** adds the base domain of each selected mail's sender (`a@billing.fabrikam.com` ??`fabrikam.com`) to
   `Known Domains.txt`, then refills the selected mails and this folder's mail from those domains that is still marked `*` or `+`.
   **Ctrl+click** opens `Known Domains.txt` in VS Code (Notepad if not installed).
 
 `Known Domains.txt` (in the settings folder) has one domain per line after the date it was added and a tab, e.g.
-`'26.09.07월 15:42:39 +08<Tab>fabrikam.com` (date, Korean day of week, time, UTC offset); a line may also be just a domain, and `#` lines are comments. A domain covers
+`'26.09.07??15:42:39 +08<Tab>fabrikam.com` (date, Korean day of week, time, UTC offset); a line may also be just a domain, and `#` lines are comments. A domain covers
 its subdomains. My own addresses among the recipients are ignored. Edits apply to the next mail filled; Shift+click
 Fill Fields to recompute existing mail.
 
@@ -173,8 +165,8 @@ Each file starts with these saved filters, which you can edit or delete:
 | File | Filter | Shows | Format |
 |---|---|---|---|
 | Mail | **Flagged** | flagged (or completed) mail | red, off |
-| Mail | **Sent** | mail I sent (`me` = `▶`) | teal, underlined |
-| Mail | **Unknown** | received mail whose sender is not in Contacts (`nameRelated` not `[…]`) | gray |
+| Mail | **Sent** | mail I sent (`me` = `??) | teal, underlined |
+| Mail | **Unknown** | received mail whose sender is not in Contacts (`nameRelated` not `[??`) | gray |
 | Contacts | **No Email** | contacts without any e-mail address | gray |
 | Contacts | **Flagged** | flagged contacts | red, off |
 | Tasks | **Active** | tasks not completed | bold, off |
@@ -201,8 +193,8 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
     a shared billing service.
 
   The first time in a session `Issue` starts with domainRelated and every other filter with Subject; afterwards the
-  last choice for that filter. Subjects become patterns in which numbers (dates, times, amounts, ids, `9월 27일`,
-  `1,234원`) and month/weekday names are `%` (`Your trip with Gojek on Friday, 26 September` → `Your trip with Gojek on %`);
+  last choice for that filter. Subjects become patterns in which numbers (dates, times, amounts, ids, `9??27??,
+  `1,234??) and month/weekday names are `%` (`Your trip with Gojek on Friday, 26 September` ??`Your trip with Gojek on %`);
   a subject without them is matched exactly. The list can be edited before adding.
   DASL `LIKE` only honours `%` at the start or end, so a pattern with `%` in the middle is added as prefix/middle/suffix
   conditions joined with `AND`.
@@ -219,21 +211,26 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
 The rules are written to the view's *View Settings > Conditional Formatting* and named `[TK] <filter name> #<SQL hash>`.
 Rules without that prefix are never changed. Color is limited to the 16 colors Outlook's conditional formatting supports.
 
-### Calendar Items group (calendar folders)
-- **Recipients Report** of the selected calendar item: the organizer, then the attendees grouped by domain and by the
-  contacts' department, as for a mail (required attendees as To, optional ones and resources as Cc).
-
-### Mail Items group
-Tools for the selected items, shown in every folder.
-- **Recipients Report** opens a window for the selected mail: the sender, then the recipients grouped by **domain** and
-  by the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background: in Contacts. The check boxes add each
-  person's display name and user name. Click a person to open the contact (or search LinkedIn when there is none),
-  **Ctrl+click** for a new contact with the name and address filled in, **Shift+click** to add the address to the
-  addresses on the clipboard. **Search** finds people by name or user name and lists their addresses; **Copy Contents**
-  copies the report as text; **Refresh** reads the mail and Contacts again. The subject opens the mail.
-- **Copy Items** copies one line per selected mail (or meeting request) to the clipboard, e.g.
-  `'26.09.28월 17:01 <The Mulia Bali> Ultimate Getaway`, in the order the view shows them. **Shift+click** puts the new lines before the clipboard's
-  current text, to collect mails from several folders. Other items (contacts, tasks) are skipped.
+### Items group (mail, calendar and contact folders)
+Tools for the selected items; each button shows only in the folders where it applies.
+- **Recipients Report** (mail and calendar folders) opens a window for the selected mail: the sender, then the
+  recipients grouped by **domain** and by the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background:
+  in Contacts. The check boxes add each person's display name and user name. Click a person to open the contact (or
+  search LinkedIn when there is none), **Ctrl+click** for a new contact with the name and address filled in,
+  **Shift+click** to add the address to the addresses on the clipboard. **Search** finds people by name or user name and
+  lists their addresses; **Copy Contents** copies the report as text; **Refresh** reads the mail and Contacts again. The
+  subject opens the mail. For a calendar item: the organizer, then the attendees (required as To, optional ones and
+  resources as Cc).
+- **Copy Items** (mail folders) copies one line per selected mail (or meeting request) to the clipboard, e.g.
+  `'26.09.28??17:01 <The Mulia Bali> Ultimate Getaway`, in the order the view shows them. **Shift+click** puts the new
+  lines before the clipboard's current text, to collect mails from several folders.
+- **Default Contact Form** (contact folders) sets the selected contacts' message class to `IPM.Contact`, so they open
+  with Outlook's form.
+- **<custom form>** (contact folders, e.g. *myContactForm*) sets it to the custom form that is the default form of this
+  contact folder (or else of the default Contacts folder), e.g. `IPM.Contact.myContactForm`. Hidden when no such form is
+  set. Outlook keeps using the old form for an item it has in memory, so after a change both buttons clear the
+  selection, briefly switch to the Inbox (with the window's painting suspended, so it does not flicker), come back and
+  select the same contacts again. If a contact still opens with the old form, restart Outlook.
 
 ### Table View group
 - **View Columns** replaces the columns of the current table view with the ones in the View Columns file of the folder's
@@ -261,7 +258,7 @@ The file is rewritten when you change settings from the ribbon, so comments you 
 ### View Columns - Mail.txt / - Contacts.txt / - Tasks.txt
 One column per line; `#` lines are skipped. The values are separated by tabs, and several tabs in a row count as one,
 so the lines can be lined up freely. After the field name, each value goes to the next field whose format it fits,
-so fields can be left out (`me⇥Center` is a centered column with no width; `unknownDomain⇥4⇥Center⇥ud` skips Type and
+so fields can be left out (`me?쩉enter` is a centered column with no width; `unknownDomain???쩉enter?쪀d` skips Type and
 Format):
 
 | Field (in order) | Format | Meaning |
@@ -293,9 +290,9 @@ older `Filters.xml`, `Saved Filters.xml` and `View Columns.txt` are renamed auto
 
 ## **TinyKit** tab in a received mail's window
 Before the window's Message tab, with one **Message** group:
-- Delete, Archive, Send to OneNote · Follow Up, Flag (no date), Clear Flag · Translate, Show Original, translation
-  preferences · Approve / Reject (approval requests only) · Find · Edit Message: Outlook's own commands.
-- **Recipients Report** of the open mail, as in the Mail Items group.
+- Delete, Archive, Send to OneNote 쨌 Follow Up, Flag (no date), Clear Flag 쨌 Translate, Show Original, translation
+  preferences 쨌 Approve / Reject (approval requests only) 쨌 Find 쨌 Edit Message: Outlook's own commands.
+- **Recipients Report** of the open mail, as in the Items group.
 
 ## **TinyKit** tab in a mail being written
 Before the window's Message tab, with a **Recipients** group:
@@ -304,7 +301,7 @@ Before the window's Message tab, with a **Recipients** group:
   with that contact entry, so it shows with the name set in Contacts; its type (To/Cc/Bcc) is kept. The replaced
   recipients move after the others, those in the sender's own domain (base domain, e.g. `contoso.com` for
   `a@mail.contoso.com`) last. Then Outlook's Check Names runs.
-- **Recipients Report** of this mail, as in the Mail Items group.
+- **Recipients Report** of this mail, as in the Items group.
 
 and a **Compose** group of Outlook's own commands: theme Fonts, Ruler, Bcc.
 

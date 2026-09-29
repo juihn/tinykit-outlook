@@ -288,15 +288,6 @@ namespace tinykit.OutlookAddin.Ribbon
                 }
                 sb.Append("</box>");
             }
-            // Contact folders: switch the selected contacts between Outlook's form and the folder's custom form.
-            sb.Append("<box id=\"biForms\" boxStyle=\"vertical\">");
-            sb.Append("<button id=\"cfFormDefault\" label=\"Default Contact Form\" showLabel=\"false\" imageMso=\"NewContact\"")
-              .Append(" getVisible=\"GetContactVisible\" onAction=\"OnSetDefaultContactForm\" screentip=\"Default Contact Form\"")
-              .Append(" supertip=\"Set the selected contacts to open with Outlook's own contact form (message class IPM.Contact).\"/>");
-            sb.Append("<button id=\"cfFormCustom\" getLabel=\"GetCustomFormLabel\" showLabel=\"false\" imageMso=\"ChooseForm\"")
-              .Append(" getVisible=\"GetCustomFormVisible\" onAction=\"OnSetCustomContactForm\" getScreentip=\"GetCustomFormLabel\"")
-              .Append(" getSupertip=\"GetCustomFormSupertip\"/>");
-            sb.Append("</box>");
             // Calendar views and Go To Date, with labels.
             sb.Append("<box id=\"biCalendar\" boxStyle=\"vertical\">");
             sb.Append("<toggleButton idMso=\"MonthlyView\"/>");
@@ -316,6 +307,17 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" screentip=\"Add Known Domain\" getSupertip=\"GetAddKnownSupertip\"/>");
             sb.Append("<checkBox id=\"cfAutoFill\" label=\"Auto-fill new mail\" getPressed=\"GetAutoFillPressed\" onAction=\"OnAutoFillToggle\"")
               .Append(" screentip=\"Auto-fill new mail\" supertip=\"Fill the fields of mail arriving in each account's Inbox and Sent Items.\"/>");
+            sb.Append("</group>");
+
+            // Table View.
+            sb.Append("<group id=\"grpView\" label=\"Table View\" getVisible=\"GetNotCalendarVisible\">");
+            sb.Append("<button id=\"mViewColumns\" label=\"View Columns\" imageMso=\"TableInsert\" onAction=\"OnViewColumns\"")
+              .Append(" screentip=\"View Columns\" getSupertip=\"GetViewColumnsSupertip\"/>");
+            sb.Append("<button id=\"mViewFont\" label=\"View Font...\" imageMso=\"FontDialog\" onAction=\"OnViewFont\"")
+              .Append(" screentip=\"View Font\" supertip=\"Choose the font and size of the whole table view: rows, column headers and conditional formatting.\"/>");
+            sb.Append("<button id=\"mSortCompany\" label=\"Sort by Company/Dept\" imageMso=\"SortDialog\" onAction=\"OnSortByCompany\"")
+              .Append(" getVisible=\"GetContactVisible\" screentip=\"Sort by Company/Dept\" supertip=\"Sort the contacts by Company, and ")
+              .Append("within a company by Department (both A to Z). The view keeps this sort.\"/>");
             sb.Append("</group>");
 
             // Quick Filter (mail and contact folders): one input box, then four buttons, each followed by its own
@@ -388,33 +390,24 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("</menu>");
             sb.Append("</group>");
 
-            // Items: tools for the selected items, in mail, contact and task folders alike.
-            sb.Append("<group id=\"grpItems\" label=\"Mail Items\" getVisible=\"GetMailItemsVisible\">");
-            sb.Append("<button id=\"cfRecipients\" label=\"Recipients Report\" imageMso=\"ContactProperties\" onAction=\"OnRecipientsReport\"")
-              .Append(" screentip=\"Recipients Report\" supertip=\"Show the selected mail's sender and recipients grouped by domain and ")
-              .Append("department (from Contacts). Blue: To, gray: Cc/Bcc; green: in Contacts. In the window, click a person to open the ")
-              .Append("contact (or search LinkedIn), Ctrl+click for a new contact, Shift+click to add the address to the clipboard.\"/>");
+            // Items: tools for the selected items of any kind; each button shows where it applies.
+            sb.Append("<group id=\"grpItems\" label=\"Items\" getVisible=\"GetItemsVisible\">");
+            sb.Append("<button id=\"cfRecipients\" label=\"Recipients Report\" imageMso=\"ContactCardViewMySite\" onAction=\"OnRecipientsReport\"")
+              .Append(" getVisible=\"GetReportVisible\" screentip=\"Recipients Report\" supertip=\"Show the selected mail's sender and ")
+              .Append("recipients, or the selected calendar item's organizer and attendees, grouped by domain and department (from ")
+              .Append("Contacts). Blue: To / required, gray: Cc, Bcc / optional, resources; green: in Contacts. In the window, click a ")
+              .Append("person to open the contact (or search LinkedIn), Ctrl+click for a new contact, Shift+click to add the address to ")
+              .Append("the clipboard.\"/>");
             sb.Append("<button id=\"cfCopyItems\" label=\"Copy Items\" imageMso=\"GroupClipboard\" onAction=\"OnCopyItems\"")
-              .Append(" screentip=\"Copy Items\" supertip=\"Copy one line per selected mail to the clipboard: ")
+              .Append(" getVisible=\"GetMailVisible\" screentip=\"Copy Items\" supertip=\"Copy one line per selected mail to the clipboard: ")
               .Append("'yy.MM.dd요일 HH:mm &lt;sender&gt; subject. Shift+click: put the new lines before the clipboard's current text.\"/>");
-            sb.Append("</group>");
-
-            // Calendar Items: calendar folders only (where Mail Items is hidden).
-            sb.Append("<group id=\"grpCalendarItems\" label=\"Calendar Items\" getVisible=\"GetCalendarVisible\">");
-            sb.Append("<button id=\"caRecipients\" label=\"Recipients Report\" imageMso=\"ContactCardViewMySite\" onAction=\"OnRecipientsReport\"")
-              .Append(" screentip=\"Recipients Report\" supertip=\"Show the selected calendar item's organizer and attendees grouped by ")
-              .Append("domain and department (from Contacts). Blue: required, gray: optional/resources; green: in Contacts.\"/>");
-            sb.Append("</group>");
-
-            // Table View.
-            sb.Append("<group id=\"grpView\" label=\"Table View\" getVisible=\"GetNotCalendarVisible\">");
-            sb.Append("<button id=\"mViewColumns\" label=\"View Columns\" imageMso=\"TableInsert\" onAction=\"OnViewColumns\"")
-              .Append(" screentip=\"View Columns\" getSupertip=\"GetViewColumnsSupertip\"/>");
-            sb.Append("<button id=\"mViewFont\" label=\"View Font...\" imageMso=\"FontDialog\" onAction=\"OnViewFont\"")
-              .Append(" screentip=\"View Font\" supertip=\"Choose the font and size of the whole table view: rows, column headers and conditional formatting.\"/>");
-            sb.Append("<button id=\"mSortCompany\" label=\"Sort by Company/Dept\" imageMso=\"SortDialog\" onAction=\"OnSortByCompany\"")
-              .Append(" getVisible=\"GetContactVisible\" screentip=\"Sort by Company/Dept\" supertip=\"Sort the contacts by Company, and ")
-              .Append("within a company by Department (both A to Z). The view keeps this sort.\"/>");
+            // Contact folders: switch the selected contacts between Outlook's form and the folder's custom form.
+            sb.Append("<button id=\"cfFormDefault\" label=\"Default Contact Form\" imageMso=\"NewContact\"")
+              .Append(" getVisible=\"GetContactVisible\" onAction=\"OnSetDefaultContactForm\" screentip=\"Default Contact Form\"")
+              .Append(" supertip=\"Set the selected contacts to open with Outlook's own contact form (message class IPM.Contact).\"/>");
+            sb.Append("<button id=\"cfFormCustom\" getLabel=\"GetCustomFormLabel\" imageMso=\"ChooseForm\"")
+              .Append(" getVisible=\"GetCustomFormVisible\" onAction=\"OnSetCustomContactForm\" getScreentip=\"GetCustomFormLabel\"")
+              .Append(" getSupertip=\"GetCustomFormSupertip\"/>");
             sb.Append("</group>");
 
             sb.Append("</tab></tabs></ribbon></customUI>");
@@ -624,22 +617,22 @@ namespace tinykit.OutlookAddin.Ribbon
             return Safe(() => Focus(control) == ItemKind.Mail, true);
         }
 
-        // Clear, Mail Items and Table View: not in calendar folders (no table view filters there).
+        // Clear and Table View: not in calendar folders (no table view filters there).
         public bool GetNotCalendarVisible(Office.IRibbonControl control)
         {
             return Safe(() => !IsCalendar(control), true);
         }
 
-        // Mail Items: not in calendar or contact folders.
-        public bool GetMailItemsVisible(Office.IRibbonControl control)
+        // Items: in mail, calendar and contact folders (where it has buttons).
+        public bool GetItemsVisible(Office.IRibbonControl control)
         {
-            return Safe(() => !IsCalendar(control) && Focus(control) != ItemKind.Contact, true);
+            return Safe(() => IsCalendar(control) || Focus(control) == ItemKind.Mail || Focus(control) == ItemKind.Contact, true);
         }
 
-        // Calendar Items: calendar folders only.
-        public bool GetCalendarVisible(Office.IRibbonControl control)
+        // Recipients Report: mail and calendar folders.
+        public bool GetReportVisible(Office.IRibbonControl control)
         {
-            return Safe(() => IsCalendar(control), false);
+            return Safe(() => IsCalendar(control) || Focus(control) == ItemKind.Mail, true);
         }
 
         private static bool IsCalendar(Office.IRibbonControl control)
