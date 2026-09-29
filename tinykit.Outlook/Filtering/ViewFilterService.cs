@@ -108,7 +108,7 @@ namespace tinykit.OutlookAddin.Filtering
             if (!_originals.TryGetValue(key, out original) || IsAddinFilter(original))
                 original = "";
 
-            view.Filter = original;
+            SetFilter(view, original);
             view.Apply();
             _applied.Remove(key);
             if (_originals.Remove(key))
@@ -157,7 +157,7 @@ namespace tinykit.OutlookAddin.Filtering
                 var restore = recorded && !IsAddinFilter(original) ? original : "";
                 if (!string.Equals(filter, restore, StringComparison.Ordinal))
                 {
-                    view.Filter = restore;
+                    SetFilter(view, restore);
                     view.Save();
                     changed++;
                 }
@@ -166,6 +166,26 @@ namespace tinykit.OutlookAddin.Filtering
             }
             SaveOriginals();
             return changed;
+        }
+
+        /// <summary>
+        /// Sets a view's filter. Calendar views ignore an empty Filter (the old one stays and is saved with the view,
+        /// although the same View object then reads back ""), so no filter is set by taking the filter out of the view's
+        /// XML instead, which works for every kind of view.
+        /// </summary>
+        private static void SetFilter(Outlook.View view, string filter)
+        {
+            if (!string.IsNullOrEmpty(filter))
+            {
+                view.Filter = filter;
+                return;
+            }
+            var xml = new System.Xml.XmlDocument();
+            xml.LoadXml(view.XML);
+            var nodes = xml.GetElementsByTagName("filter");
+            for (int i = nodes.Count - 1; i >= 0; i--)
+                nodes[i].ParentNode.RemoveChild(nodes[i]);
+            view.XML = xml.OuterXml;
         }
 
         /// <summary>
