@@ -359,28 +359,31 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" onAction=\"OnOthersToggle\" screentip=\"Others\" supertip=\"Show only the items that none of the saved filters on the left ")
               .Append("match (NOT (filter 1 OR filter 2 ...)). Press again to restore the view's own filter.\"/>");
             sb.Append("<separator id=\"sepSaved1\"/>");
-            sb.Append("<toggleButton id=\"sfFormat\" label=\"Format\" imageMso=\"ConditionalFormattingMenu\"")
-              .Append(" getPressed=\"GetApplyFormatPressed\" onAction=\"OnFormatToggle\" screentip=\"Format\" getSupertip=\"GetFormatSupertip\"/>");
-            sb.Append("<dynamicMenu id=\"sfAddTo\" label=\"Add to\" imageMso=\"").Append(AddIcon)
+            sb.Append("<dynamicMenu id=\"sfAddTo\" label=\"Add to\" size=\"large\" imageMso=\"").Append(AddIcon)
               .Append("\" getVisible=\"GetMailVisible\" getContent=\"GetAddToContent\" invalidateContentOnDrop=\"true\" screentip=\"Add to\"")
               .Append(" supertip=\"Add the selected mails to a saved filter (all except Flagged, Sent and Unknown). A small window asks ")
               .Append("whether by DOMAINRELATED, by SUBJECT, or by both together (domainRelated = ... AND subject); subjects become ")
               .Append("patterns in which numbers, dates and month/weekday names are % (e.g. Your trip with Gojek on %), which you can ")
               .Append("edit before adding.\"/>");
-            sb.Append("<separator id=\"sepSaved2\"/>");
+
+            // Beside Add to, one column: Format, Refresh Formats, then the Manage menu.
+            sb.Append("<box id=\"sfFormats\" boxStyle=\"vertical\">");
+            sb.Append("<toggleButton id=\"sfFormat\" label=\"Format\" imageMso=\"ConditionalFormattingMenu\"")
+              .Append(" getPressed=\"GetApplyFormatPressed\" onAction=\"OnFormatToggle\" screentip=\"Format\" getSupertip=\"GetFormatSupertip\"/>");
+            sb.Append("<button id=\"mApplyFormats\" label=\"Refresh Formats\" imageMso=\"Refresh\" onAction=\"OnApplyFormats\"")
+              .Append(" screentip=\"Refresh Formats\" supertip=\"Turn the saved filters' formats on (after All Formats Off) and rewrite the formats of all saved filters whose Format is on into this view's conditional formatting.\"/>");
+
+            // Manage: editing, saving to and reloading the saved filters file, and the conditional-format housekeeping.
+            sb.Append("<menu id=\"mManage\" label=\"Manage\" imageMso=\"").Append(ManageIcon).Append("\" screentip=\"Manage\"")
+              .Append(" supertip=\"Edit, add to or reload the saved filters file and manage the saved filters' conditional formatting.\">");
             sb.Append("<button id=\"mSettings\" label=\"Edit Saved Filters\" imageMso=\"").Append(XmlIcon)
               .Append("\" onAction=\"OnOpenSettings\" getScreentip=\"GetSettingsScreentip\" getSupertip=\"GetSettingsSupertip\"/>");
             sb.Append("<button id=\"mSaveView\" label=\"Save View as Filter...\" imageMso=\"FileSaveAs\" onAction=\"OnSaveViewFilter\"")
               .Append(" screentip=\"Save View as Filter\" supertip=\"Save the current view's filter (e.g. from View Settings &gt; Filter) as a saved filter.\"/>");
-
-            // Manage: reloading the file and the conditional-format housekeeping, out of the way in one menu.
-            sb.Append("<menu id=\"mManage\" label=\"Manage\" imageMso=\"").Append(ManageIcon).Append("\" screentip=\"Manage\"")
-              .Append(" supertip=\"Reload the saved filters file and manage the saved filters' conditional formatting.\">");
+            sb.Append("<menuSeparator id=\"mManageSep0\"/>");
             sb.Append("<button id=\"mReload\" label=\"Reload\" imageMso=\"Refresh\" onAction=\"OnReload\" getScreentip=\"GetReloadScreentip\"")
               .Append(" supertip=\"Read the saved filters file again now (changes saved in an editor are also picked up automatically).\"/>");
             sb.Append("<menuSeparator id=\"mManageSep\"/>");
-            sb.Append("<button id=\"mApplyFormats\" label=\"Refresh Formats\" imageMso=\"Refresh\" onAction=\"OnApplyFormats\"")
-              .Append(" screentip=\"Refresh Formats\" supertip=\"Turn the saved filters' formats on (after All Formats Off) and rewrite the formats of all saved filters whose Format is on into this view's conditional formatting.\"/>");
             sb.Append("<button id=\"mFormatsOff\" label=\"All Formats Off\" imageMso=\"").Append(FormatsOffIcon).Append("\" onAction=\"OnAllFormatsOff\"")
               .Append(" screentip=\"All Formats Off\" supertip=\"Take all saved filters' conditional formatting out of the views. Each filter's Format on/off setting is kept, so Refresh Formats turns the same formats back on.\"/>");
             sb.Append("<button id=\"mRemoveFormats\" label=\"Remove Formats\" imageMso=\"ClearFormatting\" onAction=\"OnRemoveFormats\"")
@@ -388,6 +391,7 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<checkBox id=\"mAutoApply\" label=\"Auto-apply formats\" getPressed=\"GetAutoApplyPressed\" onAction=\"OnAutoApplyToggle\"")
               .Append(" screentip=\"Auto-apply formats\" supertip=\"Sync the formats into each table view when switching folders or views.\"/>");
             sb.Append("</menu>");
+            sb.Append("</box>");
             sb.Append("</group>");
 
             // Items: tools for the selected items of any kind; each button shows where it applies.

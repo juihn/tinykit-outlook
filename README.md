@@ -31,8 +31,8 @@ The namespace is `tinykit.OutlookAddin` (not `tinykit.Outlook`) so the usual
 `Forms\myContactForm.fdm` (and the same form as `Forms\myContactForm.oft`) is a custom contact form,
 message class `IPM.Contact.myContactForm`. To use it:
 
-1. **Install:** *File > Options > Advanced > Custom Forms??> Manage Forms??, choose *Personal Forms* on the right,
-   **Install??*, pick `myContactForm.fdm`, OK.
+1. **Install:** *File > Options > Advanced > Custom Forms… > Manage Forms…*, choose *Personal Forms* on the right,
+   **Install…**, pick `myContactForm.fdm`, OK.
 2. **Make it the Contacts folder's form:** right-click *Contacts* > *Properties* > *When posting to this folder, use:*
    **myContactForm**. New contacts then open with it, and the Built-in group shows a **myContactForm** button that
    switches selected contacts to it (**Default Contact Form** switches them back).
@@ -72,7 +72,7 @@ The current local files are copied there; the local copies stay as a backup.
 
 ## **TinyKit** tab
 
-Groups, left to right: Built-in 쨌 Custom Mail Fields 쨌 Table View 쨌 Quick Filter 쨌 Clear 쨌 Saved Filters 쨌 Items.
+Groups, left to right: Built-in · Custom Mail Fields · Table View · Quick Filter · Clear · Saved Filters · Items.
 The tab follows the kind of folder you are in:
 
 | Folder | Custom Mail Fields | Quick Filter | Saved Filters, View Columns |
@@ -105,14 +105,14 @@ Outlook enables and disables them as on its own tabs. Clear Flag and Messages in
 their own (they live in menus), so they get Delete and GroupConversations.
 
 ### Quick Filter group
-One input box, then two rows of two buttons, each followed by a ??drop-down.
+One input box, then two rows of two buttons, each followed by a ▼ drop-down.
 The filter shows the items whose field *contains* the value (`LIKE '%value%'`):
 
 | Folder | Button | Column used |
 |---|---|---|
 | Mail | **F** | the From (sender) e-mail address |
 | Mail | **S** | the subject (RE:/FW: ignored when taken from a mail) |
-| Mail | **N** | `nameRelated` (taken from a mail without `??`, ` (+)`, `[ ]`/`( )`, so received and sent mail of the same person match) |
+| Mail | **N** | `nameRelated` (taken from a mail without `▶ `, ` (+)`, `[ ]`/`( )`, so received and sent mail of the same person match) |
 | Mail | **D** | `domainRelated` |
 | Contacts | **F** | File As |
 | Contacts | **E** | E-mail, E-mail 2 or E-mail 3 |
@@ -120,7 +120,7 @@ The filter shows the items whose field *contains* the value (`LIKE '%value%'`):
 | Contacts | **D** | Department |
 
 - **Button:** uses the text in the input box. If the box is empty, it uses the value of the first selected mail or contact.
-- **??** opens a one-level list of that field's last 19 values as `[short date] value`. Clicking one filters by it and puts it in the box.
+- **▼:** opens a one-level list of that field's last 19 values as `[short date] value`. Clicking one filters by it and puts it in the box.
   **Ctrl+click** removes it from the list. Every field keeps its own list, so mail and contact values never mix.
 - The box keeps its text after filtering, so the same word can be tried with another field. **Clear Filter** empties it.
 
@@ -136,11 +136,11 @@ The add-in writes these text columns (user properties) on mail and meeting items
 
 | Column | Received mail | Mail I sent |
 |---|---|---|
-| `domainRelated` | sender's domain label, then its subdomains nearest first: `a@billing.fabrikam.com` ??`fabrikam/billing` (for *on behalf of*, the principal's) | same, for the first To recipient (no To: first Cc) |
-| `nameRelated` | `[contact name]` if the sender is in Contacts, else the sender display name; `(local part)` when that is just the address | `??` + first recipient + ` (+)` when there are several recipients |
-| `me` | `?? I am in To 쨌 `?? I am in Cc 쨌 `-` | `?? |
+| `domainRelated` | sender's domain label, then its subdomains nearest first: `a@billing.fabrikam.com` → `fabrikam/billing` (for *on behalf of*, the principal's) | same, for the first To recipient (no To: first Cc) |
+| `nameRelated` | `[contact name]` if the sender is in Contacts, else the sender display name; `(local part)` when that is just the address | `▶ ` + first recipient + ` (+)` when there are several recipients |
+| `me` | `●` I am in To · `○` I am in Cc · `-` | `▶` |
 | `tos` / `ccs` | number of To / Cc recipients (`-` for 0) | same |
-| `unknownDomain` | `*` the sender's domain is not in *Known Domains.txt* 쨌 `+` it is, but a recipient's is not 쨌 `-` all known | `+` / `-` for the recipients (I am a known sender) |
+| `unknownDomain` | `*` the sender's domain is not in *Known Domains.txt* · `+` it is, but a recipient's is not · `-` all known | `+` / `-` for the recipients (I am a known sender) |
 
 - For mail I sent, the first recipient is shown as follows. If it was picked from an address book (contact or GAL), it shows the name Outlook displayed. If an address was typed or pasted (`Name <address>`), it shows `[contact name]` when the address is in Contacts, otherwise the address itself.
 - Contact name means the contact's e-mail display name for that address, or File As if that is empty. Contacts are looked up in every store's Contacts folder and its subfolders (e.g. `olk/family`), skipping system folders such as Recipient Cache and GAL Contacts.
@@ -149,12 +149,12 @@ The add-in writes these text columns (user properties) on mail and meeting items
 - **Fill Fields** fills the current folder's items that have no `domainRelated` or `unknownDomain` yet, e.g. mail that arrived
   while Outlook was closed or in folders other than Inbox and Sent Items.
   **Shift+click** recomputes the selected items instead, even if they already have values (e.g. after editing Known Domains.txt).
-- **Add Known Domain** adds the base domain of each selected mail's sender (`a@billing.fabrikam.com` ??`fabrikam.com`) to
+- **Add Known Domain** adds the base domain of each selected mail's sender (`a@billing.fabrikam.com` → `fabrikam.com`) to
   `Known Domains.txt`, then refills the selected mails and this folder's mail from those domains that is still marked `*` or `+`.
   **Ctrl+click** opens `Known Domains.txt` in VS Code (Notepad if not installed).
 
 `Known Domains.txt` (in the settings folder) has one domain per line after the date it was added and a tab, e.g.
-`'26.09.07??15:42:39 +08<Tab>fabrikam.com` (date, Korean day of week, time, UTC offset); a line may also be just a domain, and `#` lines are comments. A domain covers
+`'26.09.07월 15:42:39 +08<Tab>fabrikam.com` (date, Korean day of week, time, UTC offset); a line may also be just a domain, and `#` lines are comments. A domain covers
 its subdomains. My own addresses among the recipients are ignored. Edits apply to the next mail filled; Shift+click
 Fill Fields to recompute existing mail.
 
@@ -165,8 +165,8 @@ Each file starts with these saved filters, which you can edit or delete:
 | File | Filter | Shows | Format |
 |---|---|---|---|
 | Mail | **Flagged** | flagged (or completed) mail | red, off |
-| Mail | **Sent** | mail I sent (`me` = `??) | teal, underlined |
-| Mail | **Unknown** | received mail whose sender is not in Contacts (`nameRelated` not `[??`) | gray |
+| Mail | **Sent** | mail I sent (`me` = `▶`) | teal, underlined |
+| Mail | **Unknown** | received mail whose sender is not in Contacts (`nameRelated` not `[…]`) | gray |
 | Contacts | **No Email** | contacts without any e-mail address | gray |
 | Contacts | **Flagged** | flagged contacts | red, off |
 | Tasks | **Active** | tasks not completed | bold, off |
@@ -178,11 +178,7 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
 - **One toggle button per saved filter** (up to 20). Pressing it applies the filter's SQL as the view filter. Pressing it again restores the view's own filter.
 - **Others** (toggle, after the saved filters) shows only the items that **none** of the saved filters match:
   `NOT ((filter 1) OR (filter 2) ...)`. Filters without SQL are left out. Pressing it again restores the view's own filter.
-- **Format** (toggle) applies to the saved filter that is currently applied:
-  - **Click:** turns its format on or off as conditional formatting.
-  - **No format defined yet:** opens the Format dialog first, and the new format is turned on.
-  - **Ctrl+click:** opens the Format dialog to edit it (font style, strikeout, underline, color). Font name and size follow the view (View Font).
-- **Add to** (menu, mail) lists the saved filters except `Flagged`, `Sent` and `Unknown` (the first-install filters that
+- **Add to** (large menu button, mail) lists the saved filters except `Flagged`, `Sent` and `Unknown` (the first-install filters that
   are computed from the mail itself), including ones added to the file later and ones that have a name and format but no
   SQL yet (they are filled in place). Picking one opens a small window with three check boxes:
   - **domainRelated**: `domainRelated = '...'` for each selected mail's domain.
@@ -193,17 +189,22 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
     a shared billing service.
 
   The first time in a session `Issue` starts with domainRelated and every other filter with Subject; afterwards the
-  last choice for that filter. Subjects become patterns in which numbers (dates, times, amounts, ids, `9??27??,
-  `1,234??) and month/weekday names are `%` (`Your trip with Gojek on Friday, 26 September` ??`Your trip with Gojek on %`);
+  last choice for that filter. Subjects become patterns in which numbers (dates, times, amounts, ids, `9월 27일`,
+  `1,234원`) and month/weekday names are `%` (`Your trip with Gojek on Friday, 26 September` → `Your trip with Gojek on %`);
   a subject without them is matched exactly. The list can be edited before adding.
   DASL `LIKE` only honours `%` at the start or end, so a pattern with `%` in the middle is added as prefix/middle/suffix
   conditions joined with `AND`.
   Each value is added as one condition per line (`... OR` + new line); values the filter already covers are skipped.
-- **Edit Saved Filters** opens the current folder kind's saved filters file in VS Code (Notepad if not installed). Saved changes are picked up automatically; **Manage > Reload** forces it.
-- **Save View as Filter...** saves the current view filter (e.g. one built in View Settings > Filter) as a saved filter.
+- Beside Add to, one column of **Format**, **Refresh Formats** and **Manage**:
+- **Format** (toggle) applies to the saved filter that is currently applied:
+  - **Click:** turns its format on or off as conditional formatting.
+  - **No format defined yet:** opens the Format dialog first, and the new format is turned on.
+  - **Ctrl+click:** opens the Format dialog to edit it (font style, strikeout, underline, color). Font name and size follow the view (View Font).
+- **Refresh Formats** turns the formats back on (after All Formats Off) and rewrites the rules of all filters whose Format is on into the current view.
 - **Manage** (menu):
+  - **Edit Saved Filters** opens the current folder kind's saved filters file in VS Code (Notepad if not installed). Saved changes are picked up automatically; **Reload** forces it.
+  - **Save View as Filter...** saves the current view filter (e.g. one built in View Settings > Filter) as a saved filter.
   - **Reload** reads the saved filters file again now.
-  - **Refresh Formats** turns the formats back on (after All Formats Off) and rewrites the rules of all filters whose Format is on into the current view.
   - **All Formats Off** takes all saved filters' formats out of the views (`formatsOn="false"`). Each filter's Format on/off setting is kept, so Refresh Formats brings the same set back. Turning a filter's Format on also turns formats back on.
   - **Remove Formats** deletes the add-in's rules from the current view after a warning. Settings are unchanged, so the rules come back with Refresh Formats or the next auto-apply.
   - **Auto-apply formats**: when on, syncs the rules into each table view as you switch folders and views.
@@ -239,7 +240,7 @@ Tools for the selected items; each button shows only in the folders where it app
   subject opens the mail. For a calendar item: the organizer, then the attendees (required as To, optional ones and
   resources as Cc).
 - **Copy Items** (mail folders) copies one line per selected mail (or meeting request) to the clipboard, e.g.
-  `'26.09.28??17:01 <The Mulia Bali> Ultimate Getaway`, in the order the view shows them. **Shift+click** puts the new
+  `'26.09.28월 17:01 <The Mulia Bali> Ultimate Getaway`, in the order the view shows them. **Shift+click** puts the new
   lines before the clipboard's current text, to collect mails from several folders.
 - **Default Contact Form** (contact folders) sets the selected contacts' message class to `IPM.Contact`, so they open
   with Outlook's form.
@@ -275,7 +276,7 @@ The file is rewritten when you change settings from the ribbon, so comments you 
 ### View Columns - Mail.txt / - Contacts.txt / - Tasks.txt
 One column per line; `#` lines are skipped. The values are separated by tabs, and several tabs in a row count as one,
 so the lines can be lined up freely. After the field name, each value goes to the next field whose format it fits,
-so fields can be left out (`me?쩉enter` is a centered column with no width; `unknownDomain???쩉enter?쪀d` skips Type and
+so fields can be left out (`me⇥Center` is a centered column with no width; `unknownDomain⇥4⇥Center⇥ud` skips Type and
 Format):
 
 | Field (in order) | Format | Meaning |
@@ -307,8 +308,8 @@ older `Filters.xml`, `Saved Filters.xml` and `View Columns.txt` are renamed auto
 
 ## **TinyKit** tab in a received mail's window
 Before the window's Message tab, with one **Message** group:
-- Delete, Archive, Send to OneNote 쨌 Follow Up, Flag (no date), Clear Flag 쨌 Translate, Show Original, translation
-  preferences 쨌 Approve / Reject (approval requests only) 쨌 Find 쨌 Edit Message: Outlook's own commands.
+- Delete, Archive, Send to OneNote · Follow Up, Flag (no date), Clear Flag · Translate, Show Original, translation
+  preferences · Approve / Reject (approval requests only) · Find · Edit Message: Outlook's own commands.
 - **Recipients Report** of the open mail, as in the Items group.
 
 ## **TinyKit** tab in a mail being written
