@@ -105,18 +105,31 @@ namespace tinykit.OutlookAddin.Settings
     </Filter>
   </SavedFilters>
 
-  icon: an Office icon name (imageMso, e.g. FlagToday). Filters with an icon are the mail list's own kinds of
-  items (Flagged, Sent, Unknown); they come first on the ribbon, with their icon, before a separator and the others.
+  icon: an Office icon name (imageMso, e.g. FlagToday). Filters with an icon come first on the ribbon, with their
+  icon, then a separator and the filters without one (text only).
+
+  Flagged, Sent, Unknown and Others are not like the other saved filters:
+  - They are the mail list's own kinds of items, not a choice of yours: a flagged mail (PR_FLAG_STATUS set), mail
+    you sent (me = '▶'), received mail whose sender is not in Contacts (nameRelated not '[contact name]'). They are
+    created with the first Saved Filters - Mail.xml and carry an icon (Flagged FlagToday, Sent SendDefault, Unknown
+    Help), so they stand apart at the front of the group. Sent and Unknown read the Custom Mail Fields (me,
+    nameRelated): older mail needs Fill Fields once.
+  - They are computed from the mail itself, so Add/New... does not list them (it adds conditions taken from the
+    selected mails). It recognizes them by name: renamed, they are listed like any other filter.
+  - Others is not in this file: it is computed as NOT (filter 1 OR filter 2 ...) of all the filters here, i.e. the
+    mail none of them catches, and is the last filter button (funnel icon), before Add/New....
+  The other filters are your own: what they catch is up to you, Add/New... adds to them, and New... creates more.
+
   font/size are optional (omit to keep the view's font). #RRGGBB maps to the nearest of the 16 colors
   Outlook conditional formatting supports. Tip: build a filter in View Settings > Filter, then use
-  Manage > Save View Filter on the ribbon, or copy the text of its SQL tab here.
+  Manage > Save View as Filter... on the ribbon, or copy the text of its SQL tab here.
   Up to 20 saved filters are shown on the ribbon.
 
   Location: %OneDriveConsumer%\.config\tinykit\Outlook\ when that folder exists (shared by every PC
   signed in to the same personal OneDrive; create it and restart Outlook to move there), otherwise
   %APPDATA%\tinykit\Outlook\. History.xml and View Columns - *.txt follow the same rule; ViewState.xml and the
-  log stay local. Mail: ""Add to Delete"" appends the selected mails' subjects to the saved filter named ""Delete""
-  (created if missing), ""Add to Issue"" their domainRelated values to ""Issue"".
+  log stay local. Mail: Add/New... > Delete adds conditions from the selected mails (domainRelated, From address,
+  subject pattern, or several together) to the saved filter named Delete; New... names a new filter first.
 ";
 
         public static FilterSettings Load(string path, ItemKind kind)
