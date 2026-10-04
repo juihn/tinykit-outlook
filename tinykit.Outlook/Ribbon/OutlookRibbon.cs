@@ -27,7 +27,9 @@ namespace tinykit.OutlookAddin.Ribbon
         private const string ComposeMailRibbonId = "Microsoft.Outlook.Mail.Compose";
 
         // Namespace of the qualified ids (idQ) that other add-ins use to add groups to TinyKit's tabs:
-        // xmlns:tk="tinykit" and <tab idQ="tk:ContactTab"> (contact window), after <group idQ="tk:ContactBuiltIn">.
+        // xmlns:tk="tinykit" and <tab idQ="tk:ContactTab"> (contact window), after <group idQ="tk:ContactBuiltIn">;
+        // <tab idQ="tk:MainTab"> (explorer), whose <group idQ="tk:Items"> takes other add-ins' buttons in a
+        // <box idQ="tk:ItemsTail">, which TinyKit's own Items buttons go before.
         private const string SharedNamespace = "tinykit";
         private const string SlotSeparator = "_";
 
@@ -262,11 +264,12 @@ namespace tinykit.OutlookAddin.Ribbon
         private static string BuildXml()
         {
             var sb = new StringBuilder();
-            sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\" onLoad=\"OnLoad\">");
-            sb.Append("<ribbon><tabs><tab id=\"tabOAFilter\" label=\"TinyKit\" insertBeforeMso=\"TabMail\">");
+            sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\" xmlns:tk=\"")
+              .Append(SharedNamespace).Append("\" onLoad=\"OnLoad\">");
+            sb.Append("<ribbon><tabs><tab idQ=\"tk:MainTab\" label=\"TinyKit\" insertBeforeMso=\"TabMail\">");
 
             // Built-in: frequently used Outlook commands, icon only, in columns.
-            sb.Append("<group id=\"grpBuiltIn\" label=\"Built-in\">");
+            sb.Append("<group id=\"grpBuiltIn\" insertBeforeQ=\"tk:Items\" label=\"Built-in\">");
             int separators = 0;
             foreach (var column in BuiltInColumns)
             {
@@ -297,7 +300,7 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("</group>");
 
             // Custom mail fields (domainRelated, nameRelated, me, tos, ccs, unknownDomain): mail folders only.
-            sb.Append("<group id=\"grpFields\" label=\"Custom Mail Fields\" getVisible=\"GetMailVisible\">");
+            sb.Append("<group id=\"grpFields\" insertBeforeQ=\"tk:Items\" label=\"Custom Mail Fields\" getVisible=\"GetMailVisible\">");
             sb.Append("<button id=\"cfFill\" label=\"Fill Fields\" imageMso=\"PropertySheet\" onAction=\"OnFillFields\"")
               .Append(" screentip=\"Fill Fields\" supertip=\"Fill domainRelated, nameRelated, me, tos, ccs and unknownDomain. ")
               .Append("Click: the items of the current folder that do not have them yet (e.g. mail received while Outlook was closed, ")
@@ -310,7 +313,7 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("</group>");
 
             // Table View.
-            sb.Append("<group id=\"grpView\" label=\"Table View\" getVisible=\"GetNotCalendarVisible\">");
+            sb.Append("<group id=\"grpView\" insertBeforeQ=\"tk:Items\" label=\"Table View\" getVisible=\"GetNotCalendarVisible\">");
             sb.Append("<button id=\"mViewColumns\" label=\"View Columns\" imageMso=\"TableInsert\" onAction=\"OnViewColumns\"")
               .Append(" screentip=\"View Columns\" getSupertip=\"GetViewColumnsSupertip\"/>");
             sb.Append("<button id=\"mViewFont\" label=\"View Font...\" imageMso=\"FontDialog\" onAction=\"OnViewFont\"")
@@ -322,7 +325,7 @@ namespace tinykit.OutlookAddin.Ribbon
 
             // Quick Filter (mail and contact folders): one input box, then four buttons, each followed by its own
             // history drop-down; what they filter by depends on the folder.
-            sb.Append("<group id=\"grpQuick\" label=\"Quick Filter\" getVisible=\"GetQuickVisible\">");
+            sb.Append("<group id=\"grpQuick\" insertBeforeQ=\"tk:Items\" label=\"Quick Filter\" getVisible=\"GetQuickVisible\">");
             sb.Append("<editBox id=\"qInput\" label=\"Value\" showLabel=\"false\" sizeString=\"WWWWWWWWWWm\"")
               .Append(" getText=\"GetInputText\" onChange=\"OnInputChange\" screentip=\"Quick filter value\"")
               .Append(" supertip=\"Type a value, then press a button below to show the items whose field contains it. ")
@@ -337,7 +340,7 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("</group>");
 
             // Clear Filter.
-            sb.Append("<group id=\"grpClear\" label=\"Clear Filter\" getVisible=\"GetNotCalendarVisible\">");
+            sb.Append("<group id=\"grpClear\" insertBeforeQ=\"tk:Items\" label=\"Clear Filter\" getVisible=\"GetNotCalendarVisible\">");
             sb.Append("<button id=\"qClear\" label=\"Clear Filter\" size=\"large\" imageMso=\"FilterClearAllFilters\" onAction=\"OnClear\"")
               .Append(" screentip=\"Clear Filter\" supertip=\"Remove the quick or saved filter and restore the view's own filter.\"/>");
             sb.Append("<toggleButton id=\"qClearOnExit\" label=\"Clear Inboxes on Exit\" size=\"large\" imageMso=\"FilterClearAllFilters\"")
@@ -348,7 +351,7 @@ namespace tinykit.OutlookAddin.Ribbon
 
             // Saved filters: a toggle per saved filter (fixed slots shown/hidden by callbacks, so edits need no
             // restart), formats of the applied one, the Add to menu, then the file and format management.
-            sb.Append("<group id=\"grpSaved\" label=\"Saved Filters\" getVisible=\"GetSavedGroupVisible\">");
+            sb.Append("<group id=\"grpSaved\" insertBeforeQ=\"tk:Items\" label=\"Saved Filters\" getVisible=\"GetSavedGroupVisible\">");
             // First the filters that are the mail list's own kinds of items (those with an icon in the file: Flagged,
             // Sent, Unknown) and Others, with icons; then a separator and the user's own filters, text only. The visible
             // filters start with the icon ones, so both sets of slots use the same index (tag).
@@ -407,27 +410,30 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("</box>");
             sb.Append("</group>");
 
-            // Items: tools for the selected items of any kind; each button shows where it applies.
-            sb.Append("<group id=\"grpItems\" label=\"Items\" getVisible=\"GetItemsVisible\">");
-            sb.Append("<button id=\"cfCustomFilter\" label=\"Custom Filter\" imageMso=\"Filter\" onAction=\"OnCustomFilter\"")
+            // The groups above each go before tk:Items, so Items stays last even when another add-in declares it first.
+            // Items: tools for the selected items of any kind; each button shows where it applies. Shared (idQ) so other
+            // add-ins can add buttons: theirs sit in the box tk:ItemsTail, and each button here goes before it, so they come
+            // last whichever add-in loads first (an insertBeforeQ naming a control not loaded yet is ignored).
+            sb.Append("<group idQ=\"tk:Items\" label=\"Items\" getVisible=\"GetItemsVisible\">");
+            sb.Append("<button id=\"cfCustomFilter\" insertBeforeQ=\"tk:ItemsTail\" label=\"Custom Filter\" imageMso=\"Filter\" onAction=\"OnCustomFilter\"")
               .Append(" screentip=\"Custom Filter (Ctrl+Alt+2)\" supertip=\"Open a window to find text in the fields you tick (any of them), with the ")
               .Append("filter shown as you type. Mail: sender name and address, nameRelated, domainRelated, recipient names, subject, body. ")
               .Append("Calendar: organizer name and address, subject, body. Contacts: company, department, names, e-mail addresses, ")
               .Append("phone numbers, notes. Tasks: subject, body.\"/>");
-            sb.Append("<button id=\"cfRecipients\" label=\"Recipients Report\" imageMso=\"ContactCardViewMySite\" onAction=\"OnRecipientsReport\"")
+            sb.Append("<button id=\"cfRecipients\" insertBeforeQ=\"tk:ItemsTail\" label=\"Recipients Report\" imageMso=\"ContactCardViewMySite\" onAction=\"OnRecipientsReport\"")
               .Append(" getVisible=\"GetReportVisible\" screentip=\"Recipients Report\" supertip=\"Show the selected mail's sender and ")
               .Append("recipients, or the selected calendar item's organizer and attendees, grouped by domain and department (from ")
               .Append("Contacts). Blue: To / required, gray: Cc, Bcc / optional, resources; green: in Contacts. In the window, click a ")
               .Append("person to open the contact (or search LinkedIn), Ctrl+click for a new contact, Shift+click to add the address to ")
               .Append("the clipboard.\"/>");
-            sb.Append("<button id=\"cfCopyItems\" label=\"Copy Items\" imageMso=\"GroupClipboard\" onAction=\"OnCopyItems\"")
+            sb.Append("<button id=\"cfCopyItems\" insertBeforeQ=\"tk:ItemsTail\" label=\"Copy Items\" imageMso=\"GroupClipboard\" onAction=\"OnCopyItems\"")
               .Append(" getVisible=\"GetMailVisible\" screentip=\"Copy Items\" supertip=\"Copy one line per selected mail to the clipboard: ")
               .Append("'yy.MM.dd요일 HH:mm &lt;sender&gt; subject. Shift+click: put the new lines before the clipboard's current text.\"/>");
             // Contact folders: switch the selected contacts between Outlook's form and the folder's custom form.
-            sb.Append("<button id=\"cfFormDefault\" label=\"Default Contact Form\" imageMso=\"NewContact\"")
+            sb.Append("<button id=\"cfFormDefault\" insertBeforeQ=\"tk:ItemsTail\" label=\"Default Contact Form\" imageMso=\"NewContact\"")
               .Append(" getVisible=\"GetContactVisible\" onAction=\"OnSetDefaultContactForm\" screentip=\"Default Contact Form\"")
               .Append(" supertip=\"Set the selected contacts to open with Outlook's own contact form (message class IPM.Contact).\"/>");
-            sb.Append("<button id=\"cfFormCustom\" getLabel=\"GetCustomFormLabel\" imageMso=\"ChooseForm\"")
+            sb.Append("<button id=\"cfFormCustom\" insertBeforeQ=\"tk:ItemsTail\" getLabel=\"GetCustomFormLabel\" imageMso=\"ChooseForm\"")
               .Append(" getVisible=\"GetCustomFormVisible\" onAction=\"OnSetCustomContactForm\" getScreentip=\"GetCustomFormLabel\"")
               .Append(" getSupertip=\"GetCustomFormSupertip\"/>");
             sb.Append("</group>");
