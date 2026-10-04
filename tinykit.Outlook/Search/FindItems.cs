@@ -506,12 +506,16 @@ namespace tinykit.OutlookAddin.Search
             return DateTimeText(appointment.Start) + " ~ " + DateTimeText(appointment.End) + (string.IsNullOrEmpty(zone) ? "" : " " + zone);
         }
 
+        /// <summary>The body after a blank line, without its lines that are empty or only white space (e.g. &amp;nbsp;).</summary>
         private static void AppendBody(StringBuilder sb, string body)
         {
             if (string.IsNullOrEmpty(body))
                 return;
+            var lines = body.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n').Where(l => !string.IsNullOrWhiteSpace(l)).ToList();
+            if (lines.Count == 0)
+                return;
             sb.AppendLine();
-            sb.Append(body.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", Environment.NewLine).TrimEnd());
+            sb.Append(string.Join(Environment.NewLine, lines.Select(l => l.TrimEnd())));
         }
 
         private static string Address(string address, string displayName)

@@ -268,8 +268,9 @@ Tools for the selected items; each button shows only in the folders where it app
     address; IM address;
   - tasks: subject; due date / status / completed; reminder time; recurrence;
 
-  then the body or notes. **Enter** searches wherever the focus is, except in the results, where it (or a
-  double-click) opens the item. The window keeps its size,
+  then the body or notes, without its blank (or white-space only) lines. **Enter** searches wherever the focus is,
+  except in the results, where it (or a double-click) opens the item; after a search the first result is selected and
+  has the focus, so Enter opens it (Esc goes back to the text). The window keeps its size,
   splitter, Message Body, item types and accounts (`Find Items.txt` in `%APPDATA%\tinykit\Outlook\`).
 - **Recipients Report** (mail and calendar folders) opens a window for the selected mail: the sender, then the
   recipients grouped by **domain** and by the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background:

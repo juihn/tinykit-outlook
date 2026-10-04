@@ -300,9 +300,12 @@ namespace tinykit.OutlookAddin.Search
             Sort();
             if (_results.Count > 0)
             {
+                // The first result selected and the focus in the results, so Enter opens it (Esc goes back to the text).
                 _list.SelectedIndices.Clear();
                 _list.SelectedIndices.Add(0);
+                _list.FocusedItem = _list.Items[0];
                 _list.EnsureVisible(0);
+                _list.Focus();
             }
         }
 
