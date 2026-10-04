@@ -75,6 +75,9 @@ namespace tinykit.OutlookAddin.Search
             _text = new TextBox { Dock = DockStyle.Fill, Margin = new Padding(0, 1, 6, 0), Text = _lastText };
             _text.TextChanged += (s, e) => _lastText = _text.Text;
             _body = new CheckBox { Text = "Message Body / Notes", AutoSize = true, Checked = _bodyChecked, Margin = new Padding(0, 3, 6, 0), Anchor = AnchorStyles.Left };
+            // Check boxes are saved as soon as they change, not only when the window closes (Outlook exiting with the
+            // window open does not close it).
+            _body.CheckedChanged += (s, e) => SaveSettings();
             _search = new Button { Text = "Search", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0) };
             _search.Click += (s, e) => { if (_searching) _stop = true; else RunSearch(); };
             top.Controls.Add(_text, 0, 0);
@@ -165,7 +168,7 @@ namespace tinykit.OutlookAddin.Search
                     box.Image = _icons.Images[(int)k];
                     box.TextImageRelation = TextImageRelation.ImageBeforeText;
                 }
-                box.CheckedChanged += (s, e) => { if (box.Checked) _kinds.Add(k); else _kinds.Remove(k); };
+                box.CheckedChanged += (s, e) => { if (box.Checked) _kinds.Add(k); else _kinds.Remove(k); SaveSettings(); };
                 row.Controls.Add(box);
             }
             row.Controls.Add(new Label { Text = "|", AutoSize = true, ForeColor = SystemColors.GrayText, Margin = new Padding(4, 3, 12, 0) });
@@ -173,7 +176,7 @@ namespace tinykit.OutlookAddin.Search
             {
                 var n = name;
                 var box = new CheckBox { Text = n, AutoSize = true, Checked = !_excludedAccounts.Contains(n), Margin = new Padding(0, 0, 8, 0) };
-                box.CheckedChanged += (s, e) => { if (box.Checked) _excludedAccounts.Remove(n); else _excludedAccounts.Add(n); };
+                box.CheckedChanged += (s, e) => { if (box.Checked) _excludedAccounts.Remove(n); else _excludedAccounts.Add(n); SaveSettings(); };
                 row.Controls.Add(box);
             }
             return row;
