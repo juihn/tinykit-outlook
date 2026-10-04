@@ -245,7 +245,7 @@ Tools for the selected items; each button shows only in the folders where it app
   lists their addresses; **Copy Contents** copies the report as text; **Refresh** reads the mail and Contacts again. The
   subject opens the mail. For a calendar item: the organizer, then the attendees (required as To, optional ones and
   resources as Cc).
-- **Copy Items** (mail folders) copies one line per selected mail (or meeting request) to the clipboard, e.g.
+- **Copy Items Text** (mail folders) copies one line per selected mail (or meeting request) to the clipboard, e.g.
   `'26.09.28월 17:01 <The Mulia Bali> Ultimate Getaway`, in the order the view shows them. **Shift+click** puts the new
   lines before the clipboard's current text, to collect mails from several folders.
 - **Default Contact Form** (contact folders) sets the selected contacts' message class to `IPM.Contact`, so they open
@@ -333,19 +333,21 @@ The tab and group have qualified ids (`tk:ComposeTab`, `tk:ComposeRecipients`, b
 add-ins can add groups, as in the contact window.
 
 ## **TinyKit** tab in a contact's window
-Before the window's Contact tab, with one **Built-in** group:
-- General, Details, All Fields (the window's pages).
-- **Open in Google Map** (the business address, or else home or other), Delete, Save & Close.
-- **Contact Picture** (large, shows the contact's picture): adds a picture, or changes it; **Shift+click** removes it.
-- **Default Message Class** / **Custom Message Class**: make this contact open with Outlook's form (`IPM.Contact`) or with
-  the Contacts folder's custom form (e.g. `IPM.Contact.myContactForm`); it takes effect when the contact is opened again.
-- **Copy to Clipboard**: `company / department / name (job title)`, e-mail, `T.`phone, `M.`mobile, tab-separated;
-  **Shift+click** keeps the clipboard's text after it.
+Before the window's Contact tab, with two groups:
+- **Built-in**: General, Details, All Fields (the window's pages), Delete, Save & Close.
+- **TinyKit**:
+  - **Contact Picture** (large, shows the contact's picture): adds a picture, or changes it; **Shift+click** removes it.
+  - **Open Address in Google Map** (the business address, or else home or other).
+  - **Copy to Clipboard**: `company / department / name (job title)`, e-mail, `T.`phone, `M.`mobile, tab-separated;
+    **Shift+click** keeps the clipboard's text after it.
+
+To switch contacts between Outlook's form and the folder's custom form, use the Items group of the main window (the
+contact window keeps the form it opened with).
 
 Other add-ins can add their own groups to this tab: declare `xmlns:tk="tinykit"` in their ribbon XML and use
-`<tab idQ="tk:ContactTab" label="TinyKit" insertBeforeMso="TabContact">`. To put a group right after Built-in, give it
-`idQ="tk:AfterBuiltIn"` and `insertAfterQ="tk:ContactBuiltIn"`: Outlook merges groups in load order and ignores a
-reference to a group not loaded yet, so Built-in also names `tk:AfterBuiltIn` in its `insertBeforeQ`.
+`<tab idQ="tk:ContactTab" label="TinyKit" insertBeforeMso="TabContact">`. To put a group right after TinyKit's groups,
+give it `idQ="tk:AfterBuiltIn"` and `insertAfterQ="tk:ContactTools"`: Outlook merges groups in load order and ignores a
+reference to a group not loaded yet, so Built-in and TinyKit also name `tk:AfterBuiltIn` in their `insertBeforeQ`.
 
 ## License
 

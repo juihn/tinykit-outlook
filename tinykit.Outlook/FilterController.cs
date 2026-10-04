@@ -1449,7 +1449,7 @@ namespace tinykit.OutlookAddin
         }
 
         /// <summary>
-        /// Copy Items: one line per selected mail, <c>'yy.MM.dd요일 HH:mm &lt;sender&gt; subject</c>, to the clipboard.
+        /// Copy Items Text: one line per selected mail, <c>'yy.MM.dd요일 HH:mm &lt;sender&gt; subject</c>, to the clipboard.
         /// The lines follow the order of the view (Outlook's Selection comes in its own order).
         /// Shift+click appends the clipboard's current text after the new lines.
         /// </summary>
@@ -1549,7 +1549,7 @@ namespace tinykit.OutlookAddin
             }
             catch (COMException ex)
             {
-                Log.Info("Copy Items: view order unavailable, using the selection's order: " + ex.Message);
+                Log.Info("Copy Items Text: view order unavailable, using the selection's order: " + ex.Message);
                 return null;
             }
         }

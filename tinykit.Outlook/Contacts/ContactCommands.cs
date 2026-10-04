@@ -75,32 +75,6 @@ namespace tinykit.OutlookAddin.Contacts
             contact.Save();
         }
 
-        /// <summary>Sets the contact's message class and saves it; it opens with that form from the next time.</summary>
-        public static string SetForm(Outlook.ContactItem contact, string messageClass)
-        {
-            if (string.Equals(contact.MessageClass, messageClass, StringComparison.OrdinalIgnoreCase))
-                return "This contact already uses the " + FilterController.FormName(messageClass) + " form.";
-            contact.MessageClass = messageClass;
-            contact.Save();
-            return "This contact now uses the " + FilterController.FormName(messageClass) + " form. "
-                + "Close it and open it again to see it (restart Outlook if it still shows the old form).";
-        }
-
-        /// <summary>The custom contact form of the contact's folder, or else of the default Contacts folder.</summary>
-        public static string CustomForm(Outlook.ContactItem contact)
-        {
-            Outlook.MAPIFolder folder = null;
-            try
-            {
-                folder = contact == null ? null : contact.Parent as Outlook.MAPIFolder;
-            }
-            catch (COMException)
-            {
-            }
-            return FilterController.CustomFormOf(folder)
-                ?? FilterController.CustomFormOf(Globals.ThisAddIn.Application.Session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderContacts));
-        }
-
         /// <summary>
         /// Copy to Clipboard: <c>company / department / name (job title) e-mail T.phone M.mobile</c>, tab-separated;
         /// Shift+click keeps the clipboard's text after it.
