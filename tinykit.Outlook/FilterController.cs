@@ -468,6 +468,12 @@ namespace tinykit.OutlookAddin
             }
         }
 
+        /// <summary>Whether Add/New... lists this filter (mail folders; not Flagged, Sent or Unknown).</summary>
+        public bool IsAddTarget(string name)
+        {
+            return AddToTargets.Contains(name, StringComparer.OrdinalIgnoreCase);
+        }
+
         private static readonly string DomainRelatedProperty = CustomFieldNames.Dasl(CustomFieldNames.DomainRelated);
 
         private const string SubjectProperty = "http://schemas.microsoft.com/mapi/proptag/0x0037001F"; // PR_SUBJECT

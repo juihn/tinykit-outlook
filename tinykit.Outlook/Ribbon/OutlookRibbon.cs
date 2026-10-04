@@ -831,7 +831,15 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public string GetSavedSupertip(Office.IRibbonControl control)
         {
-            return Safe(() => { Focus(control); var f = _controller.FilterAt(SlotOf(control)); return f == null ? "" : FilterController.Truncate(f.Sql, 1000); }, "");
+            return Safe(() =>
+            {
+                Focus(control);
+                var f = _controller.FilterAt(SlotOf(control));
+                if (f == null)
+                    return "";
+                var sql = FilterController.Truncate(f.Sql, 1000);
+                return _controller.IsAddTarget(f.Name) ? "Shift+click: add the selected mails to it (as Add/New...).\n\n" + sql : sql;
+            }, "");
         }
 
         public bool GetSavedPressed(Office.IRibbonControl control)
@@ -858,7 +866,25 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public void OnSavedToggle(Office.IRibbonControl control, bool pressed)
         {
-            Run(control, ex => _controller.ToggleSaved(ex, SlotOf(control), pressed));
+            // Shift+click on one of your own filters (one Add/New... lists): add the selected mails to it instead.
+            bool shift = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
+            Run(control, ex =>
+            {
+                var f = _controller.FilterAt(SlotOf(control));
+                if (shift && f != null && _controller.IsAddTarget(f.Name))
+                {
+                    try
+                    {
+                        _controller.AddSelectionToFilter(ex, f.Name);
+                    }
+                    finally
+                    {
+                        _controller.Invalidate(); // the click flipped the button; show the filter's real state again
+                    }
+                    return;
+                }
+                _controller.ToggleSaved(ex, SlotOf(control), pressed);
+            });
         }
 
         public string GetFormatSupertip(Office.IRibbonControl control)

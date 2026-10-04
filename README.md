@@ -176,6 +176,8 @@ Each file starts with these saved filters, which you can edit or delete:
 Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields** once.
 
 - **One toggle button per saved filter** (up to 20). Pressing it applies the filter's SQL as the view filter. Pressing it again restores the view's own filter.
+  **Shift+click** on one of your own filters (mail; not Flagged, Sent, Unknown or Others) adds the selected mails to it,
+  the same as picking it in **Add/New...**.
   Filters with an `icon` in the file (the first-install Flagged, Sent and Unknown: the mail list's own kinds of items)
   come first, with their icon, then a separator and the other filters as text.
 - **Others** (toggle with a funnel icon, the last filter button) shows only the items that **none** of the saved filters
