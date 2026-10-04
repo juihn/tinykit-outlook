@@ -260,10 +260,16 @@ Tools for the selected items; each button shows only in the folders where it app
   | Tasks | due | subject | status | completed | body |
 
   each with its account and folder; dates are local time, `'yy.MM.dd요일 HH:mm` (a due date without the time); click a
-  header to sort. Under them, the selected item's details (mail: subject,
-  received `'yyMMdd요일 HH:mm:ss +09:00`, sender name and address; calendar: start ~ end and time zone; contacts:
-  File As, created / modified, e-mail addresses (display names), phone numbers; tasks: due date, status, completed;
-  then the body or notes). Double-click or **Enter** in the results opens the item. The window keeps its size,
+  header to sort. Under them, the selected item's details (a field without a value is left out with its label):
+  - mail: subject, received `'yyMMdd요일 HH:mm:ss +09:00`, sender name and address, recipients, carbon copy;
+  - calendar: subject, start ~ end and time zone, location;
+  - contacts: File As; created / modified / anniversary; full name / nickname; company / department / job title;
+    e-mail addresses with display names; phone numbers (mobile, pager, work, ...); business address; free/busy
+    address; IM address;
+  - tasks: subject; due date / status / completed; reminder time; recurrence;
+
+  then the body or notes. **Enter** searches wherever the focus is, except in the results, where it (or a
+  double-click) opens the item. The window keeps its size,
   splitter, Message Body, item types and accounts (`Find Items.txt` in `%APPDATA%\tinykit\Outlook\`).
 - **Recipients Report** (mail and calendar folders) opens a window for the selected mail: the sender, then the
   recipients grouped by **domain** and by the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background:

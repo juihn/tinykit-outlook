@@ -17,8 +17,8 @@ namespace tinykit.OutlookAddin.Search
     /// Find Items window (resizable, stays open): the text to find, Message Body and Search in one row; under it the item
     /// types and accounts to search as check boxes; the results (type icon, Account, Folder, Date, Subject, Field 1-3)
     /// and, under them, the selected item's details. Enter searches; Esc stops a search, else puts the focus in the text,
-    /// else selects the text, and closes the window when the text is empty. Double-click or Enter in the results opens
-    /// the item. Size, splitter, Message Body, item types and accounts are kept.
+    /// else selects the text, and closes the window when the text is empty. Enter searches wherever the focus is, except
+    /// in the results, where it (or a double-click) opens the item. Size, splitter, Message Body, item types and accounts are kept.
     /// </summary>
     internal sealed class FindItemsForm : Form
     {
@@ -74,7 +74,6 @@ namespace tinykit.OutlookAddin.Search
                 top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             _text = new TextBox { Dock = DockStyle.Fill, Margin = new Padding(0, 1, 6, 0), Text = _lastText };
             _text.TextChanged += (s, e) => _lastText = _text.Text;
-            _text.KeyDown += OnTextKeyDown;
             _body = new CheckBox { Text = "Message Body / Notes", AutoSize = true, Checked = _bodyChecked, Margin = new Padding(0, 3, 6, 0), Anchor = AnchorStyles.Left };
             _search = new Button { Text = "Search", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0) };
             _search.Click += (s, e) => { if (_searching) _stop = true; else RunSearch(); };
@@ -100,14 +99,6 @@ namespace tinykit.OutlookAddin.Search
             _list.RetrieveVirtualItem += (s, e) => e.Item = RowOf(_results[e.ItemIndex]);
             _list.SelectedIndexChanged += (s, e) => ShowDetails();
             _list.DoubleClick += (s, e) => OpenSelected();
-            _list.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode == Keys.Enter)
-                {
-                    OpenSelected();
-                    e.Handled = e.SuppressKeyPress = true;
-                }
-            };
             _list.ColumnClick += (s, e) => SortBy(e.Column);
             _details = new TextBox
             {
@@ -127,22 +118,21 @@ namespace tinykit.OutlookAddin.Search
             SizeColumns();
         }
 
-        private void OnTextKeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                if (!_searching)
-                    RunSearch();
-                e.Handled = e.SuppressKeyPress = true;
-            }
-        }
-
-        // Esc wherever the focus is.
+        // Enter and Esc wherever the focus is: Enter opens the selected result when the results have the focus, and
+        // searches anywhere else.
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
             if (keyData == Keys.Escape)
             {
                 EscapePressed();
+                return true;
+            }
+            if (keyData == Keys.Enter)
+            {
+                if (_list.Focused)
+                    OpenSelected();
+                else if (!_searching)
+                    RunSearch();
                 return true;
             }
             return base.ProcessCmdKey(ref msg, keyData);

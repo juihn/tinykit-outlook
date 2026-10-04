@@ -306,7 +306,10 @@ namespace tinykit.OutlookAddin.Search
             return result;
         }
 
-        /// <summary>The text shown under the results for an item, read from the item itself.</summary>
+        /// <summary>
+        /// The text shown under the results for an item, read from the item itself. A field without a value is left out
+        /// with its label, and a line with nothing in it is left out.
+        /// </summary>
         public static string Details(Outlook.NameSpace session, FindResult result)
         {
             var item = session.GetItemFromID(result.EntryId, result.StoreId);
@@ -315,62 +318,73 @@ namespace tinykit.OutlookAddin.Search
                 var sb = new StringBuilder();
                 if (item is Outlook.ContactItem contact)
                 {
-                    sb.AppendLine(contact.FileAs);
-                    sb.AppendLine(DateText(contact.CreationTime) + " / " + DateText(contact.LastModificationTime));
-                    var mails = new[]
-                    {
-                        Address(contact.Email1Address, contact.Email1DisplayName),
-                        Address(contact.Email2Address, contact.Email2DisplayName),
-                        Address(contact.Email3Address, contact.Email3DisplayName),
-                    }.Where(s => s != null).ToList();
-                    if (mails.Count > 0)
-                        sb.AppendLine(string.Join(" / ", mails));
-                    var phones = new[]
-                    {
-                        Phone("mobile", contact.MobileTelephoneNumber), Phone("pager", contact.PagerNumber),
-                        Phone("business", contact.BusinessTelephoneNumber), Phone("business 2", contact.Business2TelephoneNumber),
-                        Phone("company", contact.CompanyMainTelephoneNumber), Phone("home", contact.HomeTelephoneNumber),
-                        Phone("home 2", contact.Home2TelephoneNumber), Phone("other", contact.OtherTelephoneNumber),
-                        Phone("primary", contact.PrimaryTelephoneNumber), Phone("car", contact.CarTelephoneNumber),
-                        Phone("fax", contact.BusinessFaxNumber),
-                    }.Where(s => s != null).ToList();
-                    if (phones.Count > 0)
-                        sb.AppendLine(string.Join(" / ", phones));
+                    Line(sb, contact.FileAs);
+                    Line(sb, Part("Created", ListDateText(DateOf(contact.CreationTime), false), " "),
+                        Part("Modified", ListDateText(DateOf(contact.LastModificationTime), false), " "),
+                        Part("Anniversary", ListDateText(DateOf(contact.Anniversary), false), " "));
+                    Line(sb, Part("Full Name", contact.FullName), Part("NickName", contact.NickName));
+                    Line(sb, contact.CompanyName, contact.Department, contact.JobTitle);
+                    Line(sb, Address(contact.Email1Address, contact.Email1DisplayName), Address(contact.Email2Address, contact.Email2DisplayName),
+                        Address(contact.Email3Address, contact.Email3DisplayName));
+                    Line(sb, Part("mobile", contact.MobileTelephoneNumber), Part("pager", contact.PagerNumber),
+                        Part("work", contact.BusinessTelephoneNumber), Part("work 2", contact.Business2TelephoneNumber),
+                        Part("company", contact.CompanyMainTelephoneNumber), Part("home", contact.HomeTelephoneNumber),
+                        Part("home 2", contact.Home2TelephoneNumber), Part("other", contact.OtherTelephoneNumber),
+                        Part("primary", contact.PrimaryTelephoneNumber), Part("car", contact.CarTelephoneNumber),
+                        Part("fax", contact.BusinessFaxNumber));
+                    Line(sb, Part("Business Address", OneLineAddress(contact.BusinessAddress)));
+                    Line(sb, Part("Free/Busy Address", contact.InternetFreeBusyAddress));
+                    Line(sb, Part("IM Address", contact.IMAddress));
                     AppendBody(sb, contact.Body);
                 }
                 else if (item is Outlook.AppointmentItem appointment)
                 {
-                    sb.AppendLine("Subject: " + appointment.Subject);
-                    sb.AppendLine(AppointmentTime(appointment));
-                    if (!string.IsNullOrEmpty(appointment.Location))
-                        sb.AppendLine("Location: " + appointment.Location);
+                    Line(sb, Part("Subject", appointment.Subject));
+                    Line(sb, AppointmentTime(appointment));
+                    Line(sb, Part("Location", appointment.Location));
                     AppendBody(sb, appointment.Body);
                 }
                 else if (item is Outlook.TaskItem task)
                 {
-                    sb.AppendLine("Subject: " + task.Subject);
-                    sb.AppendLine("DueDate: " + (DateText(DateOf(task.DueDate)) ?? "None") + " / Status " + StatusText((int)task.Status)
-                        + " / Completed " + (DateText(DateOf(task.DateCompleted)) ?? "None"));
+                    Line(sb, Part("Subject", task.Subject));
+                    Line(sb, Part("DueDate", ListDateText(DateOf(task.DueDate), false)), Part("Status", StatusText((int)task.Status), " "),
+                        Part("Completed", ListDateText(DateOf(task.DateCompleted), false), " "));
+                    if (task.ReminderSet)
+                        Line(sb, Part("Reminder Time", ListDateText(DateOf(task.ReminderTime), true)));
+                    if (task.IsRecurring)
+                        Line(sb, Part("Recurrence", RecurrenceText(task.GetRecurrencePattern())));
                     AppendBody(sb, task.Body);
                 }
                 else
                 {
                     // Mail, meeting requests and responses, reports: read late-bound.
                     dynamic d = item;
-                    sb.AppendLine("Subject: " + (string)d.Subject);
+                    Line(sb, Part("Subject", (string)d.Subject));
                     DateTime received = d.ReceivedTime;
-                    sb.AppendLine("Received: " + FullTimeText(received));
-                    string name = null, address = null;
+                    Line(sb, Part("Received", FullTimeText(received)));
+                    string name = null, address = null, to = null, cc = null;
                     try
                     {
                         name = d.SenderName;
                         address = item is Outlook.MailItem mail ? Compose.RecipientCommands.SenderSmtp(mail) : (string)d.SenderEmailAddress;
                     }
-                    catch (COMException)
+                    catch (Exception)
                     {
                         // no sender (e.g. a report)
                     }
-                    sb.AppendLine("Sender: " + name + (string.IsNullOrEmpty(address) ? "" : " <" + address + ">"));
+                    try
+                    {
+                        to = d.To;
+                        cc = d.CC;
+                    }
+                    catch (Exception)
+                    {
+                        // no recipients (e.g. a meeting response)
+                    }
+                    var sender = string.IsNullOrEmpty(address) ? name : (string.IsNullOrEmpty(name) ? "" : name + " ") + "<" + address + ">";
+                    Line(sb, Part("Sender", sender));
+                    Line(sb, Part("Recipients", to));
+                    Line(sb, Part("Carbon Copy", cc));
                     AppendBody(sb, (string)d.Body);
                 }
                 return sb.ToString();
@@ -378,6 +392,95 @@ namespace tinykit.OutlookAddin.Search
             finally
             {
                 Marshal.ReleaseComObject(item);
+            }
+        }
+
+        /// <summary>"label: value", or null when there is no value (so the label is left out too).</summary>
+        private static string Part(string label, string value, string separator = ": ")
+        {
+            return string.IsNullOrWhiteSpace(value) ? null : label + separator + value.Trim();
+        }
+
+        /// <summary>The parts that have a value, joined with " / "; nothing when none has.</summary>
+        private static void Line(StringBuilder sb, params string[] parts)
+        {
+            var present = parts.Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p.Trim()).ToList();
+            if (present.Count > 0)
+                sb.AppendLine(string.Join(" / ", present));
+        }
+
+        private static string OneLineAddress(string address)
+        {
+            if (string.IsNullOrWhiteSpace(address))
+                return null;
+            return string.Join(", ", address.Replace("\r\n", "\n").Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0));
+        }
+
+        private static readonly string[] WeekdayNames = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+
+        /// <summary>
+        /// A recurrence in words: "every 2 weeks on Mon, Thu", "monthly on day 15", "yearly on the 2nd Tue of March", then
+        /// "from 'yy.MM.ddW" and the end (until a date, N times, or no end).
+        /// </summary>
+        private static string RecurrenceText(Outlook.RecurrencePattern p)
+        {
+            var interval = p.Interval;
+            string text;
+            switch (p.RecurrenceType)
+            {
+                case Outlook.OlRecurrenceType.olRecursDaily:
+                    text = interval > 1 ? "every " + interval + " days" : "daily";
+                    break;
+                case Outlook.OlRecurrenceType.olRecursWeekly:
+                    text = (interval > 1 ? "every " + interval + " weeks" : "weekly") + " on " + Weekdays(p.DayOfWeekMask);
+                    break;
+                case Outlook.OlRecurrenceType.olRecursMonthly:
+                    text = (interval > 1 ? "every " + interval + " months" : "monthly") + " on day " + p.DayOfMonth;
+                    break;
+                case Outlook.OlRecurrenceType.olRecursMonthNth:
+                    text = (interval > 1 ? "every " + interval + " months" : "monthly") + " on the " + Nth(p.Instance) + " " + Weekdays(p.DayOfWeekMask);
+                    break;
+                case Outlook.OlRecurrenceType.olRecursYearly:
+                    text = "yearly on " + CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(p.MonthOfYear) + " " + p.DayOfMonth;
+                    break;
+                case Outlook.OlRecurrenceType.olRecursYearNth:
+                    text = "yearly on the " + Nth(p.Instance) + " " + Weekdays(p.DayOfWeekMask) + " of "
+                        + CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(p.MonthOfYear);
+                    break;
+                default:
+                    text = p.RecurrenceType.ToString();
+                    break;
+            }
+            text += ", from " + ListDateText(DateOf(p.PatternStartDate), false);
+            if (p.NoEndDate)
+                text += ", no end";
+            else if (p.Occurrences > 0 && DateOf(p.PatternEndDate) == null)
+                text += ", " + p.Occurrences + " times";
+            else
+                text += " until " + ListDateText(DateOf(p.PatternEndDate), false);
+            return text;
+        }
+
+        private static string Weekdays(Outlook.OlDaysOfWeek mask)
+        {
+            var days = new List<string>();
+            for (int i = 0; i < 7; i++)
+            {
+                if (((int)mask & (1 << i)) != 0)
+                    days.Add(WeekdayNames[i]);
+            }
+            return string.Join(", ", days);
+        }
+
+        private static string Nth(int instance)
+        {
+            switch (instance)
+            {
+                case 1: return "1st";
+                case 2: return "2nd";
+                case 3: return "3rd";
+                case 5: return "last";
+                default: return instance + "th";
             }
         }
 
@@ -415,12 +518,7 @@ namespace tinykit.OutlookAddin.Search
         {
             if (string.IsNullOrEmpty(address))
                 return null;
-            return string.IsNullOrEmpty(displayName) ? address : address + " (" + displayName + ")";
-        }
-
-        private static string Phone(string label, string number)
-        {
-            return string.IsNullOrEmpty(number) ? null : label + ": " + number;
+            return string.IsNullOrEmpty(displayName) ? address : address + " " + displayName;
         }
 
         private static string StatusText(object status)
