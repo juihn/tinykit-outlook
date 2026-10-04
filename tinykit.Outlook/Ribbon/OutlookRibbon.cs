@@ -336,14 +336,14 @@ namespace tinykit.OutlookAddin.Ribbon
             }
             sb.Append("</group>");
 
-            // Clear.
-            sb.Append("<group id=\"grpClear\" label=\"Clear\" getVisible=\"GetNotCalendarVisible\">");
+            // Clear Filter.
+            sb.Append("<group id=\"grpClear\" label=\"Clear Filter\" getVisible=\"GetNotCalendarVisible\">");
+            sb.Append("<button id=\"qClear\" label=\"Clear Filter\" size=\"large\" imageMso=\"FilterClearAllFilters\" onAction=\"OnClear\"")
+              .Append(" screentip=\"Clear Filter\" supertip=\"Remove the quick or saved filter and restore the view's own filter.\"/>");
             sb.Append("<toggleButton id=\"qClearOnExit\" label=\"Clear Inboxes on Exit\" size=\"large\" imageMso=\"FilterClearAllFilters\"")
               .Append(" getPressed=\"GetClearOnExitPressed\" onAction=\"OnClearOnExitToggle\"")
               .Append(" screentip=\"Clear Inboxes on exit\" supertip=\"When Outlook closes, clear the quick, saved and Others filters in the ")
               .Append("Inbox of every account (as Clear Filter does; the views' own filters stay), so Outlook opens with full Inboxes.\"/>");
-            sb.Append("<button id=\"qClear\" label=\"Clear Filter\" size=\"large\" imageMso=\"FilterClearAllFilters\" onAction=\"OnClear\"")
-              .Append(" screentip=\"Clear Filter\" supertip=\"Remove the quick or saved filter and restore the view's own filter.\"/>");
             sb.Append("</group>");
 
             // Saved filters: a toggle per saved filter (fixed slots shown/hidden by callbacks, so edits need no
@@ -358,15 +358,15 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<toggleButton id=\"sfOthers\" label=\"Others\" getVisible=\"GetOthersVisible\" getPressed=\"GetOthersPressed\"")
               .Append(" onAction=\"OnOthersToggle\" screentip=\"Others\" supertip=\"Show only the items that none of the saved filters on the left ")
               .Append("match (NOT (filter 1 OR filter 2 ...)). Press again to restore the view's own filter.\"/>");
-            sb.Append("<separator id=\"sepSaved1\"/>");
             sb.Append("<dynamicMenu id=\"sfAddTo\" label=\"Add to\" size=\"large\" imageMso=\"").Append(AddIcon)
               .Append("\" getVisible=\"GetMailVisible\" getContent=\"GetAddToContent\" invalidateContentOnDrop=\"true\" screentip=\"Add to\"")
               .Append(" supertip=\"Add the selected mails to a saved filter (all except Flagged, Sent and Unknown). A small window asks ")
               .Append("whether by DOMAINRELATED, by SUBJECT, or by both together (domainRelated = ... AND subject); subjects become ")
               .Append("patterns in which numbers, dates and month/weekday names are % (e.g. Your trip with Gojek on %), which you can ")
               .Append("edit before adding.\"/>");
+            sb.Append("<separator id=\"sepSaved1\"/>");
 
-            // Beside Add to, one column: Format, Refresh Formats, then the Manage menu.
+            // After the separator, one column: Format, Refresh Formats, then the Manage menu.
             sb.Append("<box id=\"sfFormats\" boxStyle=\"vertical\">");
             sb.Append("<toggleButton id=\"sfFormat\" label=\"Format\" imageMso=\"ConditionalFormattingMenu\"")
               .Append(" getPressed=\"GetApplyFormatPressed\" onAction=\"OnFormatToggle\" screentip=\"Format\" getSupertip=\"GetFormatSupertip\"/>");

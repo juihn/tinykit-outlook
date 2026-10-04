@@ -72,7 +72,7 @@ The current local files are copied there; the local copies stay as a backup.
 
 ## **TinyKit** tab
 
-Groups, left to right: Built-in · Custom Mail Fields · Table View · Quick Filter · Clear · Saved Filters · Items.
+Groups, left to right: Built-in · Custom Mail Fields · Table View · Quick Filter · Clear Filter · Saved Filters · Items.
 The tab follows the kind of folder you are in:
 
 | Folder | Custom Mail Fields | Quick Filter | Saved Filters, View Columns |
@@ -82,7 +82,7 @@ The tab follows the kind of folder you are in:
 | Tasks | hidden | hidden | `- Tasks` files |
 | Other (calendar, notes, ...) | hidden | hidden | Saved Filters hidden |
 
-In calendar folders Clear and Table View are hidden too. Items shows in mail, calendar, contact and task folders, each
+In calendar folders Clear Filter and Table View are hidden too. Items shows in mail, calendar, contact and task folders, each
 button only where it applies.
 
 Informational messages (results such as *Custom fields: 3 updated*, and hints such as *Select the mails first*) appear as
@@ -124,10 +124,10 @@ The filter shows the items whose field *contains* the value (`LIKE '%value%'`):
   **Ctrl+click** removes it from the list. Every field keeps its own list, so mail and contact values never mix.
 - The box keeps its text after filtering, so the same word can be tried with another field. **Clear Filter** empties it.
 
-### Clear group
+### Clear Filter group
+- **Clear Filter** removes the quick or saved filter and restores the view's own filter (recorded in `ViewState.xml`, so it survives a restart).
 - **Clear Inboxes on Exit** (toggle button, on by default): when Outlook closes (its last window), the quick, saved and Others filters are
   cleared in every view of every account's Inbox, the same way as Clear Filter, so Outlook opens with full Inboxes.
-- **Clear Filter** removes the quick or saved filter and restores the view's own filter (recorded in `ViewState.xml`, so it survives a restart).
   Filters that are part of a view's own definition (View Settings > Filter) stay. Stored as `clearInboxFiltersOnExit` in
   `Saved Filters - Mail.xml`.
 
@@ -195,7 +195,7 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
   DASL `LIKE` only honours `%` at the start or end, so a pattern with `%` in the middle is added as prefix/middle/suffix
   conditions joined with `AND`.
   Each value is added as one condition per line (`... OR` + new line); values the filter already covers are skipped.
-- Beside Add to, one column of **Format**, **Refresh Formats** and **Manage**:
+- After a separator, one column of **Format**, **Refresh Formats** and **Manage**:
 - **Format** (toggle) applies to the saved filter that is currently applied:
   - **Click:** turns its format on or off as conditional formatting.
   - **No format defined yet:** opens the Format dialog first, and the new format is turned on.
