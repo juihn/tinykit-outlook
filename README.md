@@ -237,6 +237,32 @@ Tools for the selected items; each button shows only in the folders where it app
 
   Message Body and Notes start unticked (searching bodies is slower). Calendar, card and other views can be filtered
   too, not only table views.
+- **Find Items** opens a resizable window that finds text in mail, calendar items, contacts and tasks of all folders
+  at once (each folder read with `Folder.GetTable`, `LIKE '%text%'`, up to 5000 results). It searches the subject and
+
+  | Items | Also searched |
+  |---|---|
+  | Mail | sender name |
+  | Calendar | location |
+  | Contacts | File As, company, department, nickname, e-mail 1-3 addresses and display names, phone numbers |
+  | Tasks | – |
+
+  and, with **Message Body / Notes** ticked, the body. **Filter** chooses the item types and the accounts (stores;
+  public folders start unticked); hidden folders and Sync Issues are left out. **Enter** searches, **Esc** stops a
+  search or empties the text (or, when it is empty, closes the window). The results:
+
+  | Type | Date | Subject | Field 1 | Field 2 | Field 3 |
+  |---|---|---|---|---|---|
+  | Mail | received | subject | nameRelated | domainRelated | body |
+  | Calendar | start | subject | end | time zone | body |
+  | Contacts | created | File As | company | department | notes |
+  | Tasks | due | subject | status | completed | body |
+
+  each with its account and folder; click a header to sort. Under them, the selected item's details (mail: subject,
+  received `'yyMMdd요일 HH:mm:ss +09:00`, sender name and address; calendar: start ~ end and time zone; contacts:
+  File As, created / modified, e-mail addresses (display names), phone numbers; tasks: due date, status, completed;
+  then the body or notes). Double-click or **Enter** in the results opens the item. The window keeps its size,
+  splitter, Message Body, item types and accounts (`Find Items.txt` in `%APPDATA%\tinykit\Outlook\`).
 - **Recipients Report** (mail and calendar folders) opens a window for the selected mail: the sender, then the
   recipients grouped by **domain** and by the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background:
   in Contacts. The check boxes add each person's display name and user name. Click a person to open the contact (or

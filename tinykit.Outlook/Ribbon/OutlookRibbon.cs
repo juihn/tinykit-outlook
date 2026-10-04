@@ -417,6 +417,11 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("filter shown as you type. Mail: sender name and address, nameRelated, domainRelated, recipient names, subject, body. ")
               .Append("Calendar: organizer name and address, subject, body. Contacts: company, department, names, e-mail addresses, ")
               .Append("phone numbers, notes. Tasks: subject, body.\"/>");
+            sb.Append("<button id=\"cfFindItems\" label=\"Find Items\" imageMso=\"FindDialog\" onAction=\"OnFindItems\"")
+              .Append(" screentip=\"Find Items\" supertip=\"Open a window to find text in mail, calendar items, contacts and tasks of ")
+              .Append("all folders at once. Subject, and mail: sender name; calendar: location; contacts: File As, company, department, ")
+              .Append("nickname, e-mail addresses and display names, phone numbers; with Message Body / Notes ticked also the body. ")
+              .Append("Filter chooses the item types and accounts. Click a result for its details, double-click to open it.\"/>");
             sb.Append("<button id=\"cfRecipients\" label=\"Recipients Report\" imageMso=\"ContactCardViewMySite\" onAction=\"OnRecipientsReport\"")
               .Append(" getVisible=\"GetReportVisible\" screentip=\"Recipients Report\" supertip=\"Show the selected mail's sender and ")
               .Append("recipients, or the selected calendar item's organizer and attendees, grouped by domain and department (from ")
@@ -622,6 +627,11 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnCustomFilter(Office.IRibbonControl control)
         {
             Run(control, ex => _controller.ShowCustomFilter(ex));
+        }
+
+        public void OnFindItems(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.ShowFindItems(ex));
         }
 
         // Recipients Report: mail and calendar folders.

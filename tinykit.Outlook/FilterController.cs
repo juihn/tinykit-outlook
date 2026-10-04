@@ -438,6 +438,20 @@ namespace tinykit.OutlookAddin
             _customFilter.Show(WindowOwner.From(explorer));
         }
 
+        private Search.FindItemsForm _findItems;
+
+        /// <summary>Find Items: one window for the whole session; pressing the button again brings it to the front.</summary>
+        public void ShowFindItems(Outlook.Explorer explorer)
+        {
+            if (_findItems != null && !_findItems.IsDisposed)
+            {
+                _findItems.Activate();
+                return;
+            }
+            _findItems = new Search.FindItemsForm(explorer.Application);
+            _findItems.Show(WindowOwner.From(explorer));
+        }
+
         public void Clear(Outlook.Explorer explorer)
         {
             if (!Views.Clear(explorer))
