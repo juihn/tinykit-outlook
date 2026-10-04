@@ -247,18 +247,20 @@ Tools for the selected items; each button shows only in the folders where it app
   | Contacts | File As, company, department, nickname, e-mail 1-3 addresses and display names, phone numbers |
   | Tasks | – |
 
-  and, with **Message Body / Notes** ticked, the body. **Filter** chooses the item types and the accounts (stores;
-  public folders start unticked); hidden folders and Sync Issues are left out. **Enter** searches, **Esc** stops a
-  search or empties the text (or, when it is empty, closes the window). The results:
+  and, with **Message Body / Notes** ticked, the body. Under the text, check boxes choose the item types (with their
+  icons) and the accounts (stores; public folders start unticked); hidden folders and Sync Issues are left out.
+  **Enter** searches. **Esc** stops a search; otherwise it puts the focus in the text, or, when the focus is there,
+  selects the text, and closes the window when the text is empty. The results:
 
-  | Type | Date | Subject | Field 1 | Field 2 | Field 3 |
+  | Type (icon) | Date | Subject | Field 1 | Field 2 | Field 3 |
   |---|---|---|---|---|---|
   | Mail | received | subject | nameRelated | domainRelated | body |
   | Calendar | start | subject | end | time zone | body |
   | Contacts | created | File As | company | department | notes |
   | Tasks | due | subject | status | completed | body |
 
-  each with its account and folder; click a header to sort. Under them, the selected item's details (mail: subject,
+  each with its account and folder; dates are local time, `'yy.MM.dd요일 HH:mm` (a due date without the time); click a
+  header to sort. Under them, the selected item's details (mail: subject,
   received `'yyMMdd요일 HH:mm:ss +09:00`, sender name and address; calendar: start ~ end and time zone; contacts:
   File As, created / modified, e-mail addresses (display names), phone numbers; tasks: due date, status, completed;
   then the body or notes). Double-click or **Enter** in the results opens the item. The window keeps its size,

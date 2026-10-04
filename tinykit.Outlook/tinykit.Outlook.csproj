@@ -136,6 +136,7 @@
     <Compile Include="Common\UserMessageException.cs" />
     <Compile Include="Common\KeyboardShortcuts.cs" />
     <Compile Include="Common\RedrawLock.cs" />
+    <Compile Include="Common\OfficeImage.cs" />
     <Compile Include="Compose\RecipientCommands.cs" />
     <Compile Include="Contacts\ContactCommands.cs" />
     <Compile Include="Common\WindowOwner.cs" />

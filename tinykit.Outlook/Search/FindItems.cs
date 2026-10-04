@@ -106,6 +106,18 @@ namespace tinykit.OutlookAddin.Search
             }
         }
 
+        /// <summary>The Office image of the kind (its "New ..." command).</summary>
+        public static string ImageMsoOf(FindKind kind)
+        {
+            switch (kind)
+            {
+                case FindKind.Mail: return "NewMailMessage";
+                case FindKind.Appointment: return "NewAppointment";
+                case FindKind.Contact: return "NewContact";
+                default: return "NewTask";
+            }
+        }
+
         public static FindKind? KindOf(Outlook.OlItemType type)
         {
             switch (type)
@@ -272,19 +284,19 @@ namespace tinykit.OutlookAddin.Search
                 StoreId = folder.StoreId,
                 EntryId = cell(0) as string,
                 Date = DateOf(cell(1)),
-                DateHasTime = folder.Kind == FindKind.Mail || folder.Kind == FindKind.Appointment,
+                DateHasTime = folder.Kind != FindKind.Task, // a due date has no time
                 Subject = Text(cell(2)),
                 Field3 = OneLine(Text(cell(5))),
             };
             switch (folder.Kind)
             {
                 case FindKind.Appointment:
-                    result.Field1 = DateTimeText(DateOf(cell(3)));
+                    result.Field1 = ListDateText(DateOf(cell(3)), true);
                     result.Field2 = Text(cell(4));
                     break;
                 case FindKind.Task:
                     result.Field1 = StatusText(cell(3));
-                    result.Field2 = DateText(DateOf(cell(4)));
+                    result.Field2 = ListDateText(DateOf(cell(4)), false);
                     break;
                 default:
                     result.Field1 = Text(cell(3));
@@ -444,6 +456,18 @@ namespace tinykit.OutlookAddin.Search
         }
 
         /// <summary>'261005일 14:30.</summary>
+        /// <summary>
+        /// The result list's dates: 'yy.MM.dd, the Korean weekday, and HH:mm when <paramref name="withTime"/>: '26.10.05일 14:30.
+        /// Local time, as the table gives built-in date properties (ReceivedTime, Start, ...) in local time.
+        /// </summary>
+        public static string ListDateText(DateTime? date, bool withTime)
+        {
+            if (date == null)
+                return null;
+            return "'" + date.Value.ToString("yy.MM.dd", CultureInfo.InvariantCulture) + date.Value.ToString("ddd", Korean)
+                + (withTime ? " " + date.Value.ToString("HH:mm", CultureInfo.InvariantCulture) : "");
+        }
+
         public static string DateTimeText(DateTime? date)
         {
             return date == null ? null : DateText(date) + " " + date.Value.ToString("HH:mm", CultureInfo.InvariantCulture);

@@ -14,10 +14,11 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 namespace tinykit.OutlookAddin.Search
 {
     /// <summary>
-    /// Find Items window (resizable, stays open): the text to find, Message Body, Filter (kinds of items and accounts) and
-    /// Search in one row; the results (Type, Account, Folder, Date, Subject, Field 1-3) and, under them, the selected
-    /// item's details. Enter searches, Esc stops a search or empties the text (and closes the window when it is empty);
-    /// double-click or Enter in the results opens the item. Size, splitter, Message Body, kinds and accounts are kept.
+    /// Find Items window (resizable, stays open): the text to find, Message Body and Search in one row; under it the item
+    /// types and accounts to search as check boxes; the results (type icon, Account, Folder, Date, Subject, Field 1-3)
+    /// and, under them, the selected item's details. Enter searches; Esc stops a search, else puts the focus in the text,
+    /// else selects the text, and closes the window when the text is empty. Double-click or Enter in the results opens
+    /// the item. Size, splitter, Message Body, item types and accounts are kept.
     /// </summary>
     internal sealed class FindItemsForm : Form
     {
@@ -29,9 +30,8 @@ namespace tinykit.OutlookAddin.Search
         private readonly Outlook.Application _app;
         private readonly TextBox _text;
         private readonly CheckBox _body;
-        private readonly Button _filter;
         private readonly Button _search;
-        private readonly ContextMenuStrip _filterMenu = new ContextMenuStrip();
+        private readonly ImageList _icons; // per FindKind, from Outlook's own images; null if they cannot be had
         private readonly ListView _list;
         private readonly TextBox _details;
         private readonly SplitContainer _split;
@@ -59,31 +59,30 @@ namespace tinykit.OutlookAddin.Search
             MinimumSize = new Size(560, 320);
             LoadSettings();
 
-            var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Padding = new Padding(10) };
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            _icons = LoadIcons();
 
-            // Text, Message Body, Filter, Search.
-            var top = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 4, RowCount = 1, Margin = new Padding(0, 0, 0, 6) };
+            var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Padding = new Padding(10) };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));     // text, Message Body, Search
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));     // item types and accounts
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); // results and details
+
+            // Text, Message Body, Search.
+            var top = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 3, RowCount = 1, Margin = new Padding(0, 0, 0, 4) };
             top.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 2; i++)
                 top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             _text = new TextBox { Dock = DockStyle.Fill, Margin = new Padding(0, 1, 6, 0), Text = _lastText };
             _text.TextChanged += (s, e) => _lastText = _text.Text;
             _text.KeyDown += OnTextKeyDown;
             _body = new CheckBox { Text = "Message Body / Notes", AutoSize = true, Checked = _bodyChecked, Margin = new Padding(0, 3, 6, 0), Anchor = AnchorStyles.Left };
-            _filter = new Button { Text = "Filter ▾", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0, 0, 6, 0) };
-            _filter.Click += (s, e) => ShowFilterMenu();
-            // Ticking an item keeps the menu open, so several can be changed at once.
-            _filterMenu.Closing += (s, e) => { if (e.CloseReason == ToolStripDropDownCloseReason.ItemClicked) e.Cancel = true; };
             _search = new Button { Text = "Search", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0) };
             _search.Click += (s, e) => { if (_searching) _stop = true; else RunSearch(); };
             top.Controls.Add(_text, 0, 0);
             top.Controls.Add(_body, 1, 0);
-            top.Controls.Add(_filter, 2, 0);
-            top.Controls.Add(_search, 3, 0);
+            top.Controls.Add(_search, 2, 0);
             layout.Controls.Add(top, 0, 0);
+            layout.Controls.Add(BuildFilters(), 0, 1);
 
             _list = new ListView
             {
@@ -93,8 +92,10 @@ namespace tinykit.OutlookAddin.Search
                 HideSelection = false,
                 MultiSelect = false,
                 VirtualMode = true,
+                SmallImageList = _icons,
             };
-            foreach (var column in new[] { "Type", "Account", "Folder", "Date", "Subject", "Field 1", "Field 2", "Field 3" })
+            // The type is an icon; its header stays empty when the icons are there.
+            foreach (var column in new[] { _icons == null ? "Type" : "", "Account", "Folder", "Date", "Subject", "Field 1", "Field 2", "Field 3" })
                 _list.Columns.Add(column);
             _list.RetrieveVirtualItem += (s, e) => e.Item = RowOf(_results[e.ItemIndex]);
             _list.SelectedIndexChanged += (s, e) => ShowDetails();
@@ -104,11 +105,6 @@ namespace tinykit.OutlookAddin.Search
                 if (e.KeyCode == Keys.Enter)
                 {
                     OpenSelected();
-                    e.Handled = e.SuppressKeyPress = true;
-                }
-                else if (e.KeyCode == Keys.Escape)
-                {
-                    EscapePressed();
                     e.Handled = e.SuppressKeyPress = true;
                 }
             };
@@ -125,7 +121,7 @@ namespace tinykit.OutlookAddin.Search
             _split = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, Margin = new Padding(0) };
             _split.Panel1.Controls.Add(_list);
             _split.Panel2.Controls.Add(_details);
-            layout.Controls.Add(_split, 0, 1);
+            layout.Controls.Add(_split, 0, 2);
 
             Controls.Add(layout);
             SizeColumns();
@@ -139,48 +135,77 @@ namespace tinykit.OutlookAddin.Search
                     RunSearch();
                 e.Handled = e.SuppressKeyPress = true;
             }
-            else if (e.KeyCode == Keys.Escape)
-            {
-                EscapePressed();
-                e.Handled = e.SuppressKeyPress = true;
-            }
         }
 
-        // Esc stops a search; otherwise it empties the text, and with the text already empty it closes the window.
+        // Esc wherever the focus is.
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.Escape)
+            {
+                EscapePressed();
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        // Esc stops a search. Otherwise: focus elsewhere -> into the text; in the text -> select all of it; in an empty
+        // text -> close the window.
         private void EscapePressed()
         {
             if (_searching)
                 _stop = true;
+            else if (!_text.Focused)
+                _text.Focus();
             else if (_text.Text.Length == 0)
                 Close();
             else
-            {
-                _text.Text = "";
-                _text.Focus();
-            }
+                _text.SelectAll();
         }
 
-        private void ShowFilterMenu()
+        // Item types (with their icons), then the accounts, as check boxes in one row (wrapping when narrow).
+        private Control BuildFilters()
         {
-            _filterMenu.Items.Clear();
-            _filterMenu.Items.Add(new ToolStripLabel("Item Types") { Font = new Font(Font, FontStyle.Bold) });
+            var row = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true, Margin = new Padding(0, 0, 0, 6) };
             foreach (FindKind kind in Enum.GetValues(typeof(FindKind)))
             {
                 var k = kind;
-                var item = new ToolStripMenuItem(FindItems.LabelOf(k)) { CheckOnClick = true, Checked = _kinds.Contains(k) };
-                item.CheckedChanged += (s, e) => { if (item.Checked) _kinds.Add(k); else _kinds.Remove(k); };
-                _filterMenu.Items.Add(item);
+                var box = new CheckBox { Text = FindItems.LabelOf(k), AutoSize = true, Checked = _kinds.Contains(k), Margin = new Padding(0, 0, 8, 0) };
+                if (_icons != null)
+                {
+                    box.Image = _icons.Images[(int)k];
+                    box.TextImageRelation = TextImageRelation.ImageBeforeText;
+                }
+                box.CheckedChanged += (s, e) => { if (box.Checked) _kinds.Add(k); else _kinds.Remove(k); };
+                row.Controls.Add(box);
             }
-            _filterMenu.Items.Add(new ToolStripSeparator());
-            _filterMenu.Items.Add(new ToolStripLabel("Accounts") { Font = new Font(Font, FontStyle.Bold) });
+            row.Controls.Add(new Label { Text = "|", AutoSize = true, ForeColor = SystemColors.GrayText, Margin = new Padding(4, 3, 12, 0) });
             foreach (var name in AccountNames())
             {
                 var n = name;
-                var item = new ToolStripMenuItem(n) { CheckOnClick = true, Checked = !_excludedAccounts.Contains(n) };
-                item.CheckedChanged += (s, e) => { if (item.Checked) _excludedAccounts.Remove(n); else _excludedAccounts.Add(n); };
-                _filterMenu.Items.Add(item);
+                var box = new CheckBox { Text = n, AutoSize = true, Checked = !_excludedAccounts.Contains(n), Margin = new Padding(0, 0, 8, 0) };
+                box.CheckedChanged += (s, e) => { if (box.Checked) _excludedAccounts.Remove(n); else _excludedAccounts.Add(n); };
+                row.Controls.Add(box);
             }
-            _filterMenu.Show(_filter, new Point(0, _filter.Height));
+            return row;
+        }
+
+        // Outlook's own icons for new mail, appointment, contact and task, at the screen's size of 16 pixels.
+        private ImageList LoadIcons()
+        {
+            try
+            {
+                var size = LogicalToDeviceUnits(16);
+                var bars = _app.ActiveExplorer().CommandBars;
+                var list = new ImageList { ColorDepth = ColorDepth.Depth32Bit, ImageSize = new Size(size, size) };
+                foreach (FindKind kind in Enum.GetValues(typeof(FindKind)))
+                    list.Images.Add(OfficeImage.FromImageMso(bars, FindItems.ImageMsoOf(kind), size));
+                return list;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Find Items icons", ex);
+                return null;
+            }
         }
 
         private List<string> AccountNames()
@@ -209,7 +234,7 @@ namespace tinykit.OutlookAddin.Search
             }
             if (_kinds.Count == 0)
             {
-                MessageBox.Show(this, "Tick at least one item type under Filter.", ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "Tick at least one item type.", ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             _searching = true;
@@ -291,10 +316,10 @@ namespace tinykit.OutlookAddin.Search
             }
         }
 
-        private static ListViewItem RowOf(FindResult r)
+        private ListViewItem RowOf(FindResult r)
         {
-            var date = r.DateHasTime ? FindItems.DateTimeText(r.Date) : FindItems.DateText(r.Date);
-            var row = new ListViewItem(FindItems.LabelOf(r.Kind));
+            var date = FindItems.ListDateText(r.Date, r.DateHasTime);
+            var row = _icons == null ? new ListViewItem(FindItems.LabelOf(r.Kind)) : new ListViewItem("", (int)r.Kind);
             row.SubItems.Add(r.Account ?? "");
             row.SubItems.Add(r.Folder ?? "");
             row.SubItems.Add(date ?? "");
@@ -375,7 +400,9 @@ namespace tinykit.OutlookAddin.Search
         private void Sort()
         {
             Comparison<FindResult> compare;
-            if (_sortColumn == 3)
+            if (_sortColumn == 0)
+                compare = (a, b) => a.Kind.CompareTo(b.Kind);
+            else if (_sortColumn == 3)
                 compare = (a, b) => Nullable.Compare(a.Date, b.Date);
             else
             {
@@ -399,7 +426,7 @@ namespace tinykit.OutlookAddin.Search
 
         private void SizeColumns()
         {
-            var widths = new[] { 70, 150, 160, 120, 300, 160, 160, 300 };
+            var widths = new[] { _icons == null ? 70 : 28, 150, 160, 140, 300, 160, 160, 300 };
             for (int i = 0; i < widths.Length; i++)
                 _list.Columns[i].Width = LogicalToDeviceUnits(widths[i]);
         }
@@ -407,7 +434,9 @@ namespace tinykit.OutlookAddin.Search
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
-            if (_savedSplit > 0 && _savedSplit < _split.Height - _split.Panel2MinSize)
+            // The last splitter position, unless it would leave the results or the details too small to use.
+            var minimum = LogicalToDeviceUnits(100);
+            if (_savedSplit >= minimum && _savedSplit <= _split.Height - minimum)
                 _split.SplitterDistance = _savedSplit;
             else
                 _split.SplitterDistance = _split.Height * 3 / 5;
