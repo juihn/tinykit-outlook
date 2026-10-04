@@ -50,6 +50,12 @@ namespace tinykit.OutlookAddin.Settings
         public string Name;
         public string Sql;
 
+        /// <summary>
+        /// An Office icon (imageMso, e.g. FlagToday) for filters that are part of how the mail list works (Flagged, Sent,
+        /// Unknown) rather than the user's own: they come first on the ribbon, with this icon, before a separator.
+        /// </summary>
+        public string Icon;
+
         // Whitespace around the SQL in the file (e.g. a line break before "]]>"), written back unchanged.
         public string SqlLeading = "";
         public string SqlTrailing = "";
@@ -91,7 +97,7 @@ namespace tinykit.OutlookAddin.Settings
                                                        clear quick/saved filters in every account's Inbox
                 formatsOn=""true|false"">               formatsOn: all formats on/off (All Formats Off /
                                                        Refresh Formats); formatEnabled per filter is kept
-    <Filter name=""Ribbon button label"" formatEnabled=""true|false"">
+    <Filter name=""Ribbon button label"" icon=""imageMso (optional)"" formatEnabled=""true|false"">
       <Sql><![CDATA[ DASL filter, e.g. ""urn:schemas:httpmail:read"" = 0 ]]></Sql>
       <Format font=""Segoe UI"" size=""9"" style=""Regular|Bold|Italic|Bold Italic""
               strikeout=""false"" underline=""false"" color=""Auto|Black|Maroon|Green|Olive|Navy|Purple|
@@ -99,6 +105,8 @@ namespace tinykit.OutlookAddin.Settings
     </Filter>
   </SavedFilters>
 
+  icon: an Office icon name (imageMso, e.g. FlagToday). Filters with an icon are the mail list's own kinds of
+  items (Flagged, Sent, Unknown); they come first on the ribbon, with their icon, before a separator and the others.
   font/size are optional (omit to keep the view's font). #RRGGBB maps to the nearest of the 16 colors
   Outlook conditional formatting supports. Tip: build a filter in View Settings > Filter, then use
   Manage > Save View Filter on the ribbon, or copy the text of its SQL tab here.
@@ -143,9 +151,11 @@ namespace tinykit.OutlookAddin.Settings
                 if (name.Length == 0)
                     continue;
                 var fe = e.Element("Format");
+                var icon = ((string)e.Attribute("icon") ?? "").Trim();
                 settings.Filters.Add(new SavedFilter
                 {
                     Name = name,
+                    Icon = icon.Length == 0 ? null : icon,
                     Sql = sql,
                     SqlLeading = rawSql.Substring(0, rawSql.Length - rawSql.TrimStart().Length),
                     SqlTrailing = rawSql.Substring(rawSql.TrimEnd().Length),
@@ -180,6 +190,7 @@ namespace tinykit.OutlookAddin.Settings
         {
             var e = new XElement("Filter",
                 new XAttribute("name", f.Name),
+                string.IsNullOrEmpty(f.Icon) ? null : new XAttribute("icon", f.Icon),
                 new XAttribute("formatEnabled", f.FormatEnabled ? "true" : "false"),
                 new XElement("Sql", new XCData(f.SqlLeading + f.Sql + f.SqlTrailing)));
             if (f.Format != null)
@@ -228,7 +239,12 @@ namespace tinykit.OutlookAddin.Settings
             return fallback;
         }
 
-        private const string FlagStatus = "\"http://schemas.microsoft.com/mapi/proptag/0x10900003\" IS NOT NULL";
+        // Icons of the first-install filters that are the mail list's own kinds of items.
+        private const string FlaggedIcon = "FlagToday";
+        private const string SentIcon = "SendDefault";
+        private const string UnknownIcon = "Help";
+
+        private const string FlagStatus ="\"http://schemas.microsoft.com/mapi/proptag/0x10900003\" IS NOT NULL";
 
         /// <summary>The saved filters of a first install (no saved filters file of that kind yet).</summary>
         private static FilterSettings CreateDefault(ItemKind kind)
@@ -256,6 +272,7 @@ namespace tinykit.OutlookAddin.Settings
             s.Filters.Add(new SavedFilter
             {
                 Name = "Flagged",
+                Icon = FlaggedIcon,
                 Sql = FlagStatus,
                 FormatEnabled = false,
                 Format = new FilterFormat { Color = Outlook.OlColor.olColorRed },
@@ -299,6 +316,7 @@ namespace tinykit.OutlookAddin.Settings
             s.Filters.Add(new SavedFilter
             {
                 Name = "Flagged",
+                Icon = FlaggedIcon,
                 Sql = FlagStatus,
                 FormatEnabled = false,
                 Format = new FilterFormat { Color = Outlook.OlColor.olColorRed },
@@ -307,6 +325,7 @@ namespace tinykit.OutlookAddin.Settings
             s.Filters.Add(new SavedFilter
             {
                 Name = "Sent",
+                Icon = SentIcon,
                 Sql = "\"" + userProp + "me\" = '▶'",
                 FormatEnabled = true,
                 Format = new FilterFormat { Underline = true, Color = Outlook.OlColor.olColorTeal },
@@ -315,6 +334,7 @@ namespace tinykit.OutlookAddin.Settings
             s.Filters.Add(new SavedFilter
             {
                 Name = "Unknown",
+                Icon = UnknownIcon,
                 Sql = "\"" + userProp + "nameRelated\" IS NOT NULL AND NOT (\"" + userProp + "nameRelated\" LIKE '[%')"
                     + " AND \"" + userProp + "me\" <> '▶'",
                 FormatEnabled = true,

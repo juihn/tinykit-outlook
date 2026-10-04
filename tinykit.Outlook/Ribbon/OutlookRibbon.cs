@@ -349,18 +349,31 @@ namespace tinykit.OutlookAddin.Ribbon
             // Saved filters: a toggle per saved filter (fixed slots shown/hidden by callbacks, so edits need no
             // restart), formats of the applied one, the Add to menu, then the file and format management.
             sb.Append("<group id=\"grpSaved\" label=\"Saved Filters\" getVisible=\"GetSavedGroupVisible\">");
+            // First the filters that are the mail list's own kinds of items (those with an icon in the file: Flagged,
+            // Sent, Unknown) and Others, with icons; then a separator and the user's own filters, text only. The visible
+            // filters start with the icon ones, so both sets of slots use the same index (tag).
+            for (int i = 0; i < FilterController.MaxIconFilters; i++)
+            {
+                sb.Append("<toggleButton id=\"sfi").Append(SlotSeparator).Append(i).Append("\" tag=\"").Append(i)
+                  .Append("\" getLabel=\"GetSavedLabel\" getImage=\"GetSavedImage\" getVisible=\"GetSavedIconVisible\" getPressed=\"GetSavedPressed\"")
+                  .Append(" onAction=\"OnSavedToggle\" getScreentip=\"GetSavedLabel\" getSupertip=\"GetSavedSupertip\"/>");
+            }
+            sb.Append("<separator id=\"sepSaved0\"/>");
             for (int i = 0; i < FilterController.MaxSavedFilters; i++)
             {
                 sb.Append("<toggleButton id=\"sf").Append(SlotSeparator).Append(i).Append("\" tag=\"").Append(i)
                   .Append("\" getLabel=\"GetSavedLabel\" getVisible=\"GetSavedVisible\" getPressed=\"GetSavedPressed\" onAction=\"OnSavedToggle\"")
                   .Append(" getScreentip=\"GetSavedLabel\" getSupertip=\"GetSavedSupertip\"/>");
             }
-            sb.Append("<toggleButton id=\"sfOthers\" label=\"Others\" getVisible=\"GetOthersVisible\" getPressed=\"GetOthersPressed\"")
-              .Append(" onAction=\"OnOthersToggle\" screentip=\"Others\" supertip=\"Show only the items that none of the saved filters on the left ")
+            // Others: the last of the filters, then Add/New...
+            sb.Append("<toggleButton id=\"sfOthers\" label=\"Others\" imageMso=\"").Append(OthersIcon)
+              .Append("\" getVisible=\"GetOthersVisible\" getPressed=\"GetOthersPressed\"")
+              .Append(" onAction=\"OnOthersToggle\" screentip=\"Others\" supertip=\"Show only the items that none of the saved filters ")
               .Append("match (NOT (filter 1 OR filter 2 ...)). Press again to restore the view's own filter.\"/>");
-            sb.Append("<dynamicMenu id=\"sfAddTo\" label=\"Add to\" size=\"large\" imageMso=\"").Append(AddIcon)
-              .Append("\" getVisible=\"GetMailVisible\" getContent=\"GetAddToContent\" invalidateContentOnDrop=\"true\" screentip=\"Add to\"")
-              .Append(" supertip=\"Add the selected mails to a saved filter (all except Flagged, Sent and Unknown). A small window asks ")
+            sb.Append("<dynamicMenu id=\"sfAddTo\" label=\"Add/New...\" imageMso=\"").Append(AddIcon)
+              .Append("\" getVisible=\"GetMailVisible\" getContent=\"GetAddToContent\" invalidateContentOnDrop=\"true\" screentip=\"Add/New...\"")
+              .Append(" supertip=\"Add the selected mails to a saved filter (all except Flagged, Sent and Unknown), or New... to name a new ")
+              .Append("saved filter made from them. A small window asks ")
               .Append("whether by DOMAINRELATED, by SUBJECT, or by both together (domainRelated = ... AND subject); subjects become ")
               .Append("patterns in which numbers, dates and month/weekday names are % (e.g. Your trip with Gojek on %), which you can ")
               .Append("edit before adding.\"/>");
@@ -427,6 +440,7 @@ namespace tinykit.OutlookAddin.Ribbon
         private const string XmlIcon = "EditItem";
         private const string FormatsOffIcon = "ConditionalFormattingClearMenu";
         private const string ManageIcon = "AlignJustify";
+        private const string OthersIcon = "FilterToggleFilter";
 
         /// <summary>
         /// A filter button followed by an arrow-only gallery of that field's recent values (a gallery placed directly
@@ -797,9 +811,22 @@ namespace tinykit.OutlookAddin.Ribbon
             return Safe(() => { Focus(control); var f = _controller.FilterAt(SlotOf(control)); return f == null ? "" : f.Name; }, "");
         }
 
+        // Text-only slots: the filters without an icon.
         public bool GetSavedVisible(Office.IRibbonControl control)
         {
-            return Safe(() => { Focus(control); return _controller.FilterAt(SlotOf(control)) != null; }, false);
+            return Safe(() => { Focus(control); var f = _controller.FilterAt(SlotOf(control)); return f != null && string.IsNullOrEmpty(f.Icon); }, false);
+        }
+
+        // Icon slots: the filters with an icon (they come first among the visible filters).
+        public bool GetSavedIconVisible(Office.IRibbonControl control)
+        {
+            return Safe(() => { Focus(control); var f = _controller.FilterAt(SlotOf(control)); return f != null && !string.IsNullOrEmpty(f.Icon); }, false);
+        }
+
+        // A string from getImage is taken as an imageMso name.
+        public object GetSavedImage(Office.IRibbonControl control)
+        {
+            return Safe<object>(() => { Focus(control); var f = _controller.FilterAt(SlotOf(control)); return f == null ? null : f.Icon; }, null);
         }
 
         public string GetSavedSupertip(Office.IRibbonControl control)
@@ -877,6 +904,10 @@ namespace tinykit.OutlookAddin.Ribbon
                 }
                 if (targets.Count == 0)
                     sb.Append("<button id=\"addToNone\" label=\"(no saved filters to add to)\" enabled=\"false\"/>");
+                sb.Append("<menuSeparator id=\"addToNewSep\"/>");
+                sb.Append("<button id=\"addToNew\" label=\"New...\" imageMso=\"").Append(AddIcon)
+                  .Append("\" onAction=\"OnNewFilter\" screentip=\"New saved filter\"")
+                  .Append(" supertip=\"Name a new saved filter, then choose its conditions from the selected mails.\"/>");
                 return sb.Append("</menu>").ToString();
             }, "<menu xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\"/>");
         }
@@ -884,6 +915,11 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnAddToFilter(Office.IRibbonControl control)
         {
             Run(control, ex => _controller.AddSelectionToFilter(ex, control.Tag));
+        }
+
+        public void OnNewFilter(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.NewFilterFromSelection(ex));
         }
 
         public string GetSettingsScreentip(Office.IRibbonControl control)

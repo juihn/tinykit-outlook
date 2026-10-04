@@ -254,11 +254,22 @@ namespace tinykit.OutlookAddin
             }
         }
 
-        /// <summary>The saved filters shown on the ribbon: those with SQL (empty ones are placeholders), at most 20.</summary>
+        /// <summary>
+        /// The saved filters shown on the ribbon: those with SQL (empty ones are placeholders), at most 20; the ones with
+        /// an icon first, each part in file order.
+        /// </summary>
         public IList<SavedFilter> VisibleFilters
         {
-            get { return Settings.Filters.Where(f => !string.IsNullOrWhiteSpace(f.Sql)).Take(MaxSavedFilters).ToList(); }
+            get
+            {
+                return Settings.Filters.Where(f => !string.IsNullOrWhiteSpace(f.Sql))
+                    .OrderBy(f => string.IsNullOrEmpty(f.Icon) ? 1 : 0) // stable: file order within each part
+                    .Take(MaxSavedFilters).ToList();
+            }
         }
+
+        /// <summary>The ribbon's icon slots (filters with an icon); the visible filters start with them.</summary>
+        public const int MaxIconFilters = 6;
 
         public SavedFilter FilterAt(int index)
         {
@@ -652,6 +663,35 @@ namespace tinykit.OutlookAddin
                 var parts = fields.Select(f => ConditionFor(f, v)).ToList();
                 return parts.Count == 1 ? parts[0] : "(" + string.Join(" AND ", parts) + ")";
             }, null);
+        }
+
+        /// <summary>
+        /// Add/New... > New...: asks for the name of a new saved filter, then builds it from the selected mails as Add to
+        /// does (the conditions window); the filter is created only when conditions are added.
+        /// </summary>
+        public void NewFilterFromSelection(Outlook.Explorer explorer)
+        {
+            if (_kind != ItemKind.Mail)
+                throw new UserMessageException("New saved filters from mails work in mail folders.");
+            Outlook.Selection selection = null;
+            try
+            {
+                selection = explorer.Selection;
+            }
+            catch (COMException)
+            {
+            }
+            if (selection == null || selection.Count == 0)
+                throw new UserMessageException("Select the mails for the new saved filter first.");
+
+            ReloadIfChanged(explorer); // never overwrite edits made outside the add-in
+            var name = Microsoft.VisualBasic.Interaction.InputBox(
+                "Name of the new saved filter (its ribbon button label):", ThisAddIn.Title + " – New saved filter", "").Trim();
+            if (name.Length == 0)
+                return; // cancelled
+            if (Settings.Find(name) != null)
+                throw new UserMessageException("A saved filter named \"" + name + "\" already exists. Use Add/New... > " + name + " to add to it.");
+            AddSelectionToFilter(explorer, name);
         }
 
         private static string ConditionFor(ConditionField field, MailKey v)

@@ -176,11 +176,15 @@ Each file starts with these saved filters, which you can edit or delete:
 Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields** once.
 
 - **One toggle button per saved filter** (up to 20). Pressing it applies the filter's SQL as the view filter. Pressing it again restores the view's own filter.
-- **Others** (toggle, after the saved filters) shows only the items that **none** of the saved filters match:
-  `NOT ((filter 1) OR (filter 2) ...)`. Filters without SQL are left out. Pressing it again restores the view's own filter.
-- **Add to** (large menu button, mail) lists the saved filters except `Flagged`, `Sent` and `Unknown` (the first-install filters that
+  Filters with an `icon` in the file (the first-install Flagged, Sent and Unknown: the mail list's own kinds of items)
+  come first, with their icon, then a separator and the other filters as text.
+- **Others** (toggle with a funnel icon, the last filter button) shows only the items that **none** of the saved filters
+  match: `NOT ((filter 1) OR (filter 2) ...)`. Filters without SQL are left out. Pressing it again restores the view's own filter.
+- **Add/New...** (menu, mail) lists the saved filters except `Flagged`, `Sent` and `Unknown` (the first-install filters that
   are computed from the mail itself), including ones added to the file later and ones that have a name and format but no
-  SQL yet (they are filled in place). Picking one opens a small window with three check boxes:
+  SQL yet (they are filled in place), and last **New...**, which asks for the name of a new saved filter and then builds
+  it from the selected mails in the same way (the filter is created when its conditions are added).
+  Picking a filter opens a small window with three check boxes:
   - **domainRelated**: `domainRelated = '...'` for each selected mail's domain.
   - **From address**: the sender's address (`PR_SENDER_SMTP_ADDRESS` or the raw sender address, as the **F** quick filter).
   - **Subject**: a subject pattern for each selected mail.
