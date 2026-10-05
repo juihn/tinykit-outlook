@@ -101,7 +101,7 @@ namespace tinykit.OutlookAddin
                 timer.Dispose();
                 try
                 {
-                    Controller.OnViewChanged(explorer);
+                    Controller.OnViewChanged(explorer, "startup");
                 }
                 catch (Exception ex)
                 {

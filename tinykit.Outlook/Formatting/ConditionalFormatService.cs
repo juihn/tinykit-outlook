@@ -32,7 +32,8 @@ namespace tinykit.OutlookAddin.Formatting
         /// Returns false when the current view is not a table view; unchanged views are not rewritten unless forced.
         /// <paramref name="ownFilter"/> is the view's own filter to persist (null: the shown one is the view's own).
         /// </summary>
-        public static bool Sync(Outlook.Explorer explorer, IEnumerable<SavedFilter> filters, bool force, string ownFilter)
+        public static bool Sync(Outlook.Explorer explorer, IEnumerable<SavedFilter> filters, bool force, string ownFilter,
+            string reason = "")
         {
             var view = ViewFilterService.GetTableView(explorer) as Outlook.TableView;
             if (view == null)
@@ -49,17 +50,75 @@ namespace tinykit.OutlookAddin.Formatting
             if (wanted.Count == 0 && !HasOurs(rules))
                 return true; // nothing to write or remove: don't touch the view
 
+            // Logged with what the view had, so a rule that went wrong can be traced to when it was (re)written.
+            var where = "view \"" + view.Name + "\" (" + SaveOptionText(view) + ") of " + FolderPathOf(explorer);
+            var shownFilter = view.Filter ?? "";
+            Log.Info("Formats: " + (force ? "rewriting" : "fixing") + " " + wanted.Count + " rule(s) in " + where + " [" + reason + "]"
+                + "; before: " + DescribeOurs(rules) + "; shown filter " + shownFilter.Length + " chars, own filter "
+                + (ownFilter == null ? "same" : ownFilter.Length + " chars"));
+
             var othersBefore = OtherCustomRules(rules);
             RemoveOurs(rules);
+            var total = 0;
             foreach (var f in wanted)
             {
                 var rule = rules.Add(RuleName(f));
-                rule.Filter = Dasl.StripSqlPrefix(f.Sql);
+                var sql = Dasl.StripSqlPrefix(f.Sql);
+                rule.Filter = sql;
                 rule.Enabled = true;
                 ApplyFont(rule.Font, f.Format, rowFont);
+                total += sql.Length;
             }
-            Save(view, rules, othersBefore, ownFilter);
+            try
+            {
+                Save(view, rules, othersBefore, ownFilter);
+            }
+            catch (Exception ex)
+            {
+                Log.Info("Formats: saving " + where + " failed: " + ex.Message);
+                throw;
+            }
+            Log.Info("Formats: wrote " + wanted.Count + " rule(s), " + total + " chars of conditions, in " + where
+                + "; after: " + DescribeOurs(view.AutoFormatRules));
             return true;
+        }
+
+        // The add-in's rules of a view: "name (on|off)", or "none".
+        private static string DescribeOurs(Outlook.AutoFormatRules rules)
+        {
+            var names = new List<string>();
+            for (int i = 1; i <= rules.Count; i++)
+            {
+                var r = rules[i];
+                if (IsOurs(r))
+                    names.Add(r.Name + (r.Enabled ? "" : " (off)"));
+            }
+            return names.Count == 0 ? "none" : string.Join(", ", names);
+        }
+
+        private static string SaveOptionText(Outlook.TableView view)
+        {
+            try
+            {
+                // as Outlook names it, e.g. olViewSaveOptionAllFoldersOfType (a view shared by all folders of the type)
+                return view.SaveOption.ToString();
+            }
+            catch (Exception)
+            {
+                return "?";
+            }
+        }
+
+        private static string FolderPathOf(Outlook.Explorer explorer)
+        {
+            try
+            {
+                return explorer.CurrentFolder.FolderPath;
+            }
+            catch (Exception)
+            {
+                return "?";
+            }
         }
 
         /// <summary>The current table view's row font (name, size), or null when not a table view.</summary>

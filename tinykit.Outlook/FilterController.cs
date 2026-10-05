@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Windows.Forms;
@@ -979,14 +980,18 @@ namespace tinykit.OutlookAddin
 
         // ---------- Conditional formatting ----------
 
-        public void SyncFormats(Outlook.Explorer explorer, bool force)
+        /// <summary>
+        /// Brings the current view's formatting rules in line with the saved filters (rewrites them all when
+        /// <paramref name="force"/>). <paramref name="reason"/> goes to the log with each rewrite (the caller by default).
+        /// </summary>
+        public void SyncFormats(Outlook.Explorer explorer, bool force, [CallerMemberName] string reason = "")
         {
             if (_syncing)
                 return;
             _syncing = true;
             try
             {
-                if (!ConditionalFormatService.Sync(explorer, FormattedFilters, force, Views.OwnFilter(explorer)) && force)
+                if (!ConditionalFormatService.Sync(explorer, FormattedFilters, force, Views.OwnFilter(explorer), reason) && force)
                     throw new UserMessageException("Conditional formatting needs a table (list) view.");
             }
             finally
@@ -1122,22 +1127,34 @@ namespace tinykit.OutlookAddin
         /// Folder or view switched: switch to the saved filters of the folder's kind, keep formats in sync (quietly)
         /// and refresh the ribbon (which groups show depends on the kind).
         /// </summary>
-        public void OnViewChanged(Outlook.Explorer explorer)
+        public void OnViewChanged(Outlook.Explorer explorer, string trigger = "folder/view switch")
         {
             try
             {
                 if (Focus(explorer) != null && Settings.AutoApplyFormats)
                 {
-                    // A rule's Filter set through the object model does not survive an Outlook restart, so each
-                    // view's rules are rewritten on its first visit per session; later visits only fix differences.
-                    var view = ViewFilterService.GetTableView(explorer);
-                    var first = view != null && _syncedViews.Add(ViewFilterService.ViewKey(explorer, view));
-                    SyncFormats(explorer, first);
+                    Outlook.View view;
+                    try
+                    {
+                        view = ViewFilterService.GetTableView(explorer);
+                    }
+                    catch (UserMessageException)
+                    {
+                        view = null; // not a table view: nothing to format
+                    }
+                    if (view != null)
+                    {
+                        // A rule's Filter set through the object model does not survive an Outlook restart, so each
+                        // view's rules are rewritten on its first visit per session; later visits only fix differences.
+                        var first = _syncedViews.Add(ViewFilterService.ViewKey(explorer, view));
+                        SyncFormats(explorer, first, trigger + (first ? ", first visit" : ""));
+                    }
                 }
             }
-            catch (UserMessageException)
+            catch (UserMessageException ex)
             {
-                // not a table view: nothing to format
+                // e.g. Outlook dropped some of the user's own rules while saving (the sync's guard)
+                Log.Info("Formats (" + trigger + "): " + ex.Message);
             }
             catch (Exception ex)
             {

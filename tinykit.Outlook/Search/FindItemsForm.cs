@@ -436,8 +436,29 @@ namespace tinykit.OutlookAddin.Search
                 _split.SplitterDistance = _savedSplit;
             else
                 _split.SplitterDistance = _split.Height * 3 / 5;
+            // From now on the size and the splitter are saved as soon as they change (not only on closing).
+            _split.SplitterMoved += (s, ev) => SaveSettings();
             _text.Focus();
             _text.SelectAll();
+        }
+
+        // After resizing or moving the window, and after maximizing or restoring it.
+        protected override void OnResizeEnd(EventArgs e)
+        {
+            base.OnResizeEnd(e);
+            SaveSettings();
+        }
+
+        private FormWindowState _lastState = FormWindowState.Normal;
+
+        protected override void OnSizeChanged(EventArgs e)
+        {
+            base.OnSizeChanged(e);
+            if (IsHandleCreated && WindowState != _lastState)
+            {
+                _lastState = WindowState;
+                SaveSettings();
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
