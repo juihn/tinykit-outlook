@@ -122,6 +122,8 @@ The filter shows the items whose field *contains* the value (`LIKE '%value%'`):
 - **Button:** uses the text in the input box. If the box is empty, it uses the value of the first selected mail or contact.
 - **▼:** opens a one-level list of that field's last 19 values as `[short date] value`. Clicking one filters by it and puts it in the box.
   **Ctrl+click** removes it from the list. Every field keeps its own list, so mail and contact values never mix.
+- **Tab / Shift+Tab** go from the box through the buttons only, skipping the ▼ lists (the ribbon has no tab-stop
+  setting: the add-in follows the focus and sends another Tab when it lands on a list).
 - The box keeps its text after filtering, so the same word can be tried with another field. **Clear Filter** empties it.
 
 ### Clear Filter group
@@ -256,7 +258,7 @@ Tools for the selected items; each button shows only in the folders where it app
   |---|---|---|---|---|---|
   | Mail | received | subject | nameRelated | domainRelated | body |
   | Calendar | start | subject | end | time zone | body |
-  | Contacts | created | File As | company | department | notes |
+  | Contacts | created | full name / nickname | company | department | notes |
   | Tasks | due | subject | status | completed | body |
 
   each with its account and folder; dates are local time, `'yy.MM.dd요일 HH:mm` (a due date without the time); click a

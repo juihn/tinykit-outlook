@@ -436,7 +436,8 @@ namespace tinykit.OutlookAddin
                 Invalidate();
                 return "applied " + DateTime.Now.ToString("HH:mm:ss");
             });
-            _customFilter.Show(WindowOwner.From(explorer));
+            _customFilter.Icon = OfficeImage.IconFromImageMso(explorer.CommandBars, "ApplyFilter");
+            WindowOwner.ShowCentred(_customFilter, explorer);
         }
 
         private Search.FindItemsForm _findItems;
@@ -446,11 +447,12 @@ namespace tinykit.OutlookAddin
         {
             if (_findItems != null && !_findItems.IsDisposed)
             {
-                _findItems.Activate();
+                WindowOwner.Activate(_findItems, explorer);
                 return;
             }
             _findItems = new Search.FindItemsForm(explorer.Application);
-            _findItems.Show(WindowOwner.From(explorer));
+            _findItems.Icon = OfficeImage.IconFromImageMso(explorer.CommandBars, "ResearchPane");
+            WindowOwner.ShowCentred(_findItems, explorer);
         }
 
         public void Clear(Outlook.Explorer explorer)

@@ -91,7 +91,7 @@ namespace tinykit.OutlookAddin.Search
             // A named property as a table column needs its type (string: /0x0000001F); a filter takes it without.
             { FindKind.Mail, new[] { "ReceivedTime", "Subject", Dasl.NameRelated + StringType, Dasl.DomainRelated + StringType } },
             { FindKind.Appointment, new[] { "Start", "Subject", "End", TimeZoneDescription } },
-            { FindKind.Contact, new[] { "CreationTime", "FileAs", "CompanyName", "Department" } },
+            { FindKind.Contact, new[] { "CreationTime", "FullName", "CompanyName", "Department" } }, // + NickName (cell 6)
             { FindKind.Task, new[] { "DueDate", "Subject", "Status", "DateCompleted" } },
         };
 
@@ -238,6 +238,8 @@ namespace tinykit.OutlookAddin.Search
             var columns = new List<string> { "EntryID" };
             columns.AddRange(Columns[folder.Kind]);
             columns.Add(Body);
+            if (folder.Kind == FindKind.Contact)
+                columns.Add("NickName"); // the subject of a contact: full name / nickname
             var present = new bool[columns.Count];
             for (int i = 0; i < columns.Count; i++)
             {
@@ -275,7 +277,7 @@ namespace tinykit.OutlookAddin.Search
 
         private static FindResult ToResult(FindFolder folder, Func<int, object> cell)
         {
-            // cell: 0 EntryID, 1 date, 2 subject, 3 field 1, 4 field 2, 5 body
+            // cell: 0 EntryID, 1 date, 2 subject, 3 field 1, 4 field 2, 5 body (contacts: 2 full name, 6 nickname)
             var result = new FindResult
             {
                 Kind = folder.Kind,
@@ -285,7 +287,7 @@ namespace tinykit.OutlookAddin.Search
                 EntryId = cell(0) as string,
                 Date = DateOf(cell(1)),
                 DateHasTime = folder.Kind != FindKind.Task, // a due date has no time
-                Subject = Text(cell(2)),
+                Subject = folder.Kind == FindKind.Contact ? JoinPresent(" / ", Text(cell(2)), Text(cell(6))) : Text(cell(2)),
                 Field3 = OneLine(Text(cell(5))),
             };
             switch (folder.Kind)
@@ -506,7 +508,7 @@ namespace tinykit.OutlookAddin.Search
             return DateTimeText(appointment.Start) + " ~ " + DateTimeText(appointment.End) + (string.IsNullOrEmpty(zone) ? "" : " " + zone);
         }
 
-        /// <summary>The body after a blank line, without its lines that are empty or only white space (e.g. &amp;nbsp;).</summary>
+        /// <summary>The body right after the fields, without its lines that are empty or only white space (e.g. &amp;nbsp;).</summary>
         private static void AppendBody(StringBuilder sb, string body)
         {
             if (string.IsNullOrEmpty(body))
@@ -514,7 +516,6 @@ namespace tinykit.OutlookAddin.Search
             var lines = body.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n').Where(l => !string.IsNullOrWhiteSpace(l)).ToList();
             if (lines.Count == 0)
                 return;
-            sb.AppendLine();
             sb.Append(string.Join(Environment.NewLine, lines.Select(l => l.TrimEnd())));
         }
 
@@ -586,6 +587,12 @@ namespace tinykit.OutlookAddin.Search
         private static string Text(object value)
         {
             return value == null ? null : Convert.ToString(value, CultureInfo.CurrentCulture);
+        }
+
+        /// <summary>The values that are there, joined with <paramref name="separator"/> ("" when none is).</summary>
+        private static string JoinPresent(string separator, params string[] values)
+        {
+            return string.Join(separator, values.Where(v => !string.IsNullOrWhiteSpace(v)).Select(v => v.Trim()));
         }
 
         private static string OneLine(string text)

@@ -71,6 +71,37 @@ namespace tinykit.OutlookAddin.Common
             };
         }
 
+        /// <summary>
+        /// Runs <paramref name="run"/> a moment after <paramref name="key"/> (with or without Shift, not with Ctrl or Alt)
+        /// has gone through to Outlook, e.g. to look where it moved the focus; it gets whether Shift was down at the key
+        /// press (it may be up by then). The key itself is not taken.
+        /// </summary>
+        public void After(Keys key, Action<bool> run)
+        {
+            _after[key] = run;
+        }
+
+        private readonly Dictionary<Keys, Action<bool>> _after = new Dictionary<Keys, Action<bool>>();
+
+        private void RunSoon(Action run, string what)
+        {
+            var timer = new Timer { Interval = 50 };
+            timer.Tick += (s, e) =>
+            {
+                timer.Stop();
+                timer.Dispose();
+                try
+                {
+                    run();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(what, ex);
+                }
+            };
+            timer.Start();
+        }
+
         private IntPtr OnKey(int code, IntPtr wParam, IntPtr lParam)
         {
             try
@@ -78,6 +109,13 @@ namespace tinykit.OutlookAddin.Common
                 long flags = lParam.ToInt64();
                 bool keyDown = (flags & 0x80000000) == 0;
                 bool repeat = (flags & 0x40000000) != 0;
+                Action<bool> after;
+                if (code == HC_ACTION && keyDown && (Control.ModifierKeys & (Keys.Control | Keys.Alt)) == Keys.None
+                    && _after.TryGetValue((Keys)wParam.ToInt32(), out after))
+                {
+                    var shift = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
+                    RunSoon(() => after(shift), "After " + (Keys)wParam.ToInt32());
+                }
                 if (code == HC_ACTION && keyDown)
                 {
                     var keys = (Keys)wParam.ToInt32() | Control.ModifierKeys;

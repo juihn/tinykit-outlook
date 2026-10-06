@@ -52,7 +52,7 @@ namespace tinykit.OutlookAddin.Search
             Font = SystemFonts.MessageBoxFont;
             AutoScaleMode = AutoScaleMode.Dpi;
             FormBorderStyle = FormBorderStyle.Sizable;
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterParent; // placed on the Outlook window's screen by WindowOwner.ShowCentred
             ShowInTaskbar = false;
             MinimizeBox = false;
             ClientSize = new Size(1000, 640);
@@ -235,7 +235,7 @@ namespace tinykit.OutlookAddin.Search
             _search.Text = "Stop";
             _results.Clear();
             _list.VirtualListSize = 0;
-            _details.Text = "";
+            _details.Text = "Searching...";
             var watch = Stopwatch.StartNew();
             int folderCount = 0;
             string status;
@@ -301,6 +301,8 @@ namespace tinykit.OutlookAddin.Search
                 return;
             Text = Title + " — " + status;
             Sort();
+            if (_results.Count == 0)
+                _details.Text = "";
             if (_results.Count > 0)
             {
                 // The first result selected and the focus in the results, so Enter opens it (Esc goes back to the text).

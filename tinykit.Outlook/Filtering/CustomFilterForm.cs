@@ -37,7 +37,7 @@ namespace tinykit.OutlookAddin.Filtering
             Font = SystemFonts.MessageBoxFont;
             AutoScaleMode = AutoScaleMode.Dpi;
             FormBorderStyle = FormBorderStyle.Sizable;
-            StartPosition = FormStartPosition.CenterParent;
+            StartPosition = FormStartPosition.CenterParent; // placed on the Outlook window's screen by WindowOwner.ShowCentred
             ShowInTaskbar = false;
             MinimizeBox = false;
             KeyPreview = true; // Enter / Esc wherever the focus is

@@ -20,6 +20,35 @@ namespace tinykit.OutlookAddin.Common
         [DllImport("gdi32.dll")]
         private static extern int GetObject(IntPtr h, int size, out BITMAP bitmap);
 
+        [DllImport("user32.dll")]
+        private static extern bool DestroyIcon(IntPtr icon);
+
+        /// <summary>The image as a window icon (title bar and Alt+Tab), or null when Office cannot give it.</summary>
+        public static Icon IconFromImageMso(Office.CommandBars bars, string imageMso)
+        {
+            try
+            {
+                using (var bitmap = FromImageMso(bars, imageMso, 32))
+                {
+                    var handle = bitmap.GetHicon();
+                    try
+                    {
+                        using (var icon = Icon.FromHandle(handle))
+                            return (Icon)icon.Clone(); // owns its own handle
+                    }
+                    finally
+                    {
+                        DestroyIcon(handle);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Window icon " + imageMso, ex);
+                return null;
+            }
+        }
+
         // The gray of the ribbon's line icons; GetImageMso draws them in a light gray (#D4D4D4) that hardly shows on a
         // light window.
         private const int IconGray = 0x42;

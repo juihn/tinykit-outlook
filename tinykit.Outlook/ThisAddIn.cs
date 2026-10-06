@@ -74,6 +74,9 @@ namespace tinykit.OutlookAddin
                             Notifier.Info(explorer, ex.Message);
                         }
                     });
+                // Tab in the ribbon skips the Quick Filter's recent-value lists.
+                RibbonTabSkip.Start();
+                _shortcuts.After(System.Windows.Forms.Keys.Tab, RibbonTabSkip.AfterTab);
             }
             catch (Exception ex)
             {
