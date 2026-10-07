@@ -111,7 +111,7 @@ namespace tinykit.OutlookAddin
             MeSymbols.Current = () =>
             {
                 var mail = State(ItemKind.Mail).Settings;
-                return Tuple.Create(mail.MeSent, mail.MeTo, mail.MeCc);
+                return Tuple.Create(mail.MeSent, mail.MeTo, mail.MeCc, mail.ContactMark);
             };
         }
 
@@ -462,14 +462,15 @@ namespace tinykit.OutlookAddin
         {
             ReloadIfChanged(ItemKind.Mail, explorer);
             var settings = State(ItemKind.Mail).Settings;
-            string sent, to, cc;
+            string contact, sent, to, cc;
             var viewFont = ConditionalFormatService.GetViewFont(explorer); // null when not a table view
-            using (var form = new MeSymbolsForm(settings.MeSent, settings.MeTo, settings.MeCc,
+            using (var form = new MeSymbolsForm(settings.ContactMark, settings.MeSent, settings.MeTo, settings.MeCc,
                 viewFont == null ? null : viewFont.Item1, viewFont == null ? 0 : viewFont.Item2))
             {
                 form.Icon = OfficeImage.IconFromImageMso(explorer.CommandBars, "TableInsert");
                 if (form.ShowDialog(WindowOwner.From(explorer)) != DialogResult.OK)
                     return;
+                contact = form.Contact;
                 sent = form.Sent;
                 to = form.To;
                 cc = form.Cc;
@@ -482,7 +483,8 @@ namespace tinykit.OutlookAddin
             if (cc != settings.MeCc) changes[settings.MeCc] = cc;
 
             // Mail to change, found before anything changes (so swapping two symbols works): me values with an old symbol,
-            // and sent mail whose nameRelated does not start with the sent symbol and one space (an old symbol, or no space).
+            // and nameRelated values starting with a sent symbol or a contact mark that are not in the chosen form
+            // ("<sent> <contact>name" for sent mail, "<contact>name" for received mail).
             var session = explorer.Application.Session;
             var updates = new Dictionary<string, MailFix>(StringComparer.Ordinal); // by entry id
             int meCount = 0, nameCount = 0;
@@ -508,15 +510,15 @@ namespace tinykit.OutlookAddin
                             meCount++;
                         }
                     }
-                    foreach (var symbol in MeSymbols.SentChoices.Select(c => c.Text).Concat(new[] { settings.MeSent }).Distinct())
+                    var starts = MeSymbols.SentChoices.Select(c => c.Text).Concat(new[] { settings.MeSent })
+                        .Concat(MeSymbols.KnownContactMarks).Concat(new[] { settings.ContactMark }).Distinct();
+                    foreach (var symbol in starts)
                     {
                         foreach (var id in EntryIds(f, Dasl.Like(NameRelatedProperty, symbol + "%"), NameRelatedProperty + "/0x0000001F"))
                         {
                             var value = id.Item2 ?? "";
-                            if (!value.StartsWith(symbol, StringComparison.Ordinal))
-                                continue;
-                            var wanted = sent + " " + value.Substring(symbol.Length).TrimStart();
-                            if (wanted == value)
+                            var wanted = NameRelatedIn(value, settings, sent, contact);
+                            if (wanted == null || wanted == value || (updates.ContainsKey(id.Item1) && updates[id.Item1].NameRelated != null))
                                 continue;
                             Fix(updates, id.Item1, f.StoreId).NameRelated = wanted;
                             nameCount++;
@@ -525,16 +527,17 @@ namespace tinykit.OutlookAddin
                 }
             }
             Cursor.Current = Cursors.Default;
-            if (changes.Count == 0 && updates.Count == 0)
-                return; // nothing chosen differently, and every sent mail's nameRelated already starts with the symbol and a space
+            if (changes.Count == 0 && updates.Count == 0 && contact == settings.ContactMark)
+                return; // nothing chosen differently, and every nameRelated is already in the chosen form
             if (updates.Count > 0 && MessageBox.Show(WindowOwner.From(explorer),
                     "Change " + updates.Count + " mail(s)?\n"
                     + (meCount > 0 ? "\n- the me column of " + meCount + " mail(s) to the new symbol(s)" : "")
-                    + (nameCount > 0 ? "\n- the nameRelated of " + nameCount + " sent mail(s) to start with \"" + sent + " \"" : "")
+                    + (nameCount > 0 ? "\n- the nameRelated of " + nameCount + " mail(s) to the marks \"" + sent + " \" (sent) and \"" + contact + "\" (Contacts)" : "")
                     + "\n\n(No: only mail filled from now on gets them.)",
                     ThisAddIn.Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 updates.Clear();
 
+            settings.ContactMark = contact;
             settings.MeSent = sent;
             settings.MeTo = to;
             settings.MeCc = cc;
@@ -575,10 +578,31 @@ namespace tinykit.OutlookAddin
                     Application.DoEvents();
             }
             Cursor.Current = Cursors.Default;
-            var summary = "me symbols now: sent " + sent + ", To " + to + ", Cc " + cc + ". " + done + " mail(s) changed"
+            var summary = "Column symbols now: contact " + contact + ", sent " + sent + ", To " + to + ", Cc " + cc + ". " + done + " mail(s) changed"
                 + (failed > 0 ? ", " + failed + " could not be" : "") + "; " + filters + " saved filter(s) updated.";
             Log.Info(summary);
             Notifier.Info(explorer, summary);
+        }
+
+        /// <summary>
+        /// A nameRelated value in the chosen form, or null when it does not start with a sent symbol or a contact mark: the
+        /// sent symbol (any) becomes "<paramref name="sent"/> ", and a contact mark (any) right after it, or at the start of
+        /// a received mail's value, becomes <paramref name="contact"/> with no space before the name.
+        /// </summary>
+        private static string NameRelatedIn(string value, FilterSettings settings, string sent, string contact)
+        {
+            var sentSymbols = MeSymbols.SentChoices.Select(c => c.Text).Concat(new[] { settings.MeSent }).ToList();
+            var marks = MeSymbols.KnownContactMarks.Concat(new[] { settings.ContactMark }).ToList();
+            var rest = value;
+            var sentSymbol = sentSymbols.FirstOrDefault(x => rest.StartsWith(x, StringComparison.Ordinal));
+            if (sentSymbol != null)
+                rest = rest.Substring(sentSymbol.Length).TrimStart();
+            var mark = marks.FirstOrDefault(x => rest.StartsWith(x, StringComparison.Ordinal));
+            if (mark != null)
+                rest = contact + rest.Substring(mark.Length).TrimStart();
+            if (sentSymbol == null && mark == null)
+                return null;
+            return sentSymbol != null ? sent + " " + rest : rest;
         }
 
         private const string NameRelatedProperty = "http://schemas.microsoft.com/mapi/string/{00020329-0000-0000-C000-000000000046}/nameRelated";

@@ -6,13 +6,14 @@ using System.Windows.Forms;
 namespace tinykit.OutlookAddin.CustomFields
 {
     /// <summary>
-    /// me Column Symbols window: a drop-down per case (Sent Mail, To, Cc) showing each symbol with its code point and name,
-    /// and above them a font (the current table view's at first) in which the three drop-downs show the symbols, to see how
-    /// they will look in the list. The font is only for that preview.
+    /// Column Symbols window: a drop-down per symbol (Contact: the mark before a name from Contacts in nameRelated; Sent,
+    /// To, Cc: the me column's) showing each with its code point and name, and above them a font (the current table
+    /// view's at first) in which the drop-downs show the symbols, to see how they will look in the list. The font is only
+    /// for that preview.
     /// </summary>
     internal sealed class MeSymbolsForm : Form
     {
-        private readonly ComboBox _sent, _to, _cc, _font;
+        private readonly ComboBox _contact, _sent, _to, _cc, _font;
         private readonly float _previewSize;
         private Font _previewFont;
 
@@ -25,9 +26,9 @@ namespace tinykit.OutlookAddin.CustomFields
 
         /// <param name="fontName">The current table view's font (null when unknown), shown first.</param>
         /// <param name="fontSize">Its size in points (0 when unknown).</param>
-        public MeSymbolsForm(string sent, string to, string cc, string fontName, float fontSize)
+        public MeSymbolsForm(string contact, string sent, string to, string cc, string fontName, float fontSize)
         {
-            Text = "me Column Symbols";
+            Text = "Column Symbols";
             Font = SystemFonts.MessageBoxFont;
             AutoScaleMode = AutoScaleMode.Dpi;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -45,8 +46,9 @@ namespace tinykit.OutlookAddin.CustomFields
             {
                 AutoSize = true,
                 MaximumSize = new Size(LogicalToDeviceUnits(520), 0),
-                Text = "The me column shows one of these for mail you sent, mail with you in To, and mail with you only in Cc. "
-                    + "Mail that already has the old symbol, and saved filters that use it, are changed too.",
+                Text = "Contact: the mark before a name from Contacts in nameRelated. Sent, To, Cc: the me column for mail you "
+                    + "sent, mail with you in To, and mail with you only in Cc (Sent also starts a sent mail's nameRelated). "
+                    + "Mail that already has an old symbol, and saved filters that use it, are changed too.",
                 Margin = new Padding(0, 0, 0, 10),
             }, 0, 0);
             grid.SetColumnSpan(grid.GetControlFromPosition(0, 0), 2);
@@ -68,33 +70,35 @@ namespace tinykit.OutlookAddin.CustomFields
                 _font.Items.Insert(0, start);
             grid.Controls.Add(_font, 1, 1);
 
-            _sent = AddRow(grid, 2, "Sent Mail", MeSymbols.SentChoices, sent);
-            _to = AddRow(grid, 3, "To", MeSymbols.ToChoices, to);
-            _cc = AddRow(grid, 4, "Cc", MeSymbols.CcChoices, cc);
+            _contact = AddRow(grid, 2, "Contact", MeSymbols.ContactChoices, contact);
+            _sent = AddRow(grid, 3, "Sent", MeSymbols.SentChoices, sent);
+            _to = AddRow(grid, 4, "To", MeSymbols.ToChoices, to);
+            _cc = AddRow(grid, 5, "Cc", MeSymbols.CcChoices, cc);
             _font.SelectedIndexChanged += (s, e) => Preview((string)_font.SelectedItem);
-            _font.SelectedItem = start; // shows the three drop-downs in the view's font
+            _font.SelectedItem = start; // shows the symbol drop-downs in the view's font
 
             var buttons = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.RightToLeft, Dock = DockStyle.Fill, Margin = new Padding(0, 10, 0, 0) };
             var cancel = new Button { Text = "Cancel", AutoSize = true, DialogResult = DialogResult.Cancel };
             var ok = new Button { Text = "OK", AutoSize = true, DialogResult = DialogResult.OK };
             buttons.Controls.Add(cancel);
             buttons.Controls.Add(ok);
-            grid.Controls.Add(buttons, 0, 5);
+            grid.Controls.Add(buttons, 0, 6);
             grid.SetColumnSpan(buttons, 2);
             AcceptButton = ok;
             CancelButton = cancel;
             Controls.Add(grid);
         }
 
+        public string Contact { get { return ((MeSymbol)_contact.SelectedItem).Text; } }
         public string Sent { get { return ((MeSymbol)_sent.SelectedItem).Text; } }
         public string To { get { return ((MeSymbol)_to.SelectedItem).Text; } }
         public string Cc { get { return ((MeSymbol)_cc.SelectedItem).Text; } }
 
-        // The three symbol drop-downs in the chosen font, at the table view's size: as the symbols will look in the list.
+        // The symbol drop-downs in the chosen font, at the table view's size: as the symbols will look in the list.
         private void Preview(string fontName)
         {
             var font = new Font(fontName, _previewSize);
-            foreach (var box in new[] { _sent, _to, _cc })
+            foreach (var box in new[] { _contact, _sent, _to, _cc })
                 box.Font = font;
             // Only the preview's own previous font is let go: the one the boxes had at first belongs to the window.
             if (_previewFont != null)

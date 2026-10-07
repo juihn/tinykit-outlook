@@ -88,6 +88,9 @@ namespace tinykit.OutlookAddin.Settings
         public string MeTo = CustomFields.MeSymbols.DefaultTo;
         public string MeCc = CustomFields.MeSymbols.DefaultCc;
 
+        /// <summary>Mail files only: the mark right before a name from Contacts in nameRelated.</summary>
+        public string ContactMark = CustomFields.MeSymbols.DefaultContact;
+
         /// <summary>Mail only: when Outlook closes, clear the add-in's filters in every account's Inbox.</summary>
         public bool ClearInboxFiltersOnExit = true;
 
@@ -111,6 +114,8 @@ namespace tinykit.OutlookAddin.Settings
                 meSent=""▶"" meTo=""●"" meCc=""○""         (Mail only) the me column's symbols: mail I sent,
                                                        me in To, me only in Cc (Table View group's dialog
                                                        button changes them, with existing mail and filters)
+                contactMark=""☺""                        (Mail only) the mark before a name from Contacts
+                                                       in nameRelated
                 clearInboxFiltersOnExit=""true|false""  clearInboxFiltersOnExit (Mail only): when Outlook closes,
                                                        clear quick/saved filters in every account's Inbox
                 formatsOn=""true|false"">               formatsOn: all formats on/off (All Formats Off /
@@ -128,7 +133,7 @@ namespace tinykit.OutlookAddin.Settings
 
   Flagged, Sent, Unknown and Others are not like the other saved filters:
   - They are the mail list's own kinds of items, not a choice of yours: a flagged mail (PR_FLAG_STATUS set), mail
-    you sent (me = '▶'), received mail whose sender is not in Contacts (nameRelated not '👤contact name'). They are
+    you sent (me = '▶'), received mail whose sender is not in Contacts (nameRelated not '☺contact name'). They are
     created with the first Saved Filters - Mail.xml and carry an icon (Flagged FlagToday, Sent SendDefault, Unknown
     Help), so they stand apart at the front of the group. Sent and Unknown read the Custom Mail Fields (me,
     nameRelated): older mail needs Fill Fields once.
@@ -177,6 +182,7 @@ namespace tinykit.OutlookAddin.Settings
                 MeSent = NonEmpty(root.Attribute("meSent"), CustomFields.MeSymbols.DefaultSent),
                 MeTo = NonEmpty(root.Attribute("meTo"), CustomFields.MeSymbols.DefaultTo),
                 MeCc = NonEmpty(root.Attribute("meCc"), CustomFields.MeSymbols.DefaultCc),
+                ContactMark = NonEmpty(root.Attribute("contactMark"), CustomFields.MeSymbols.DefaultContact),
                 FormatsOn = ParseBool(root.Attribute("formatsOn"), true),
             };
             foreach (var e in root.Elements("Filter"))
@@ -218,6 +224,7 @@ namespace tinykit.OutlookAddin.Settings
                     Kind == ItemKind.Mail ? new XAttribute("meSent", MeSent) : null,
                     Kind == ItemKind.Mail ? new XAttribute("meTo", MeTo) : null,
                     Kind == ItemKind.Mail ? new XAttribute("meCc", MeCc) : null,
+                    Kind == ItemKind.Mail ? new XAttribute("contactMark", ContactMark) : null,
                     Kind == ItemKind.Mail ? new XAttribute("clearInboxFiltersOnExit", ClearInboxFiltersOnExit ? "true" : "false") : null,
                     new XAttribute("formatsOn", FormatsOn ? "true" : "false"),
                     Filters.Select(ToElement)));
@@ -385,13 +392,13 @@ namespace tinykit.OutlookAddin.Settings
                 FormatEnabled = true,
                 Format = new FilterFormat { Underline = true, Color = Outlook.OlColor.olColorTeal },
             });
-            // Received mail whose sender is not in Contacts (nameRelated is "👤contact name" only for contacts).
+            // Received mail whose sender is not in Contacts (nameRelated is "☺contact name" only for contacts).
             s.Filters.Add(new SavedFilter
             {
                 Name = "Unknown",
                 Icon = UnknownIcon,
                 Sql = "\"" + userProp + "nameRelated\" IS NOT NULL AND NOT (\"" + userProp + "nameRelated\" LIKE '"
-                    + CustomFields.CustomFieldCalculator.ContactMark + "%')"
+                    + CustomFields.MeSymbols.DefaultContact + "%')"
                     + " AND \"" + userProp + "me\" <> '▶'",
                 FormatEnabled = true,
                 Format = new FilterFormat { Color = Outlook.OlColor.olColorGray },

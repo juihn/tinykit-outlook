@@ -29,17 +29,31 @@ namespace tinykit.OutlookAddin.CustomFields
     }
 
     /// <summary>
-    /// The me column's symbols: mail I sent, mail with me in To, mail with me in Cc (Mail settings meSent / meTo / meCc),
-    /// and the choices the me Column Symbols window offers.
+    /// The column symbols: the me column's for mail I sent, mail with me in To, mail with me in Cc (Mail settings meSent /
+    /// meTo / meCc; the sent one also starts a sent mail's nameRelated), the mark before a name from Contacts in nameRelated
+    /// (contactMark), and the choices the Column Symbols window offers.
     /// </summary>
     internal static class MeSymbols
     {
         public const string DefaultSent = "▶";
         public const string DefaultTo = "●";
         public const string DefaultCc = "○";
+        public const string DefaultContact = "☺";
 
-        /// <summary>The current symbols (sent, to, cc); set by the controller from the mail settings.</summary>
-        public static Func<Tuple<string, string, string>> Current = () => Tuple.Create(DefaultSent, DefaultTo, DefaultCc);
+        /// <summary>The current symbols (sent, to, cc, contact mark); set by the controller from the mail settings.</summary>
+        public static Func<Tuple<string, string, string, string>> Current =
+            () => Tuple.Create(DefaultSent, DefaultTo, DefaultCc, DefaultContact);
+
+        /// <summary>Marks before a name from Contacts in nameRelated: the choices, and 👤 used for a few days (2026-10).</summary>
+        public static readonly IList<MeSymbol> ContactChoices = new[]
+        {
+            new MeSymbol("☺", "WHITE SMILING FACE"),
+            new MeSymbol("☻", "BLACK SMILING FACE"),
+            new MeSymbol("✆", "TELEPHONE LOCATION SIGN"),
+            new MeSymbol("☎", "BLACK TELEPHONE"),
+        };
+
+        public static readonly string[] KnownContactMarks = { "☺", "☻", "✆", "☎", "\U0001F464" };
 
         public static readonly IList<MeSymbol> SentChoices = new[]
         {

@@ -13,10 +13,10 @@ namespace tinykit.OutlookAddin.CustomFields
     /// <item>domainRelated — domain label then subdomains, e.g. gojek/invoicing.
     ///   Received: the sender's (on behalf of: the principal's);
     ///   sent by me: first To recipient's (no To: first Cc's).</item>
-    /// <item>nameRelated — received: "👤contact name" if the sender is in Contacts, else the sender display name
+    /// <item>nameRelated — received: "☺contact name" if the sender is in Contacts, else the sender display name
     ///   ("(local part)" when the display name is just the address);
     ///   sent by me: the me column's sent symbol (▶ by default) + " " + first recipient's name (tos / ccs give the number of recipients), where a recipient
-    ///   picked from an address book keeps its shown name, and a typed address becomes "👤contact name" or the address.</item>
+    ///   picked from an address book keeps its shown name, and a typed address becomes "☺contact name" or the address.</item>
     /// <item>me — ▶ sent by me, else ● I am in To, ○ I am in Cc, else "-".  tos / ccs — number of To / Cc recipients, "-" for 0.</item>
     /// </list>
     /// </summary>
@@ -33,9 +33,6 @@ namespace tinykit.OutlookAddin.CustomFields
         private const string RepSmtp = PropTag + "0x5D02001F";
         private const string RecipientSmtpTag = PropTag + "0x39FE001F";
 
-
-        /// <summary>Right before a name taken from Contacts in nameRelated (U+1F464 BUST IN SILHOUETTE); was "[name]".</summary>
-        public const string ContactMark = "\U0001F464";
 
         private readonly Outlook.NameSpace _session;
         private readonly Dictionary<string, string> _exToSmtp = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -119,7 +116,7 @@ namespace tinykit.OutlookAddin.CustomFields
             {
                 values.DomainRelated = MailInfo.DomainPath(fromSmtp) ?? CustomFieldValues.None;
                 var contact = Contacts.Find(fromSmtp);
-                values.NameRelated = contact != null ? ContactMark + contact : SenderDisplay(fromName, fromSmtp);
+                values.NameRelated = contact != null ? MeSymbols.Current().Item4 + contact : SenderDisplay(fromName, fromSmtp);
             }
             return values;
         }
@@ -158,7 +155,7 @@ namespace tinykit.OutlookAddin.CustomFields
 
         /// <summary>
         /// Name shown for a recipient of my mail: the resolved name when it was picked from an address book,
-        /// otherwise (typed address, "Name &lt;address&gt;") "👤contact name" or the address itself.
+        /// otherwise (typed address, "Name &lt;address&gt;") "☺contact name" or the address itself.
         /// </summary>
         private string RecipientName(Outlook.Recipient r, string smtp)
         {
@@ -166,7 +163,7 @@ namespace tinykit.OutlookAddin.CustomFields
                 return r.Name.Trim();
             var contact = Contacts.Find(smtp);
             if (contact != null)
-                return ContactMark + contact;
+                return MeSymbols.Current().Item4 + contact;
             return smtp ?? r.Name ?? r.Address ?? CustomFieldValues.None;
         }
 

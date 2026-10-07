@@ -323,8 +323,9 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<button id=\"mSortCompany\" label=\"Sort by Company/Dept\" imageMso=\"SortDialog\" onAction=\"OnSortByCompany\"")
               .Append(" getVisible=\"GetContactVisible\" screentip=\"Sort by Company/Dept\" supertip=\"Sort the contacts by Company, and ")
               .Append("within a company by Department (both A to Z). The view keeps this sort.\"/>");
-            sb.Append("<dialogBoxLauncher><button id=\"mMeSymbols\" onAction=\"OnMeSymbols\" screentip=\"me Column Symbols\"")
-              .Append(" supertip=\"Choose the symbols of the me column: mail you sent, mail with you in To, mail with you only in Cc. ")
+            sb.Append("<dialogBoxLauncher><button id=\"mMeSymbols\" onAction=\"OnMeSymbols\" screentip=\"Column Symbols\"")
+              .Append(" supertip=\"Choose the column symbols: the mark before a name from Contacts in nameRelated, and the me column's ")
+              .Append("for mail you sent (it also starts a sent mail's nameRelated), mail with you in To, mail with you only in Cc. ")
               .Append("Mail that has an old symbol and saved filters that use it are changed too.\"/></dialogBoxLauncher>");
             sb.Append("</group>");
 

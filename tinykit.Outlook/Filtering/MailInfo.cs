@@ -106,8 +106,9 @@ namespace tinykit.OutlookAddin.Filtering
             }
             if (s.EndsWith(" (+)", StringComparison.Ordinal))
                 s = s.Substring(0, s.Length - 4).Trim();
-            if (s.StartsWith(CustomFields.CustomFieldCalculator.ContactMark, StringComparison.Ordinal))
-                s = s.Substring(CustomFields.CustomFieldCalculator.ContactMark.Length).Trim(); // a name from Contacts
+            var mark = Array.Find(CustomFields.MeSymbols.KnownContactMarks, m => s.StartsWith(m, StringComparison.Ordinal));
+            if (mark != null)
+                s = s.Substring(mark.Length).Trim(); // a name from Contacts, whichever mark
             else if (s.Length > 2 && ((s[0] == '[' && s[s.Length - 1] == ']') || (s[0] == '(' && s[s.Length - 1] == ')')))
                 // "[contact name]" as filled before 2026-10, "(local part)"
                 s = s.Substring(1, s.Length - 2).Trim();
