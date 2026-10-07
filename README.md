@@ -222,7 +222,7 @@ Rules without that prefix are never changed. Color is limited to the 16 colors O
 
 ### Items group (mail, calendar, contact and task folders)
 Tools for the selected items; each button shows only in the folders where it applies.
-- **Custom Filter** (mail, calendar, contact and task folders; **Ctrl+Alt+2** in the main window) opens a resizable window: the text to find with
+- **Custom Filter** (mail, calendar, contact and task folders; **Ctrl+Alt+F** in the main window) opens a resizable window: the text to find with
   **Clear All Conditions** / **Apply** beside it, a check box per field, and the filter it makes (shown as you type or
   tick). The item shows when the text appears in any ticked field (`LIKE '%text%'`, fields joined with OR). **Enter**
   applies, **Esc** empties the text (or, when it is empty, closes the window); the title bar shows when it was applied. **Apply** with no text or no field ticked
@@ -239,7 +239,7 @@ Tools for the selected items; each button shows only in the folders where it app
 
   Message Body and Notes start unticked (searching bodies is slower). Calendar, card and other views can be filtered
   too, not only table views.
-- **Find Items** (**Ctrl+Alt+F** in the main window) opens a resizable window that finds text in mail, calendar items, contacts and tasks of all folders
+- **Find Items** (**Ctrl+Alt+E** in the main window) opens a resizable window that finds text in mail, calendar items, contacts and tasks of all folders
   at once (each folder read with `Folder.GetTable`, `LIKE '%text%'`, up to 5000 results). It searches the subject and
 
   | Items | Also searched |
@@ -279,9 +279,22 @@ Tools for the selected items; each button shows only in the folders where it app
   mail sent from another mail client and synchronized is moved too). Meeting requests stay. Gmail accounts are left out:
   there Sent Mail is a label, and moving out of it over IMAP deletes Gmail's sent copy or brings it back.
   (`moveSentToInbox` in `Saved Filters - Mail.xml`; on by default.)
-- **Send Delay** (mail folders): Off, 1, 2, 3, 5 or 10 minutes (default 1). Mail you send waits that long in the Outbox
-  (*Do not deliver before*), so you can still open it there, change it and send it again, or delete it. A later delivery
-  time you set yourself is kept. (`sendDelayMinutes` in `Saved Filters - Mail.xml`.)
+- **Send Delay** (mail folders): Off, 5, 10, 15, 30 or 60 seconds (default 60). Mail you send waits that long in the
+  Outbox (*Do not deliver before*): open it there to change it and send it again, or delete it to cancel. A later delivery
+  time you set yourself is kept. Exchange accounts are held by the server, so Outlook may be closed meanwhile; IMAP accounts
+  go only while Outlook runs. With *Send immediately when connected* off (File > Options > Advanced), mail goes at the
+  first Send/Receive after the delay. (`sendDelaySeconds` in `Saved Filters - Mail.xml`.)
+- **Custom Shortcuts** shows the add-in's keyboard shortcuts with a check box each; untick one to give the key back to
+  Outlook (`Custom Shortcuts.txt` in the settings folder). They work in the main window, but not while typing in a reply
+  in the reading pane, where Outlook's own keys apply:
+
+  | Key | Command | Outlook's own use of the key in the main window |
+  |---|---|---|
+  | Ctrl+Alt+E | Find Items | – |
+  | Ctrl+Alt+F | Custom Filter | Forward as attachment |
+  | Ctrl+Alt+W | Open in New Window (the current folder) | – |
+  | Ctrl+Alt+R | Reading pane Right → Bottom → Off → Right | Reply with Meeting |
+
 - **Open Contact Item of Sender** (mail folders) opens the contact with the selected mail's sender address (any
   Contacts folder). Without one, a new contact with the sender's name and address opens in the Contacts folder of the
   mail's account (else of the default account), to be saved there.
@@ -322,7 +335,7 @@ Tools for the selected items; each button shows only in the folders where it app
 
 ### Saved Filters - Mail.xml / - Contacts.xml / - Tasks.xml
 ```xml
-<SavedFilters autoApplyFormats="true" autoFillFields="true" moveSentToInbox="true" sendDelayMinutes="1" formatsOn="true">
+<SavedFilters autoApplyFormats="true" autoFillFields="true" moveSentToInbox="true" sendDelaySeconds="60" formatsOn="true">
   <Filter name="Unread" formatEnabled="true">
     <Sql><![CDATA["urn:schemas:httpmail:read" = 0]]></Sql>
     <Format font="Segoe UI" size="9" style="Bold" strikeout="false" underline="false" color="Navy" />

@@ -86,32 +86,20 @@ namespace tinykit.OutlookAddin
             try
             {
                 _shortcuts = new KeyboardShortcuts();
-                // Ctrl+Alt+2: Custom Filter, in the main window only (mail and item windows keep theirs, e.g. Heading 2).
-                _shortcuts.Add(System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.D2,
-                    () => Application.ActiveWindow() is Outlook.Explorer,
-                    () =>
-                    {
-                        var explorer = Application.ActiveWindow() as Outlook.Explorer;
-                        if (explorer == null)
-                            return;
-                        try
-                        {
-                            Controller.ShowCustomFilter(explorer);
-                        }
-                        catch (UserMessageException ex)
-                        {
-                            Notifier.Info(explorer, ex.Message);
-                        }
-                    });
-                // Ctrl+Alt+F: Find Items, in the main window only (it takes the key from Outlook's own use there).
-                _shortcuts.Add(System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F,
-                    () => Application.ActiveWindow() is Outlook.Explorer,
-                    () =>
-                    {
-                        var explorer = Application.ActiveWindow() as Outlook.Explorer;
-                        if (explorer != null)
-                            Controller.ShowFindItems(explorer);
-                    });
+                // The add-in's shortcuts, each on unless turned off in the Custom Shortcuts window. They work in the main
+                // window only, and not while typing in a reply in its reading pane (Outlook's own keys apply there).
+                const System.Windows.Forms.Keys CtrlAlt = System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt;
+                AddShortcut("FindItems", CtrlAlt | System.Windows.Forms.Keys.E, "Find Items",
+                    "Open (or bring to the front) the Find Items window.", ex => Controller.ShowFindItems(ex));
+                AddShortcut("CustomFilter", CtrlAlt | System.Windows.Forms.Keys.F, "Custom Filter",
+                    "Open the Custom Filter window for the current folder. (Outlook: Forward as attachment.)", ex => Controller.ShowCustomFilter(ex));
+                AddShortcut("OpenInNewWindow", CtrlAlt | System.Windows.Forms.Keys.W, "Open in New Window",
+                    "Open the current folder in a new Outlook window (Folder > Open in New Window).",
+                    ex => ex.CommandBars.ExecuteMso("WebOpenInNewWindow"));
+                AddShortcut("ReadingPane", CtrlAlt | System.Windows.Forms.Keys.R, "Reading Pane Right/Bottom/Off",
+                    "Move the reading pane: Right, then Bottom, then Off, then Right again. (Outlook: Reply with Meeting.)",
+                    CycleReadingPane);
+                Shortcuts.Load();
                 // Tab in the ribbon skips the Quick Filter's recent-value lists.
                 RibbonTabSkip.Start();
                 _shortcuts.After(System.Windows.Forms.Keys.Tab, RibbonTabSkip.AfterTab);
@@ -123,6 +111,40 @@ namespace tinykit.OutlookAddin
         }
 
         private KeyboardShortcuts _shortcuts;
+
+        /// <summary>The add-in's keyboard shortcuts and which are on (Custom Shortcuts window).</summary>
+        internal CustomShortcuts Shortcuts { get; } = new CustomShortcuts();
+
+        private void AddShortcut(string id, System.Windows.Forms.Keys keys, string command, string description, Action<Outlook.Explorer> run)
+        {
+            var shortcut = Shortcuts.Add(id, keys, command, description);
+            _shortcuts.Add(keys,
+                () => shortcut.Enabled && Application.ActiveWindow() is Outlook.Explorer && !KeyboardShortcuts.TypingInEditor(),
+                () =>
+                {
+                    var explorer = Application.ActiveWindow() as Outlook.Explorer;
+                    if (explorer == null)
+                        return;
+                    try
+                    {
+                        run(explorer);
+                    }
+                    catch (UserMessageException ex)
+                    {
+                        Notifier.Info(explorer, ex.Message);
+                    }
+                });
+        }
+
+        // Reading pane Right → Bottom → Off → Right, through Outlook's own View > Reading Pane commands.
+        private static void CycleReadingPane(Outlook.Explorer explorer)
+        {
+            var bars = explorer.CommandBars;
+            string next = bars.GetPressedMso("ReadingPaneRight") ? "ReadingPaneBottom"
+                : bars.GetPressedMso("ReadingPaneBottom") ? "ReadingPaneOff"
+                : "ReadingPaneRight";
+            bars.ExecuteMso(next);
+        }
 
         private void ThisAddIn_Shutdown(object sender, EventArgs e)
         {

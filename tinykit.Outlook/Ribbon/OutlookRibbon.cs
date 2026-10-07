@@ -417,12 +417,12 @@ namespace tinykit.OutlookAddin.Ribbon
             // yet, every group here also goes before tk:AfterItems, so the order holds whichever add-in loads first.
             sb.Append("<group idQ=\"tk:Items\" insertBeforeQ=\"tk:AfterItems\" label=\"Items\" getVisible=\"GetItemsVisible\">");
             sb.Append("<button id=\"cfCustomFilter\" label=\"Custom Filter\" imageMso=\"Filter\" onAction=\"OnCustomFilter\"")
-              .Append(" screentip=\"Custom Filter (Ctrl+Alt+2)\" supertip=\"Open a window to find text in the fields you tick (any of them), with the ")
+              .Append(" screentip=\"Custom Filter (Ctrl+Alt+F)\" supertip=\"Open a window to find text in the fields you tick (any of them), with the ")
               .Append("filter shown as you type. Mail: sender name and address, nameRelated, domainRelated, recipient names, subject, body. ")
               .Append("Calendar: organizer name and address, subject, body. Contacts: company, department, names, e-mail addresses, ")
               .Append("phone numbers, notes. Tasks: subject, body.\"/>");
             sb.Append("<button id=\"cfFindItems\" label=\"Find Items\" imageMso=\"FindDialog\" onAction=\"OnFindItems\"")
-              .Append(" screentip=\"Find Items (Ctrl+Alt+F)\" supertip=\"Open a window to find text in mail, calendar items, contacts and tasks of ")
+              .Append(" screentip=\"Find Items (Ctrl+Alt+E)\" supertip=\"Open a window to find text in mail, calendar items, contacts and tasks of ")
               .Append("all folders at once. Subject, and mail: sender name; calendar: location; contacts: File As, company, department, ")
               .Append("nickname, e-mail addresses and display names, phone numbers; with Message Body / Notes ticked also the body. ")
               .Append("Filter chooses the item types and accounts. Click a result for its details, double-click to open it.\"/>");
@@ -444,11 +444,17 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" screentip=\"Move Sent Mail to Inbox\" supertip=\"Move mail in each account's Sent Items to the same account's Inbox: ")
               .Append("a few seconds after Outlook starts and after mail arrives in Sent Items (also mail sent from another mail client). ")
               .Append("Gmail accounts are left out (there Sent Mail is a label).\"/>");
-            sb.Append("<dropDown id=\"cfSendDelay\" label=\"Send Delay\" getVisible=\"GetMailVisible\" sizeString=\"10 min\"")
+            sb.Append("<dropDown id=\"cfSendDelay\" label=\"Send Delay\" getVisible=\"GetMailVisible\" sizeString=\"60 sec\"")
               .Append(" getItemCount=\"GetSendDelayCount\" getItemLabel=\"GetSendDelayLabel\" getSelectedItemIndex=\"GetSendDelayIndex\"")
               .Append(" onAction=\"OnSendDelayPick\" screentip=\"Send Delay\" supertip=\"Mail you send waits this long in the Outbox ")
-              .Append("(Do not deliver before) before it goes, so you can still open it there, change it and send it again, or delete it. ")
+              .Append("(Do not deliver before) before it goes: open it there to change it and send it again, or delete it to cancel. ")
+              .Append("A later delivery time you set yourself is kept. Exchange accounts (Outlook.com, Hotmail, work) are held by the ")
+              .Append("server, so Outlook may be closed; IMAP accounts (Naver, Gmail) go only while Outlook runs. With File &gt; Options ")
+              .Append("&gt; Advanced &gt; Send immediately when connected off, mail goes at the first Send/Receive after the delay. ")
               .Append("Off: mail goes at once.\"/>");
+            sb.Append("<button id=\"cfShortcuts\" label=\"Custom Shortcuts\" imageMso=\"AdpPrimaryKey\" onAction=\"OnCustomShortcuts\"")
+              .Append(" screentip=\"Custom Shortcuts\" supertip=\"Show the add-in's keyboard shortcuts (Ctrl+Alt+E Find Items, Ctrl+Alt+F ")
+              .Append("Custom Filter, Ctrl+Alt+W Open in New Window, Ctrl+Alt+R reading pane Right/Bottom/Off) and turn each on or off.\"/>");
             // Contact folders: switch the selected contacts between Outlook's form and the folder's custom form.
             sb.Append("<button id=\"cfFormDefault\" label=\"Default Contact Form\" imageMso=\"NewContact\"")
               .Append(" getVisible=\"GetContactVisible\" onAction=\"OnSetDefaultContactForm\" screentip=\"Default Contact Form\"")
@@ -645,6 +651,11 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnCustomFilter(Office.IRibbonControl control)
         {
             Run(control, ex => _controller.ShowCustomFilter(ex));
+        }
+
+        public void OnCustomShortcuts(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.ShowCustomShortcuts(ex));
         }
 
         public void OnFindItems(Office.IRibbonControl control)
@@ -1110,8 +1121,8 @@ namespace tinykit.OutlookAddin.Ribbon
             return _controller.AutoFillFields;
         }
 
-        // Send Delay choices, in minutes (0: off).
-        private static readonly int[] SendDelays = { 0, 1, 2, 3, 5, 10 };
+        // Send Delay choices, in seconds (0: off).
+        private static readonly int[] SendDelays = { 0, 5, 10, 15, 30, 60 };
 
         public int GetSendDelayCount(Office.IRibbonControl control)
         {
@@ -1120,21 +1131,21 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public string GetSendDelayLabel(Office.IRibbonControl control, int index)
         {
-            return SendDelays[index] == 0 ? "Off" : SendDelays[index] + " min";
+            return SendDelays[index] == 0 ? "Off" : SendDelays[index] + " sec";
         }
 
         public int GetSendDelayIndex(Office.IRibbonControl control)
         {
             return Safe(() =>
             {
-                var i = Array.IndexOf(SendDelays, _controller.SendDelayMinutes);
-                return i < 0 ? 1 : i;
-            }, 1);
+                var i = Array.IndexOf(SendDelays, _controller.SendDelaySeconds);
+                return i < 0 ? SendDelays.Length - 1 : i; // a value from the file that is not a choice: show the longest
+            }, SendDelays.Length - 1);
         }
 
         public void OnSendDelayPick(Office.IRibbonControl control, string selectedId, int selectedIndex)
         {
-            Run(control, ex => _controller.SetSendDelayMinutes(SendDelays[selectedIndex]));
+            Run(control, ex => _controller.SetSendDelaySeconds(SendDelays[selectedIndex]));
         }
 
         public bool GetSentToInboxPressed(Office.IRibbonControl control)

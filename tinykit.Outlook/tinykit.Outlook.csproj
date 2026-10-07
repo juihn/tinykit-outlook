@@ -127,6 +127,10 @@
     <Compile Include="Common\KeyboardShortcuts.cs" />
     <Compile Include="Common\RedrawLock.cs" />
     <Compile Include="Common\OfficeImage.cs" />
+    <Compile Include="Common\CustomShortcuts.cs" />
+    <Compile Include="Common\CustomShortcutsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Common\RibbonTabSkip.cs" />
     <Compile Include="Compose\RecipientCommands.cs" />
     <Compile Include="Contacts\ContactCommands.cs" />

@@ -445,6 +445,16 @@ namespace tinykit.OutlookAddin
             WindowOwner.ShowCentred(_customFilter, explorer);
         }
 
+        /// <summary>Custom Shortcuts window: the add-in's keyboard shortcuts, each turned on or off.</summary>
+        public void ShowCustomShortcuts(Outlook.Explorer explorer)
+        {
+            using (var form = new CustomShortcutsForm(Globals.ThisAddIn.Shortcuts))
+            {
+                form.Icon = OfficeImage.IconFromImageMso(explorer.CommandBars, "AdpPrimaryKey");
+                form.ShowDialog(WindowOwner.From(explorer));
+            }
+        }
+
         private Search.FindItemsForm _findItems;
 
         /// <summary>Find Items: one window for the whole session; pressing the button again brings it to the front.</summary>
@@ -1105,30 +1115,30 @@ namespace tinykit.OutlookAddin
             Invalidate();
         }
 
-        /// <summary>Kept in the mail saved filters file (sendDelayMinutes): minutes a sent mail waits in the Outbox.</summary>
-        public int SendDelayMinutes
+        /// <summary>Kept in the mail saved filters file (sendDelaySeconds): seconds a sent mail waits in the Outbox.</summary>
+        public int SendDelaySeconds
         {
-            get { return State(ItemKind.Mail).Settings.SendDelayMinutes; }
+            get { return State(ItemKind.Mail).Settings.SendDelaySeconds; }
         }
 
-        public void SetSendDelayMinutes(int minutes)
+        public void SetSendDelaySeconds(int seconds)
         {
             ReloadIfChanged(ItemKind.Mail, _activeExplorer());
-            State(ItemKind.Mail).Settings.SendDelayMinutes = minutes;
+            State(ItemKind.Mail).Settings.SendDelaySeconds = seconds;
             SaveSettings(ItemKind.Mail);
         }
 
         /// <summary>
-        /// Application.ItemSend: a mail waits <see cref="SendDelayMinutes"/> in the Outbox (Do not deliver before), so it can
+        /// Application.ItemSend: a mail waits <see cref="SendDelaySeconds"/> in the Outbox (Do not deliver before), so it can
         /// still be opened there, changed and sent again, or deleted. A later delivery time already set is kept.
         /// </summary>
         public void DelaySending(object item)
         {
             var mail = item as Outlook.MailItem;
-            var minutes = SendDelayMinutes;
-            if (mail == null || minutes <= 0)
+            var seconds = SendDelaySeconds;
+            if (mail == null || seconds <= 0)
                 return;
-            var at = DateTime.Now.AddMinutes(minutes);
+            var at = DateTime.Now.AddSeconds(seconds);
             var set = mail.DeferredDeliveryTime;
             if (set.Year < 4500 && set >= at)
                 return;

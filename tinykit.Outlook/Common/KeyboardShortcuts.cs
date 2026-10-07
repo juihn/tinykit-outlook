@@ -30,6 +30,26 @@ namespace tinykit.OutlookAddin.Common
         [DllImport("kernel32.dll")]
         private static extern uint GetCurrentThreadId();
 
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetFocus();
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetClassName(IntPtr hwnd, System.Text.StringBuilder name, int count);
+
+        /// <summary>
+        /// True while the keyboard focus is in Outlook's Word editor (a reply typed in the reading pane), where Ctrl+Alt
+        /// keys are its own (heading styles, footnote, ®...).
+        /// </summary>
+        public static bool TypingInEditor()
+        {
+            var hwnd = GetFocus();
+            if (hwnd == IntPtr.Zero)
+                return false;
+            var cls = new System.Text.StringBuilder(64);
+            GetClassName(hwnd, cls, cls.Capacity);
+            return cls.ToString() == "_WwG";
+        }
+
         private readonly HookProc _proc; // kept alive: the hook calls it
         private readonly Dictionary<Keys, Func<bool>> _shortcuts = new Dictionary<Keys, Func<bool>>();
         private IntPtr _hook;
