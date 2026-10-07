@@ -96,8 +96,14 @@ namespace tinykit.OutlookAddin.Filtering
             if (string.IsNullOrWhiteSpace(nameRelated))
                 return null;
             var s = nameRelated.Trim();
-            if (s.StartsWith("▶ ", StringComparison.Ordinal))
-                s = s.Substring(2).Trim();
+            foreach (var symbol in CustomFields.MeSymbols.SentChoices)
+            {
+                if (s.StartsWith(symbol.Text, StringComparison.Ordinal))
+                {
+                    s = s.Substring(symbol.Text.Length).Trim(); // the sent symbol, whichever is chosen, with or without a space
+                    break;
+                }
+            }
             if (s.EndsWith(" (+)", StringComparison.Ordinal))
                 s = s.Substring(0, s.Length - 4).Trim();
             if (s.Length > 2 && ((s[0] == '[' && s[s.Length - 1] == ']') || (s[0] == '(' && s[s.Length - 1] == ')')))

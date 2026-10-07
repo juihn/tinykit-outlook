@@ -455,7 +455,8 @@ namespace tinykit.OutlookAddin
         /// <summary>
         /// me Column Symbols (Table View group's dialog button): picks the symbols for mail I sent, me in To and me only in
         /// Cc. A changed symbol is also changed in the saved filters that compare me with it, and in the mail that has it
-        /// (all mail folders, asked first), so filters and the column stay consistent.
+        /// (all mail folders, asked first), so filters and the column stay consistent. Sent mail's nameRelated starts with
+        /// the sent symbol and one space; mail whose nameRelated has another sent symbol or no space is set right too.
         /// </summary>
         public void EditMeSymbols(Outlook.Explorer explorer)
         {
@@ -479,12 +480,12 @@ namespace tinykit.OutlookAddin
             if (sent != settings.MeSent) changes[settings.MeSent] = sent;
             if (to != settings.MeTo) changes[settings.MeTo] = to;
             if (cc != settings.MeCc) changes[settings.MeCc] = cc;
-            if (changes.Count == 0)
-                return;
 
-            // Mail that has an old symbol, found before anything changes (so swapping two symbols works).
+            // Mail to change, found before anything changes (so swapping two symbols works): me values with an old symbol,
+            // and sent mail whose nameRelated does not start with the sent symbol and one space (an old symbol, or no space).
             var session = explorer.Application.Session;
-            var targets = new List<Tuple<string, string, string>>(); // entry id, store id, new symbol
+            var updates = new Dictionary<string, MailFix>(StringComparer.Ordinal); // by entry id
+            int meCount = 0, nameCount = 0;
             Cursor.Current = Cursors.WaitCursor;
             foreach (Outlook.Store store in session.Stores)
             {
@@ -501,45 +502,65 @@ namespace tinykit.OutlookAddin
                 {
                     foreach (var change in changes)
                     {
-                        try
+                        foreach (var id in EntryIds(f, Dasl.PropertyEquals(MeProperty, change.Key), null))
                         {
-                            var table = f.Folder.GetTable("@SQL=" + Dasl.PropertyEquals(MeProperty, change.Key), Outlook.OlTableContents.olUserItems);
-                            table.Columns.RemoveAll();
-                            table.Columns.Add("EntryID");
-                            while (!table.EndOfTable)
-                                targets.Add(Tuple.Create((string)table.GetNextRow()[1], f.StoreId, change.Value));
+                            Fix(updates, id.Item1, f.StoreId).Me = change.Value;
+                            meCount++;
                         }
-                        catch (Exception ex)
+                    }
+                    foreach (var symbol in MeSymbols.SentChoices.Select(c => c.Text).Concat(new[] { settings.MeSent }).Distinct())
+                    {
+                        foreach (var id in EntryIds(f, Dasl.Like(NameRelatedProperty, symbol + "%"), NameRelatedProperty + "/0x0000001F"))
                         {
-                            Log.Info("me symbols: " + f.Path + " skipped: " + ex.Message);
+                            var value = id.Item2 ?? "";
+                            if (!value.StartsWith(symbol, StringComparison.Ordinal))
+                                continue;
+                            var wanted = sent + " " + value.Substring(symbol.Length).TrimStart();
+                            if (wanted == value)
+                                continue;
+                            Fix(updates, id.Item1, f.StoreId).NameRelated = wanted;
+                            nameCount++;
                         }
                     }
                 }
             }
             Cursor.Current = Cursors.Default;
-            if (targets.Count > 0 && MessageBox.Show(WindowOwner.From(explorer),
-                    "Change the me column of " + targets.Count + " mail(s) that have the old symbol(s)?\n"
-                    + "(No: only mail filled from now on gets the new symbols.)",
+            if (changes.Count == 0 && updates.Count == 0)
+                return; // nothing chosen differently, and every sent mail's nameRelated already starts with the symbol and a space
+            if (updates.Count > 0 && MessageBox.Show(WindowOwner.From(explorer),
+                    "Change " + updates.Count + " mail(s)?\n"
+                    + (meCount > 0 ? "\n- the me column of " + meCount + " mail(s) to the new symbol(s)" : "")
+                    + (nameCount > 0 ? "\n- the nameRelated of " + nameCount + " sent mail(s) to start with \"" + sent + " \"" : "")
+                    + "\n\n(No: only mail filled from now on gets them.)",
                     ThisAddIn.Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                targets.Clear();
+                updates.Clear();
 
             settings.MeSent = sent;
             settings.MeTo = to;
             settings.MeCc = cc;
             SaveSettings(ItemKind.Mail);
-            var filters = ChangeMeInSavedFilters(changes);
+            var filters = changes.Count > 0 ? ChangeMeInSavedFilters(changes) : 0;
 
             int done = 0, failed = 0;
             Cursor.Current = Cursors.WaitCursor;
-            foreach (var t in targets)
+            foreach (var u in updates)
             {
                 try
                 {
-                    dynamic item = session.GetItemFromID(t.Item1, t.Item2);
-                    var prop = item.UserProperties.Find(CustomFieldNames.Me);
-                    if (prop != null)
+                    dynamic item = session.GetItemFromID(u.Key, u.Value.StoreId);
+                    bool changed = false;
+                    if (u.Value.Me != null)
                     {
-                        prop.Value = t.Item3;
+                        var prop = item.UserProperties.Find(CustomFieldNames.Me);
+                        if (prop != null) { prop.Value = u.Value.Me; changed = true; }
+                    }
+                    if (u.Value.NameRelated != null)
+                    {
+                        var prop = item.UserProperties.Find(CustomFieldNames.NameRelated);
+                        if (prop != null) { prop.Value = u.Value.NameRelated; changed = true; }
+                    }
+                    if (changed)
+                    {
                         item.Save();
                         done++;
                     }
@@ -558,6 +579,48 @@ namespace tinykit.OutlookAddin
                 + (failed > 0 ? ", " + failed + " could not be" : "") + "; " + filters + " saved filter(s) updated.";
             Log.Info(summary);
             Notifier.Info(explorer, summary);
+        }
+
+        private const string NameRelatedProperty = "http://schemas.microsoft.com/mapi/string/{00020329-0000-0000-C000-000000000046}/nameRelated";
+
+        /// <summary>What one mail gets: a new me value and/or a new nameRelated (null: unchanged).</summary>
+        private sealed class MailFix
+        {
+            public string StoreId;
+            public string Me;
+            public string NameRelated;
+        }
+
+        private static MailFix Fix(Dictionary<string, MailFix> updates, string entryId, string storeId)
+        {
+            MailFix fix;
+            if (!updates.TryGetValue(entryId, out fix))
+                updates[entryId] = fix = new MailFix { StoreId = storeId };
+            return fix;
+        }
+
+        // The entry ids (and the given column's value, when one is asked for) of a folder's items matching a filter.
+        private static List<Tuple<string, string>> EntryIds(Search.FindFolder f, string filter, string column)
+        {
+            var found = new List<Tuple<string, string>>();
+            try
+            {
+                var table = f.Folder.GetTable("@SQL=" + filter, Outlook.OlTableContents.olUserItems);
+                table.Columns.RemoveAll();
+                table.Columns.Add("EntryID");
+                if (column != null)
+                    table.Columns.Add(column);
+                while (!table.EndOfTable)
+                {
+                    var row = table.GetNextRow();
+                    found.Add(Tuple.Create((string)row[1], column == null ? null : row[2] as string));
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Info("me symbols: " + f.Path + " skipped: " + ex.Message);
+            }
+            return found;
         }
 
         // In every kind's saved filters: "me" = 'old' becomes "me" = 'new' (all at once, so swapped symbols do not mix).

@@ -112,7 +112,7 @@ The filter shows the items whose field *contains* the value (`LIKE '%value%'`):
 |---|---|---|
 | Mail | **F** | the From (sender) e-mail address |
 | Mail | **S** | the subject (RE:/FW: ignored when taken from a mail) |
-| Mail | **N** | `nameRelated` (taken from a mail without `▶ `, ` (+)`, `[ ]`/`( )`, so received and sent mail of the same person match) |
+| Mail | **N** | `nameRelated` (taken from a mail without the sent symbol, ` (+)`, `[ ]`/`( )`, so received and sent mail of the same person match) |
 | Mail | **D** | `domainRelated` |
 | Contacts | **F** | File As |
 | Contacts | **E** | E-mail, E-mail 2 or E-mail 3 |
@@ -139,7 +139,7 @@ The add-in writes these text columns (user properties) on mail and meeting items
 | Column | Received mail | Mail I sent |
 |---|---|---|
 | `domainRelated` | sender's domain label, then its subdomains nearest first: `a@billing.fabrikam.com` → `fabrikam/billing` (for *on behalf of*, the principal's) | same, for the first To recipient (no To: first Cc) |
-| `nameRelated` | `[contact name]` if the sender is in Contacts, else the sender display name; `(local part)` when that is just the address | `▶ ` + first recipient (`tos` / `ccs` count the recipients; mail filled before 2026-10 may still end in ` (+)`) |
+| `nameRelated` | `[contact name]` if the sender is in Contacts, else the sender display name; `(local part)` when that is just the address | the `me` column's sent symbol (`▶` by default) + a space + first recipient (`tos` / `ccs` count the recipients; mail filled before 2026-10 may still end in ` (+)`) |
 | `me` | `●` I am in To · `○` I am only in Cc · `-` neither (e.g. Bcc, a list address) | `▶` |
 | `tos` / `ccs` | number of To / Cc recipients (`-` for 0) | same |
 | `unknownDomain` | `*` the sender's domain is not in *Known Domains.txt* · `+` it is, but a recipient's is not · `-` all known | `+` / `-` for the recipients (I am a known sender) |
@@ -333,8 +333,10 @@ Tools for the selected items; each button shows only in the folders where it app
 - The group's **dialog button** (corner arrow) opens **me Column Symbols**: a drop-down each for mail I sent
   (→ ⇒ ⇥ ⇨ ▶ ▷ ⟶ ⟹), me in To and me only in Cc (■ □ ▢ ◆ ○ ● ✓ and Ⓣ/Ⓒ in a circle or square, plain or negative),
   each shown with its code point and Unicode name. A changed symbol is also changed in the saved filters that compare
-  `me` with it, and, if you agree, in every mail that has it (all mail folders). Kept as `meSent` / `meTo` / `meCc` in
-  `Saved Filters - Mail.xml`.
+  `me` with it, and, if you agree, in every mail that has it (all mail folders). Sent mail's `nameRelated` starts with
+  the same sent symbol and one space: on OK, mail whose `nameRelated` has another sent symbol or no space after it is
+  set right too (asked first, with the counts). A Font drop-down at the top (the view's font at first) shows the three
+  drop-downs in that font, as a preview. Kept as `meSent` / `meTo` / `meCc` in `Saved Filters - Mail.xml`.
 - **Sort by Company/Dept** (contact folders) sorts the view by Company, and within a company by Department, both A to Z;
   the view keeps this sort (its grouping, if any, stays).
 

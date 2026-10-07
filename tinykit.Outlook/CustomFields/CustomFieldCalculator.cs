@@ -15,7 +15,7 @@ namespace tinykit.OutlookAddin.CustomFields
     ///   sent by me: first To recipient's (no To: first Cc's).</item>
     /// <item>nameRelated — received: [contact name] if the sender is in Contacts, else the sender display name
     ///   ("(local part)" when the display name is just the address);
-    ///   sent by me: "▶ " + first recipient's name (tos / ccs give the number of recipients), where a recipient
+    ///   sent by me: the me column's sent symbol (▶ by default) + " " + first recipient's name (tos / ccs give the number of recipients), where a recipient
     ///   picked from an address book keeps its shown name, and a typed address becomes [contact name] or the address.</item>
     /// <item>me — ▶ sent by me, else ● I am in To, ○ I am in Cc, else "-".  tos / ccs — number of To / Cc recipients, "-" for 0.</item>
     /// </list>
@@ -33,7 +33,6 @@ namespace tinykit.OutlookAddin.CustomFields
         private const string RepSmtp = PropTag + "0x5D02001F";
         private const string RecipientSmtpTag = PropTag + "0x39FE001F";
 
-        private const string SentPrefix = "▶ ";
 
         private readonly Outlook.NameSpace _session;
         private readonly Dictionary<string, string> _exToSmtp = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -110,7 +109,7 @@ namespace tinykit.OutlookAddin.CustomFields
                 {
                     var smtp = RecipientSmtp(first);
                     values.DomainRelated = MailInfo.DomainPath(smtp) ?? CustomFieldValues.None;
-                    values.NameRelated = SentPrefix + RecipientName(first, smtp);
+                    values.NameRelated = MeSymbols.Current().Item1 + " " + RecipientName(first, smtp); // same symbol as me
                 }
             }
             else
