@@ -34,7 +34,18 @@ namespace tinykit.OutlookAddin.CustomFields
         {
             _app = app;
             _enabled = enabled;
-            _timer.Tick += (s, e) => Sweep();
+            _timer.Tick += (s, e) =>
+            {
+                // An exception left to Outlook from a timer crashes it, and Outlook then disables the add-in.
+                try
+                {
+                    Sweep();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Sent to Inbox", ex);
+                }
+            };
         }
 
         /// <summary>On: the next sweep moves what is in Sent Items now.</summary>
@@ -72,7 +83,17 @@ namespace tinykit.OutlookAddin.CustomFields
                         Inbox = store.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderInbox),
                         Items = sent.Items,
                     };
-                    pair.Items.ItemAdd += item => Schedule();
+                    pair.Items.ItemAdd += item =>
+                    {
+                        try
+                        {
+                            Schedule();
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error("Sent to Inbox: ItemAdd", ex);
+                        }
+                    };
                     _pairs.Add(pair);
                 }
                 catch (COMException ex)
@@ -88,6 +109,18 @@ namespace tinykit.OutlookAddin.CustomFields
             var path = folder.FolderPath ?? "";
             return path.IndexOf("[Gmail]", StringComparison.OrdinalIgnoreCase) >= 0
                 || path.IndexOf("[Google Mail]", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static string PathOf(Outlook.MAPIFolder folder)
+        {
+            try
+            {
+                return folder.FolderPath;
+            }
+            catch (COMException)
+            {
+                return "(folder not reachable)";
+            }
         }
 
         // A sweep a few seconds from now (again from now if one was waiting).
@@ -132,10 +165,10 @@ namespace tinykit.OutlookAddin.CustomFields
                 }
                 catch (Exception ex)
                 {
-                    Log.Error("Sent to Inbox: " + pair.Sent.FolderPath, ex);
+                    Log.Error("Sent to Inbox: " + PathOf(pair.Sent), ex);
                 }
                 if (moved > 0)
-                    Log.Info("Sent to Inbox: moved " + moved + " mail(s) from " + pair.Sent.FolderPath + " to " + pair.Inbox.FolderPath);
+                    Log.Info("Sent to Inbox: moved " + moved + " mail(s) from " + PathOf(pair.Sent) + " to " + PathOf(pair.Inbox));
             }
         }
     }

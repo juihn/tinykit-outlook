@@ -29,6 +29,18 @@ namespace tinykit.OutlookAddin
 
         private void ThisAddIn_Startup(object sender, EventArgs e)
         {
+            // An exception nothing caught ends Outlook and gets the add-in disabled; at least its stack is logged.
+            AppDomain.CurrentDomain.UnhandledException += (s, a) =>
+            {
+                try
+                {
+                    Log.Error("Unhandled (Outlook ends)", a.ExceptionObject as Exception);
+                }
+                catch
+                {
+                    // nothing more can be done here
+                }
+            };
             _explorers = Application.Explorers;
             _explorers.NewExplorer += Watch;
             foreach (Outlook.Explorer explorer in _explorers)
@@ -216,10 +228,17 @@ namespace tinykit.OutlookAddin
                     Log.Error("Clear Inbox filters at exit", ex);
                 }
 
-                var events = (Outlook.ExplorerEvents_10_Event)_explorer;
-                events.FolderSwitch -= OnChanged;
-                events.ViewSwitch -= OnChanged;
-                events.Close -= OnClose;
+                try
+                {
+                    var events = (Outlook.ExplorerEvents_10_Event)_explorer;
+                    events.FolderSwitch -= OnChanged;
+                    events.ViewSwitch -= OnChanged;
+                    events.Close -= OnClose;
+                }
+                catch (Exception ex)
+                {
+                    Log.Info("ExplorerWatcher: events not released: " + ex.Message);
+                }
                 _owner._watchers.Remove(this);
             }
         }

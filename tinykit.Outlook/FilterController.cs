@@ -1789,7 +1789,7 @@ namespace tinykit.OutlookAddin
                         }
                     }
                 }
-                catch (COMException ex)
+                catch (Exception ex)
                 {
                     Log.Info("Contact form refresh: could not come back: " + ex.Message);
                 }

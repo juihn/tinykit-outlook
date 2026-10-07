@@ -97,7 +97,15 @@ namespace tinykit.OutlookAddin.CustomFields
         // The symbol drop-downs in the chosen font, at the table view's size: as the symbols will look in the list.
         private void Preview(string fontName)
         {
-            var font = new Font(fontName, _previewSize);
+            Font font;
+            try
+            {
+                font = new Font(fontName, _previewSize);
+            }
+            catch (System.ArgumentException)
+            {
+                return; // a family without a regular style: the boxes keep the previous font
+            }
             foreach (var box in new[] { _contact, _sent, _to, _cc })
                 box.Font = font;
             // Only the preview's own previous font is let go: the one the boxes had at first belongs to the window.
