@@ -274,6 +274,9 @@ Tools for the selected items; each button shows only in the folders where it app
   except in the results, where it (or a double-click) opens the item; after a search the first result is selected and
   has the focus, so Enter opens it (Esc goes back to the text). The window keeps its size,
   splitter, Message Body, item types and accounts (`Find Items.txt` in `%APPDATA%\tinykit\Outlook\`).
+- **Open Contact Item of Sender** (mail folders) opens the contact with the selected mail's sender address (any
+  Contacts folder). Without one, a new contact with the sender's name and address opens in the Contacts folder of the
+  mail's account (else of the default account), to be saved there.
 - **Recipients Report** (mail and calendar folders) opens a window for the selected mail: the sender, then the
   recipients grouped by **domain** and by the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background:
   in Contacts. The check boxes add each person's display name and user name. Click a person to open the contact (or

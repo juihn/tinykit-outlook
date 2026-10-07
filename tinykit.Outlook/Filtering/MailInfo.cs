@@ -202,6 +202,15 @@ namespace tinykit.OutlookAddin.Filtering
             return null;
         }
 
+        /// <summary>
+        /// The SMTP address of the person a mail is from (an Exchange sender resolved), or null. Not the account a mail
+        /// being written is sent from: that is Compose.RecipientCommands.SenderSmtp.
+        /// </summary>
+        public static string SenderSmtpOf(Outlook.MailItem mail)
+        {
+            return ResolveSmtp(mail.SenderEmailType, mail.SenderEmailAddress, mail.PropertyAccessor, () => mail.Sender);
+        }
+
         private static string ResolveSmtp(string type, string address, Outlook.PropertyAccessor pa, Func<Outlook.AddressEntry> sender)
         {
             if (!string.Equals(type, "EX", StringComparison.OrdinalIgnoreCase))

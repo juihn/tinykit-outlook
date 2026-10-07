@@ -368,7 +368,7 @@ namespace tinykit.OutlookAddin.Search
                     try
                     {
                         name = d.SenderName;
-                        address = item is Outlook.MailItem mail ? Compose.RecipientCommands.SenderSmtp(mail) : (string)d.SenderEmailAddress;
+                        address = item is Outlook.MailItem mail ? MailInfo.SenderSmtpOf(mail) : (string)d.SenderEmailAddress;
                     }
                     catch (Exception)
                     {

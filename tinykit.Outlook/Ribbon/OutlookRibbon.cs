@@ -431,6 +431,10 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<button id=\"cfCopyItems\" label=\"Copy Items Text\" imageMso=\"GroupClipboard\" onAction=\"OnCopyItems\"")
               .Append(" getVisible=\"GetMailVisible\" screentip=\"Copy Items Text\" supertip=\"Copy one line per selected mail to the clipboard: ")
               .Append("'yy.MM.dd요일 HH:mm &lt;sender&gt; subject. Shift+click: put the new lines before the clipboard's current text.\"/>");
+            sb.Append("<button id=\"cfSenderContact\" label=\"Open Contact Item of Sender\" imageMso=\"AddressBook\" onAction=\"OnOpenSenderContact\"")
+              .Append(" getVisible=\"GetMailVisible\" screentip=\"Open Contact Item of Sender\" supertip=\"Open the contact with the selected mail's ")
+              .Append("sender address (from any Contacts folder). If there is none, a new contact with the sender's name and address opens, ")
+              .Append("in the Contacts folder of the mail's account (else of the default account), to be saved there.\"/>");
             // Contact folders: switch the selected contacts between Outlook's form and the folder's custom form.
             sb.Append("<button id=\"cfFormDefault\" label=\"Default Contact Form\" imageMso=\"NewContact\"")
               .Append(" getVisible=\"GetContactVisible\" onAction=\"OnSetDefaultContactForm\" screentip=\"Default Contact Form\"")
@@ -1036,6 +1040,11 @@ namespace tinykit.OutlookAddin.Ribbon
                 Log.Error(control.Id, ex);
                 MessageBox.Show(WindowOwner.From(inspector), ex.Message, ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+        }
+
+        public void OnOpenSenderContact(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.OpenSenderContact(ex));
         }
 
         public void OnCopyItems(Office.IRibbonControl control)

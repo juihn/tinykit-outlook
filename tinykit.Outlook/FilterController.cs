@@ -1587,6 +1587,64 @@ namespace tinykit.OutlookAddin
             }
         }
 
+        /// <summary>
+        /// Open Contact Item of Sender: opens the contact that has the first selected mail's sender address (any Contacts
+        /// folder, as Recipients Report finds them). Without one, a new contact with the sender's name and address is
+        /// opened (not saved) in the Contacts folder of the mail's own account, else of the default account.
+        /// </summary>
+        public void OpenSenderContact(Outlook.Explorer explorer)
+        {
+            Outlook.Selection selection = explorer.Selection;
+            var mail = selection.Count == 0 ? null : selection[1] as Outlook.MailItem;
+            if (mail == null)
+                throw new UserMessageException("Select a mail first.");
+            // As nameRelated and Recipients Report resolve it: the principal for "on behalf of", Exchange senders by the GAL.
+            var smtp = Fields.Calculator.FromSmtpOf(ItemView.From(mail));
+            if (string.IsNullOrEmpty(smtp))
+                throw new UserMessageException("This mail's sender has no e-mail address.");
+
+            var session = explorer.Application.Session;
+            var entry = Fields.Calculator.Contacts.Lookup(smtp);
+            if (entry != null)
+            {
+                ((dynamic)session.GetItemFromID(entry.EntryId, entry.StoreId)).Display();
+                return;
+            }
+
+            var folder = ContactsFolderOf(mail) ?? session.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderContacts);
+            // Outlook's own contact form: a new item of a custom form must not be read or written before it is saved.
+            var contact = (Outlook.ContactItem)folder.Items.Add(Outlook.OlItemType.olContactItem);
+            string first, last;
+            Reports.RecipientsReportForm.SplitName(SenderNameFor(mail.SenderName, smtp), out first, out last);
+            contact.FirstName = first;
+            contact.LastName = last;
+            contact.Email1Address = smtp;
+            contact.Display();
+        }
+
+        // The sender's name, or the part of the address before @ when the name is the address itself.
+        private static string SenderNameFor(string name, string smtp)
+        {
+            name = (name ?? "").Trim().Trim('\'', '"');
+            if (name.Length == 0 || name.IndexOf('@') > 0)
+                name = smtp.Substring(0, Math.Max(0, smtp.IndexOf('@'))).Replace('.', ' ').Replace('_', ' ');
+            return name;
+        }
+
+        // The Contacts folder of the account (store) the mail is in; null when that store has none (e.g. a .pst archive).
+        private static Outlook.MAPIFolder ContactsFolderOf(Outlook.MailItem mail)
+        {
+            try
+            {
+                var parent = mail.Parent as Outlook.MAPIFolder;
+                return parent == null ? null : parent.Store.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderContacts);
+            }
+            catch (COMException)
+            {
+                return null;
+            }
+        }
+
         // A mail or meeting request: 'yy.MM.dd요일 HH:mm <sender> subject; null for other items.
         private static string ItemLine(object item)
         {
