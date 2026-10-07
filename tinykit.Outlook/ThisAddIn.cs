@@ -56,6 +56,25 @@ namespace tinykit.OutlookAddin
 
             try
             {
+                Application.ItemSend += (object item, ref bool cancel) =>
+                {
+                    try
+                    {
+                        Controller.DelaySending(item);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error("Send delay", ex); // the mail still goes, without the delay
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                Log.Error("ItemSend", ex);
+            }
+
+            try
+            {
                 Controller.SentMail = new SentToInbox(Application, Controller.MoveSentToInbox);
                 Controller.SentMail.Start();
             }

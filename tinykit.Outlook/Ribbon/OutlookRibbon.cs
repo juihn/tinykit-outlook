@@ -308,10 +308,6 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" screentip=\"Add Known Domain\" getSupertip=\"GetAddKnownSupertip\"/>");
             sb.Append("<checkBox id=\"cfAutoFill\" label=\"Auto-fill new mail\" getPressed=\"GetAutoFillPressed\" onAction=\"OnAutoFillToggle\"")
               .Append(" screentip=\"Auto-fill new mail\" supertip=\"Fill the fields of mail arriving in each account's Inbox and Sent Items.\"/>");
-            sb.Append("<checkBox id=\"cfSentToInbox\" label=\"Move Sent Mail to Inbox\" getPressed=\"GetSentToInboxPressed\" onAction=\"OnSentToInboxToggle\"")
-              .Append(" screentip=\"Move Sent Mail to Inbox\" supertip=\"Move mail in each account's Sent Items to the same account's Inbox: ")
-              .Append("a few seconds after Outlook starts and after mail arrives in Sent Items (also mail sent from another mail client). ")
-              .Append("Gmail accounts are left out (there Sent Mail is a label).\"/>");
             sb.Append("</group>");
 
             // Table View.
@@ -443,6 +439,16 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" getVisible=\"GetMailVisible\" screentip=\"Open Contact Item of Sender\" supertip=\"Open the contact with the selected mail's ")
               .Append("sender address (from any Contacts folder). If there is none, a new contact with the sender's name and address opens, ")
               .Append("in the Contacts folder of the mail's account (else of the default account), to be saved there.\"/>");
+            // Mail folders: what happens to mail I send.
+            sb.Append("<checkBox id=\"cfSentToInbox\" label=\"Move Sent Mail to Inbox\" getVisible=\"GetMailVisible\" getPressed=\"GetSentToInboxPressed\" onAction=\"OnSentToInboxToggle\"")
+              .Append(" screentip=\"Move Sent Mail to Inbox\" supertip=\"Move mail in each account's Sent Items to the same account's Inbox: ")
+              .Append("a few seconds after Outlook starts and after mail arrives in Sent Items (also mail sent from another mail client). ")
+              .Append("Gmail accounts are left out (there Sent Mail is a label).\"/>");
+            sb.Append("<dropDown id=\"cfSendDelay\" label=\"Send Delay\" getVisible=\"GetMailVisible\" sizeString=\"10 min\"")
+              .Append(" getItemCount=\"GetSendDelayCount\" getItemLabel=\"GetSendDelayLabel\" getSelectedItemIndex=\"GetSendDelayIndex\"")
+              .Append(" onAction=\"OnSendDelayPick\" screentip=\"Send Delay\" supertip=\"Mail you send waits this long in the Outbox ")
+              .Append("(Do not deliver before) before it goes, so you can still open it there, change it and send it again, or delete it. ")
+              .Append("Off: mail goes at once.\"/>");
             // Contact folders: switch the selected contacts between Outlook's form and the folder's custom form.
             sb.Append("<button id=\"cfFormDefault\" label=\"Default Contact Form\" imageMso=\"NewContact\"")
               .Append(" getVisible=\"GetContactVisible\" onAction=\"OnSetDefaultContactForm\" screentip=\"Default Contact Form\"")
@@ -1102,6 +1108,33 @@ namespace tinykit.OutlookAddin.Ribbon
         public bool GetAutoFillPressed(Office.IRibbonControl control)
         {
             return _controller.AutoFillFields;
+        }
+
+        // Send Delay choices, in minutes (0: off).
+        private static readonly int[] SendDelays = { 0, 1, 2, 3, 5, 10 };
+
+        public int GetSendDelayCount(Office.IRibbonControl control)
+        {
+            return SendDelays.Length;
+        }
+
+        public string GetSendDelayLabel(Office.IRibbonControl control, int index)
+        {
+            return SendDelays[index] == 0 ? "Off" : SendDelays[index] + " min";
+        }
+
+        public int GetSendDelayIndex(Office.IRibbonControl control)
+        {
+            return Safe(() =>
+            {
+                var i = Array.IndexOf(SendDelays, _controller.SendDelayMinutes);
+                return i < 0 ? 1 : i;
+            }, 1);
+        }
+
+        public void OnSendDelayPick(Office.IRibbonControl control, string selectedId, int selectedIndex)
+        {
+            Run(control, ex => _controller.SetSendDelayMinutes(SendDelays[selectedIndex]));
         }
 
         public bool GetSentToInboxPressed(Office.IRibbonControl control)

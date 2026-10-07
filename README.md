@@ -148,11 +148,6 @@ The add-in writes these text columns (user properties) on mail and meeting items
 - Contact name means the contact's e-mail display name for that address, or File As if that is empty. Contacts are looked up in every store's Contacts folder and its subfolders (e.g. `olk/family`), skipping system folders such as Recipient Cache and GAL Contacts.
 - A mail counts as "mine" when its sender (or principal) is one of my accounts' addresses.
 - **Auto-fill new mail** fills mail as it arrives in each account's Inbox or Sent Items.
-- **Move Sent Mail to Inbox** moves mail in each account's Sent Items to the same account's Inbox, so a conversation reads
-  in one place: a few seconds after Outlook starts and after mail arrives in Sent Items, each time all of Sent Items (so
-  mail sent from another mail client and synchronized is moved too). Meeting requests stay. Gmail accounts are left out:
-  there Sent Mail is a label, and moving out of it over IMAP deletes Gmail's sent copy or brings it back.
-  (`moveSentToInbox` in `Saved Filters - Mail.xml`; on by default.)
 - **Fill Fields** fills the current folder's items that have no `domainRelated` or `unknownDomain` yet, e.g. mail that arrived
   while Outlook was closed or in folders other than Inbox and Sent Items.
   **Shift+click** recomputes the selected items instead, even if they already have values (e.g. after editing Known Domains.txt).
@@ -279,6 +274,14 @@ Tools for the selected items; each button shows only in the folders where it app
   except in the results, where it (or a double-click) opens the item; after a search the first result is selected and
   has the focus, so Enter opens it (Esc goes back to the text). The window keeps its size,
   splitter, Message Body, item types and accounts (`Find Items.txt` in `%APPDATA%\tinykit\Outlook\`).
+- **Move Sent Mail to Inbox** (mail folders) moves mail in each account's Sent Items to the same account's Inbox, so a conversation reads
+  in one place: a few seconds after Outlook starts and after mail arrives in Sent Items, each time all of Sent Items (so
+  mail sent from another mail client and synchronized is moved too). Meeting requests stay. Gmail accounts are left out:
+  there Sent Mail is a label, and moving out of it over IMAP deletes Gmail's sent copy or brings it back.
+  (`moveSentToInbox` in `Saved Filters - Mail.xml`; on by default.)
+- **Send Delay** (mail folders): Off, 1, 2, 3, 5 or 10 minutes (default 1). Mail you send waits that long in the Outbox
+  (*Do not deliver before*), so you can still open it there, change it and send it again, or delete it. A later delivery
+  time you set yourself is kept. (`sendDelayMinutes` in `Saved Filters - Mail.xml`.)
 - **Open Contact Item of Sender** (mail folders) opens the contact with the selected mail's sender address (any
   Contacts folder). Without one, a new contact with the sender's name and address opens in the Contacts folder of the
   mail's account (else of the default account), to be saved there.
@@ -309,7 +312,8 @@ Tools for the selected items; each button shows only in the folders where it app
   first. **Ctrl+click** opens the file in VS Code (Notepad if not installed). Each file is created with default columns
   on first use.
 - **Automatic column sizing** turns the current view's View Settings > Other Settings > Automatic column sizing on or off
-  (on: the columns fill the width of the list; off: they keep their widths and the list scrolls sideways).
+  (on: the columns fill the width of the list; off: they keep their widths and the list scrolls sideways). Turned off in
+  the TinyKit view, the predefined columns are applied again, so the columns always get the file's widths.
 - **View Font...** sets the font and size (9, 10, 11 or 12) for the whole current table view: rows, and optionally column
   headers and all conditional formatting rules, which keep their own style and color. Table views store whole point sizes
   only (9.5pt is saved as 9pt), so there are no half sizes.
@@ -318,7 +322,7 @@ Tools for the selected items; each button shows only in the folders where it app
 
 ### Saved Filters - Mail.xml / - Contacts.xml / - Tasks.xml
 ```xml
-<SavedFilters autoApplyFormats="true" autoFillFields="true" moveSentToInbox="true" formatsOn="true">
+<SavedFilters autoApplyFormats="true" autoFillFields="true" moveSentToInbox="true" sendDelayMinutes="1" formatsOn="true">
   <Filter name="Unread" formatEnabled="true">
     <Sql><![CDATA["urn:schemas:httpmail:read" = 0]]></Sql>
     <Format font="Segoe UI" size="9" style="Bold" strikeout="false" underline="false" color="Navy" />

@@ -1035,18 +1035,31 @@ namespace tinykit.OutlookAddin
         /// </summary>
         public void ViewColumnsButton(Outlook.Explorer explorer)
         {
-            var kind = Focus(explorer);
-            if (kind == null)
-                throw new UserMessageException("View Columns works in mail, contact and task folders.");
-            var path = SettingsPaths.ViewColumnsFile(kind.Value);
-            var name = Path.GetFileName(path);
-            if (!File.Exists(path))
-                ViewColumns.CreateDefault(path, kind.Value);
             if ((Control.ModifierKeys & Keys.Control) == Keys.Control)
             {
-                OpenInEditor(path);
+                OpenInEditor(ColumnsFile(explorer));
                 return;
             }
+            ApplyPredefinedColumns(explorer);
+        }
+
+        // The View Columns file of the folder's kind, made with the default columns when it does not exist yet.
+        private string ColumnsFile(Outlook.Explorer explorer)
+        {
+            var kind = Focus(explorer);
+            if (kind == null)
+                throw new UserMessageException("Apply Predefined Columns works in mail, contact and task folders.");
+            var path = SettingsPaths.ViewColumnsFile(kind.Value);
+            if (!File.Exists(path))
+                ViewColumns.CreateDefault(path, kind.Value);
+            return path;
+        }
+
+        /// <summary>Switches to the TinyKit view and gives it the columns of the folder kind's View Columns file.</summary>
+        public void ApplyPredefinedColumns(Outlook.Explorer explorer)
+        {
+            var path = ColumnsFile(explorer);
+            var name = Path.GetFileName(path);
 
             List<ViewColumn> columns;
             try
@@ -1079,10 +1092,48 @@ namespace tinykit.OutlookAddin
             return ViewColumnsService.GetAutomaticColumnSizing(explorer);
         }
 
+        /// <summary>
+        /// Turns Automatic column sizing on or off. Turned off in the TinyKit view, the predefined columns are applied again,
+        /// so the columns get the widths of the View Columns file (not whatever automatic sizing had made of them).
+        /// </summary>
         public void SetAutomaticColumnSizing(Outlook.Explorer explorer, bool on)
         {
             KeepSelection(explorer, () => ViewColumnsService.SetAutomaticColumnSizing(explorer, on, Views.OwnFilter(explorer)));
+            var view = explorer.CurrentView as Outlook.View;
+            if (!on && view != null && view.Name == ViewColumnsService.ViewName)
+                ApplyPredefinedColumns(explorer);
             Invalidate();
+        }
+
+        /// <summary>Kept in the mail saved filters file (sendDelayMinutes): minutes a sent mail waits in the Outbox.</summary>
+        public int SendDelayMinutes
+        {
+            get { return State(ItemKind.Mail).Settings.SendDelayMinutes; }
+        }
+
+        public void SetSendDelayMinutes(int minutes)
+        {
+            ReloadIfChanged(ItemKind.Mail, _activeExplorer());
+            State(ItemKind.Mail).Settings.SendDelayMinutes = minutes;
+            SaveSettings(ItemKind.Mail);
+        }
+
+        /// <summary>
+        /// Application.ItemSend: a mail waits <see cref="SendDelayMinutes"/> in the Outbox (Do not deliver before), so it can
+        /// still be opened there, changed and sent again, or deleted. A later delivery time already set is kept.
+        /// </summary>
+        public void DelaySending(object item)
+        {
+            var mail = item as Outlook.MailItem;
+            var minutes = SendDelayMinutes;
+            if (mail == null || minutes <= 0)
+                return;
+            var at = DateTime.Now.AddMinutes(minutes);
+            var set = mail.DeferredDeliveryTime;
+            if (set.Year < 4500 && set >= at)
+                return;
+            mail.DeferredDeliveryTime = at;
+            Log.Info("Send delay: \"" + mail.Subject + "\" goes at " + at.ToString("HH:mm:ss"));
         }
 
         /// <summary>

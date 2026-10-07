@@ -80,6 +80,9 @@ namespace tinykit.OutlookAddin.Settings
         /// <summary>Mail files only: move mail in each account's Sent Items to its Inbox (Gmail left out).</summary>
         public bool MoveSentToInbox = true;
 
+        /// <summary>Mail files only: minutes a sent mail waits in the Outbox before it goes (0: at once).</summary>
+        public int SendDelayMinutes = 1;
+
         /// <summary>Mail only: when Outlook closes, clear the add-in's filters in every account's Inbox.</summary>
         public bool ClearInboxFiltersOnExit = true;
 
@@ -98,6 +101,8 @@ namespace tinykit.OutlookAddin.Settings
                                                        me/tos/ccs of mail arriving in Inbox / Sent Items
                 moveSentToInbox=""true|false""          moveSentToInbox (Mail only): move mail in each
                                                        account's Sent Items to its Inbox (Gmail left out)
+                sendDelayMinutes=""1""                  sendDelayMinutes (Mail only): minutes a sent mail
+                                                       waits in the Outbox (0: sent at once)
                 clearInboxFiltersOnExit=""true|false""  clearInboxFiltersOnExit (Mail only): when Outlook closes,
                                                        clear quick/saved filters in every account's Inbox
                 formatsOn=""true|false"">               formatsOn: all formats on/off (All Formats Off /
@@ -157,6 +162,7 @@ namespace tinykit.OutlookAddin.Settings
                 AutoApplyFormats = ParseBool(root.Attribute("autoApplyFormats"), true),
                 AutoFillFields = ParseBool(root.Attribute("autoFillFields"), true),
                 MoveSentToInbox = ParseBool(root.Attribute("moveSentToInbox"), true),
+                SendDelayMinutes = ParseMinutes(root.Attribute("sendDelayMinutes"), 1),
                 ClearInboxFiltersOnExit = ParseBool(root.Attribute("clearInboxFiltersOnExit"), true),
                 FormatsOn = ParseBool(root.Attribute("formatsOn"), true),
             };
@@ -195,6 +201,7 @@ namespace tinykit.OutlookAddin.Settings
                     new XAttribute("autoApplyFormats", AutoApplyFormats ? "true" : "false"),
                     Kind == ItemKind.Mail ? new XAttribute("autoFillFields", AutoFillFields ? "true" : "false") : null,
                     Kind == ItemKind.Mail ? new XAttribute("moveSentToInbox", MoveSentToInbox ? "true" : "false") : null,
+                    Kind == ItemKind.Mail ? new XAttribute("sendDelayMinutes", SendDelayMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture)) : null,
                     Kind == ItemKind.Mail ? new XAttribute("clearInboxFiltersOnExit", ClearInboxFiltersOnExit ? "true" : "false") : null,
                     new XAttribute("formatsOn", FormatsOn ? "true" : "false"),
                     Filters.Select(ToElement)));
@@ -245,6 +252,13 @@ namespace tinykit.OutlookAddin.Settings
                 Underline = ParseBool(fe.Attribute("underline"), false),
                 Color = OlColorMap.Parse((string)fe.Attribute("color")),
             };
+        }
+
+        private static int ParseMinutes(XAttribute a, int fallback)
+        {
+            int n;
+            return a != null && int.TryParse(a.Value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out n)
+                && n >= 0 && n <= 1440 ? n : fallback;
         }
 
         private static bool ParseBool(XAttribute a, bool fallback)
