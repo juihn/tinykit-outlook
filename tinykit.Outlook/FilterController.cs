@@ -462,7 +462,9 @@ namespace tinykit.OutlookAddin
             ReloadIfChanged(ItemKind.Mail, explorer);
             var settings = State(ItemKind.Mail).Settings;
             string sent, to, cc;
-            using (var form = new MeSymbolsForm(settings.MeSent, settings.MeTo, settings.MeCc))
+            var viewFont = ConditionalFormatService.GetViewFont(explorer); // null when not a table view
+            using (var form = new MeSymbolsForm(settings.MeSent, settings.MeTo, settings.MeCc,
+                viewFont == null ? null : viewFont.Item1, viewFont == null ? 0 : viewFont.Item2))
             {
                 form.Icon = OfficeImage.IconFromImageMso(explorer.CommandBars, "TableInsert");
                 if (form.ShowDialog(WindowOwner.From(explorer)) != DialogResult.OK)
