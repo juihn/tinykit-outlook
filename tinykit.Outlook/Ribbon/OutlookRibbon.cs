@@ -303,7 +303,7 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" screentip=\"Fill Fields\" supertip=\"Fill domainRelated, nameRelated, me, tos, ccs and unknownDomain. ")
               .Append("Click: the items of the current folder that do not have them yet (e.g. mail received while Outlook was closed, ")
               .Append("or in folders other than Inbox and Sent Items). Shift+click: recompute the selected items, even if they already have ")
-              .Append("values (e.g. after editing Known Domains.txt or adding a contact).\"/>");
+              .Append("values (e.g. after editing Known Domains.txt or adding a contact). Ctrl+click: clear the fields of the selected items.\"/>");
             sb.Append("<button id=\"cfAddKnown\" label=\"Add Known Domain\" imageMso=\"AddToFavorites\" onAction=\"OnAddKnownDomain\"")
               .Append(" screentip=\"Add Known Domain\" getSupertip=\"GetAddKnownSupertip\"/>");
             sb.Append("<checkBox id=\"cfAutoFill\" label=\"Auto-fill new mail\" getPressed=\"GetAutoFillPressed\" onAction=\"OnAutoFillToggle\"")
@@ -439,9 +439,10 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<button id=\"cfCopyItems\" label=\"Copy Items Text\" imageMso=\"GroupClipboard\" onAction=\"OnCopyItems\"")
               .Append(" getVisible=\"GetMailVisible\" screentip=\"Copy Items Text\" supertip=\"Copy one line per selected mail to the clipboard: ")
               .Append("'yy.MM.dd요일 HH:mm &lt;sender&gt; subject. Shift+click: put the new lines before the clipboard's current text.\"/>");
-            sb.Append("<button id=\"cfSenderContact\" label=\"Open Contact Item of Sender\" imageMso=\"AddressBook\" onAction=\"OnOpenSenderContact\"")
-              .Append(" getVisible=\"GetMailVisible\" screentip=\"Open Contact Item of Sender\" supertip=\"Open the contact with the selected mail's ")
-              .Append("sender address (from any Contacts folder). If there is none, a new contact with the sender's name and address opens, ")
+            sb.Append("<button id=\"cfNameRelatedContact\" label=\"Open Contact Item of nameRelated\" imageMso=\"AddressBook\" onAction=\"OnOpenNameRelatedContact\"")
+              .Append(" getVisible=\"GetMailVisible\" screentip=\"Open Contact Item of nameRelated\" supertip=\"Open the contact of the person in the ")
+              .Append("selected mail's nameRelated: the first recipient of mail you sent, otherwise the sender (from any Contacts folder). ")
+              .Append("If there is none, a new contact with that name and address opens, ")
               .Append("in the Contacts folder of the mail's account (else of the default account), to be saved there.\"/>");
             // Mail folders: what happens to mail I send.
             sb.Append("<checkBox id=\"cfSentToInbox\" label=\"Move Sent Mail to Inbox\" getVisible=\"GetMailVisible\" getPressed=\"GetSentToInboxPressed\" onAction=\"OnSentToInboxToggle\"")
@@ -1092,9 +1093,9 @@ namespace tinykit.OutlookAddin.Ribbon
             }
         }
 
-        public void OnOpenSenderContact(Office.IRibbonControl control)
+        public void OnOpenNameRelatedContact(Office.IRibbonControl control)
         {
-            Run(control, ex => _controller.OpenSenderContact(ex));
+            Run(control, ex => _controller.OpenNameRelatedContact(ex));
         }
 
         public void OnCopyItems(Office.IRibbonControl control)

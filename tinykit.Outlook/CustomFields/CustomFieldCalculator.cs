@@ -15,8 +15,8 @@ namespace tinykit.OutlookAddin.CustomFields
     ///   sent by me: first To recipient's (no To: first Cc's).</item>
     /// <item>nameRelated — received: "☺contact name" if the sender is in Contacts, else the sender display name
     ///   ("(local part)" when the display name is just the address);
-    ///   sent by me: the me column's sent symbol (▶ by default) + " " + first recipient's name (tos / ccs give the number of recipients), where a recipient
-    ///   picked from an address book keeps its shown name, and a typed address becomes "☺contact name" or the address.</item>
+    ///   sent by me: the me column's sent symbol (▶ by default) + " " + first recipient's name (tos / ccs give the number of recipients):
+    ///   "☺contact name" when the address is in Contacts, else the name shown when picked from an address book, else the address.</item>
     /// <item>me — ▶ sent by me, else ● I am in To, ○ I am in Cc, else "-".  tos / ccs — number of To / Cc recipients, "-" for 0.</item>
     /// </list>
     /// </summary>
@@ -69,6 +69,33 @@ namespace tinykit.OutlookAddin.CustomFields
             if (onBehalf && SameAddress(repSmtp, senderSmtp))
                 onBehalf = false;
             return onBehalf ? repSmtp : senderSmtp;
+        }
+
+        /// <summary>
+        /// The person nameRelated is about: for mail I sent the first recipient (To, else Cc), otherwise the sender as in
+        /// <see cref="FromSmtpOf"/>. Returns the SMTP address (null when there is none) and the name shown for it.
+        /// </summary>
+        public string NameRelatedSmtpOf(ItemView v, out string name)
+        {
+            string senderAddress, senderSmtp, repAddress, repSmtp;
+            bool onBehalf;
+            var fromSmtp = ResolveFrom(v, out senderAddress, out senderSmtp, out repAddress, out repSmtp, out onBehalf);
+            var sentByMe = Me.IsMe(senderSmtp) || Me.IsMe(senderAddress) || Me.IsMe(repSmtp) || Me.IsMe(repAddress);
+            if (sentByMe)
+            {
+                Outlook.Recipient first = null;
+                for (int i = 1; i <= v.Recipients.Count; i++)
+                {
+                    var r = v.Recipients[i];
+                    if (r.Type == (int)Outlook.OlMailRecipientType.olTo) { first = r; break; }
+                    if (first == null && r.Type == (int)Outlook.OlMailRecipientType.olCC) first = r;
+                }
+                name = first == null ? null : first.Name;
+                return first == null ? null : RecipientSmtp(first);
+            }
+            var senderName = Str(v.Props, SenderName) ?? v.SenderName;
+            name = onBehalf ? (Str(v.Props, RepName) ?? senderName) : senderName;
+            return fromSmtp;
         }
 
         public CustomFieldValues Compute(ItemView v)
@@ -154,16 +181,16 @@ namespace tinykit.OutlookAddin.CustomFields
         }
 
         /// <summary>
-        /// Name shown for a recipient of my mail: the resolved name when it was picked from an address book,
-        /// otherwise (typed address, "Name &lt;address&gt;") "☺contact name" or the address itself.
+        /// Name shown for a recipient of my mail: "☺contact name" when the address is in Contacts (however the recipient
+        /// was entered), else the resolved name when it was picked from an address book, else the address itself.
         /// </summary>
         private string RecipientName(Outlook.Recipient r, string smtp)
         {
-            if (!IsOneOff(r) && !string.IsNullOrWhiteSpace(r.Name))
-                return r.Name.Trim();
             var contact = Contacts.Find(smtp);
             if (contact != null)
                 return MeSymbols.Current().Item4 + contact;
+            if (!IsOneOff(r) && !string.IsNullOrWhiteSpace(r.Name))
+                return r.Name.Trim();
             return smtp ?? r.Name ?? r.Address ?? CustomFieldValues.None;
         }
 

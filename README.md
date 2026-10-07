@@ -144,13 +144,14 @@ The add-in writes these text columns (user properties) on mail and meeting items
 | `tos` / `ccs` | number of To / Cc recipients (`-` for 0) | same |
 | `unknownDomain` | `*` the sender's domain is not in *Known Domains.txt* · `+` it is, but a recipient's is not · `-` all known | `+` / `-` for the recipients (I am a known sender) |
 
-- For mail I sent, the first recipient is shown as follows. If it was picked from an address book (contact or GAL), it shows the name Outlook displayed. If an address was typed or pasted (`Name <address>`), it shows `☺contact name` when the address is in Contacts, otherwise the address itself.
+- For mail I sent, the first recipient is shown as `☺contact name` when the address is in Contacts, however it was entered. Otherwise it shows the name Outlook displayed if it was picked from an address book (e.g. the GAL), else the address itself.
 - Contact name means the contact's e-mail display name for that address, or File As if that is empty. Contacts are looked up in every store's Contacts folder and its subfolders (e.g. `olk/family`), skipping system folders such as Recipient Cache and GAL Contacts.
 - A mail counts as "mine" when its sender (or principal) is one of my accounts' addresses.
 - **Auto-fill new mail** fills mail as it arrives in each account's Inbox or Sent Items.
 - **Fill Fields** fills the current folder's items that have no `domainRelated` or `unknownDomain` yet, e.g. mail that arrived
   while Outlook was closed or in folders other than Inbox and Sent Items.
   **Shift+click** recomputes the selected items instead, even if they already have values (e.g. after editing Known Domains.txt).
+  **Ctrl+click** clears the fields of the selected items (asked first); they stay empty until filled again.
 - **Add Known Domain** adds the base domain of each selected mail's sender (`a@billing.fabrikam.com` → `fabrikam.com`) to
   `Known Domains.txt`, then refills the selected mails and this folder's mail from those domains that is still marked `*` or `+`.
   **Ctrl+click** opens `Known Domains.txt` in VS Code (Notepad if not installed).
@@ -295,9 +296,10 @@ Tools for the selected items; each button shows only in the folders where it app
   | Ctrl+Alt+W | Open in New Window (the current folder) | – |
   | Ctrl+Alt+R | Reading pane Right → Bottom → Off → Right | Reply with Meeting |
 
-- **Open Contact Item of Sender** (mail folders) opens the contact with the selected mail's sender address (any
-  Contacts folder). Without one, a new contact with the sender's name and address opens in the Contacts folder of the
-  mail's account (else of the default account), to be saved there.
+- **Open Contact Item of nameRelated** (mail folders) opens the contact of the person in the selected mail's
+  `nameRelated`: the first recipient of mail I sent, otherwise the sender (any Contacts folder). Without one, a new
+  contact with that name and address opens in the Contacts folder of the mail's account (else of the default account),
+  to be saved there.
 - **Recipients Report** (mail and calendar folders) opens a window for the selected mail: the sender, then the
   recipients grouped by **domain** and by the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background:
   in Contacts. The check boxes add each person's display name and user name. Click a person to open the contact (or

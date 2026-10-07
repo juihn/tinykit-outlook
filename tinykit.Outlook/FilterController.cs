@@ -517,6 +517,16 @@ namespace tinykit.OutlookAddin
                         foreach (var id in EntryIds(f, Dasl.Like(NameRelatedProperty, symbol + "%"), NameRelatedProperty + "/0x0000001F"))
                         {
                             var value = id.Item2 ?? "";
+                            // Sent mail to someone in Contacts stored without the mark (the name as picked from an address
+                            // book): recomputed, so it gets the mark and the contact's name.
+                            var plain = SentNameWithoutMark(value, settings);
+                            if (plain != null && !updates.ContainsKey(id.Item1) && Fields.Calculator.Contacts.AddressNamed(plain) != null
+                                && !ComputesTo(session, id.Item1, f.StoreId, value))
+                            {
+                                Fix(updates, id.Item1, f.StoreId).Recompute = true;
+                                nameCount++;
+                                continue;
+                            }
                             var wanted = NameRelatedIn(value, settings, sent, contact);
                             if (wanted == null || wanted == value || (updates.ContainsKey(id.Item1) && updates[id.Item1].NameRelated != null))
                                 continue;
@@ -604,6 +614,18 @@ namespace tinykit.OutlookAddin
                 + (failed > 0 ? ", " + failed + " could not be" : "") + "; " + filters + " saved filter(s) updated.";
             Log.Info(summary);
             Notifier.Info(explorer, summary);
+        }
+
+        /// <summary>The name in a sent mail's nameRelated that has no contact mark ("→ name"); null otherwise.</summary>
+        private static string SentNameWithoutMark(string value, FilterSettings settings)
+        {
+            var sentSymbol = MeSymbols.SentChoices.Select(c => c.Text).Concat(new[] { settings.MeSent })
+                .FirstOrDefault(x => value.StartsWith(x, StringComparison.Ordinal));
+            if (sentSymbol == null)
+                return null;
+            var rest = value.Substring(sentSymbol.Length).Trim();
+            var marks = MeSymbols.KnownContactMarks.Concat(new[] { settings.ContactMark });
+            return rest.Length == 0 || marks.Any(m => rest.StartsWith(m, StringComparison.Ordinal)) ? null : rest;
         }
 
         /// <summary>
@@ -1538,11 +1560,13 @@ namespace tinykit.OutlookAddin
 
         /// <summary>
         /// Fill Fields button: fills the current folder's items that have no fields yet; Shift+click recomputes the
-        /// selected items instead.
+        /// selected items instead, Ctrl+click removes their fields.
         /// </summary>
         public void FillFieldsButton(Outlook.Explorer explorer)
         {
-            if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift)
+            if ((Control.ModifierKeys & Keys.Control) == Keys.Control)
+                ClearSelectedFields(explorer);
+            else if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift)
                 FillSelectedFields(explorer);
             else
                 FillMissingFields(explorer);
@@ -1570,6 +1594,40 @@ namespace tinykit.OutlookAddin
             for (int i = 1; i <= count; i++)
                 items.Add(selection[i]);
             Report(explorer, Fields.FillItems(items));
+        }
+
+        /// <summary>Removes the custom mail fields from the selected items (asked first); Fill Fields fills them again.</summary>
+        public void ClearSelectedFields(Outlook.Explorer explorer)
+        {
+            Outlook.Selection selection;
+            try
+            {
+                selection = explorer.Selection;
+            }
+            catch (COMException)
+            {
+                selection = null;
+            }
+            if (selection == null || selection.Count == 0)
+                throw new UserMessageException("Select the mail items to clear first.");
+
+            int count = selection.Count;
+            if (MessageBox.Show(WindowOwner.From(explorer),
+                    "Clear the custom fields (" + string.Join(", ", CustomFieldNames.All) + ") of " + count + " selected item(s)?\n\n"
+                    + "They stay empty until filled again (Fill Fields).",
+                    ThisAddIn.Title, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+            var items = new List<object>(count);
+            for (int i = 1; i <= count; i++)
+                items.Add(selection[i]);
+            var r = Fields.ClearItems(items);
+            var message = "Custom fields: " + r[0] + " cleared, " + r[1] + " had none, " + r[2] + " skipped (not mail)"
+                + (r[3] > 0 ? ", " + r[3] + " failed (see OutlookAddin.log)" : "");
+            Log.Info(message);
+            if (r[3] > 0)
+                MessageBox.Show(WindowOwner.From(explorer), message, ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            else
+                Notifier.Info(explorer, message);
         }
 
         /// <summary>Fills the items of the current folder that have no domainRelated or no unknownDomain yet.</summary>
@@ -1953,20 +2011,23 @@ namespace tinykit.OutlookAddin
         }
 
         /// <summary>
-        /// Open Contact Item of Sender: opens the contact that has the first selected mail's sender address (any Contacts
-        /// folder, as Recipients Report finds them). Without one, a new contact with the sender's name and address is
-        /// opened (not saved) in the Contacts folder of the mail's own account, else of the default account.
+        /// Open Contact Item of nameRelated: opens the contact that has the address of the person in the first selected
+        /// mail's nameRelated (mail I sent: the first recipient; otherwise the sender), from any Contacts folder as
+        /// Recipients Report finds them. Without one, a new contact with that name and address is opened (not saved) in the
+        /// Contacts folder of the mail's own account, else of the default account.
         /// </summary>
-        public void OpenSenderContact(Outlook.Explorer explorer)
+        public void OpenNameRelatedContact(Outlook.Explorer explorer)
         {
             Outlook.Selection selection = explorer.Selection;
             var mail = selection.Count == 0 ? null : selection[1] as Outlook.MailItem;
             if (mail == null)
                 throw new UserMessageException("Select a mail first.");
-            // As nameRelated and Recipients Report resolve it: the principal for "on behalf of", Exchange senders by the GAL.
-            var smtp = Fields.Calculator.FromSmtpOf(ItemView.From(mail));
+            // The person in nameRelated, resolved as it is: mail I sent -> its first recipient; otherwise the sender (the
+            // principal for "on behalf of", Exchange senders by the GAL).
+            string name;
+            var smtp = Fields.Calculator.NameRelatedSmtpOf(ItemView.From(mail), out name);
             if (string.IsNullOrEmpty(smtp))
-                throw new UserMessageException("This mail's sender has no e-mail address.");
+                throw new UserMessageException("The person in this mail's nameRelated has no e-mail address.");
 
             var session = explorer.Application.Session;
             var entry = Fields.Calculator.Contacts.Lookup(smtp);
@@ -1980,7 +2041,7 @@ namespace tinykit.OutlookAddin
             // Outlook's own contact form: a new item of a custom form must not be read or written before it is saved.
             var contact = (Outlook.ContactItem)folder.Items.Add(Outlook.OlItemType.olContactItem);
             string first, last;
-            Reports.RecipientsReportForm.SplitName(SenderNameFor(mail.SenderName, smtp), out first, out last);
+            Reports.RecipientsReportForm.SplitName(SenderNameFor(name, smtp), out first, out last);
             contact.FirstName = first;
             contact.LastName = last;
             contact.Email1Address = smtp;

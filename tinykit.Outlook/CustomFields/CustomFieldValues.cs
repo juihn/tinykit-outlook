@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace tinykit.OutlookAddin.CustomFields
 {
@@ -11,6 +11,8 @@ namespace tinykit.OutlookAddin.CustomFields
         public const string Tos = "tos";
         public const string Ccs = "ccs";
         public const string UnknownDomain = "unknownDomain";
+
+        public static readonly string[] All = { DomainRelated, NameRelated, Me, Tos, Ccs, UnknownDomain };
 
         /// <summary>DASL name of a (PS_PUBLIC_STRINGS) user property, for filters.</summary>
         public static string Dasl(string name)

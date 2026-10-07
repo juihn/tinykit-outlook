@@ -235,6 +235,62 @@ namespace tinykit.OutlookAddin.CustomFields
             return result;
         }
 
+        /// <summary>
+        /// Removes the custom fields from each item (Fill Fields Ctrl+click), so it is as if never filled. Returns the
+        /// number of items cleared, of items that had none, of items that are not mail, and of failures.
+        /// </summary>
+        public int[] ClearItems(IEnumerable<object> items)
+        {
+            int cleared = 0, none = 0, skipped = 0, failed = 0;
+            var cursor = Cursor.Current;
+            Cursor.Current = Cursors.WaitCursor;
+            try
+            {
+                foreach (var item in items)
+                {
+                    try
+                    {
+                        var view = ItemView.From(item);
+                        if (view == null)
+                        {
+                            skipped++;
+                            continue;
+                        }
+                        bool removed = false;
+                        foreach (var name in CustomFieldNames.All)
+                        {
+                            var prop = view.UserProperties.Find(name);
+                            if (prop == null)
+                                continue;
+                            prop.Delete();
+                            removed = true;
+                        }
+                        if (removed)
+                        {
+                            view.Save();
+                            cleared++;
+                        }
+                        else
+                            none++;
+                    }
+                    catch (Exception ex)
+                    {
+                        failed++;
+                        Log.Error("CustomFields.ClearItems", ex);
+                    }
+                    finally
+                    {
+                        Marshal.ReleaseComObject(item);
+                    }
+                }
+            }
+            finally
+            {
+                Cursor.Current = cursor;
+            }
+            return new[] { cleared, none, skipped, failed };
+        }
+
         private static bool Write(ItemView view, CustomFieldValues values, bool alwaysSave)
         {
             bool changed = false;
