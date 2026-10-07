@@ -316,8 +316,12 @@ namespace tinykit.OutlookAddin.Ribbon
 
             // Table View.
             sb.Append("<group id=\"grpView\" insertBeforeQ=\"tk:AfterItems\" label=\"Table View\" getVisible=\"GetNotCalendarVisible\">");
-            sb.Append("<button id=\"mViewColumns\" label=\"View Columns\" imageMso=\"TableInsert\" onAction=\"OnViewColumns\"")
-              .Append(" screentip=\"View Columns\" getSupertip=\"GetViewColumnsSupertip\"/>");
+            sb.Append("<button id=\"mViewColumns\" label=\"Apply Predefined Columns\" imageMso=\"TableInsert\" onAction=\"OnViewColumns\"")
+              .Append(" screentip=\"Apply Predefined Columns\" getSupertip=\"GetViewColumnsSupertip\"/>");
+            sb.Append("<checkBox id=\"mAutoColumnSizing\" label=\"Automatic column sizing\" getPressed=\"GetAutoColumnSizingPressed\"")
+              .Append(" getEnabled=\"GetAutoColumnSizingEnabled\" onAction=\"OnAutoColumnSizingToggle\" screentip=\"Automatic column sizing\"")
+              .Append(" supertip=\"The current view's View Settings &gt; Other Settings &gt; Automatic column sizing: the columns fill the ")
+              .Append("width of the list (off: they keep their widths and the list scrolls sideways).\"/>");
             sb.Append("<button id=\"mViewFont\" label=\"View Font...\" imageMso=\"FontDialog\" onAction=\"OnViewFont\"")
               .Append(" screentip=\"View Font\" supertip=\"Choose the font and size of the whole table view: rows, column headers and conditional formatting.\"/>");
             sb.Append("<button id=\"mSortCompany\" label=\"Sort by Company/Dept\" imageMso=\"SortDialog\" onAction=\"OnSortByCompany\"")
@@ -1000,10 +1004,26 @@ namespace tinykit.OutlookAddin.Ribbon
             return Safe(() =>
             {
                 var kind = Focus(control) ?? ItemKind.Mail;
-                return "Replace the columns of the current table view with the ones defined for " + FolderWord(kind)
-                    + " folders (field, width, format, alignment, heading). Mail, contacts and tasks each have their own file. "
+                return "Switch to the TinyKit view (made on first use as a copy of the current table view, for all " + FolderWord(kind)
+                    + " folders; Compact and Outlook's other views stay as they are) and give it the columns defined for "
+                    + FolderWord(kind) + " folders (field, width, format, alignment, heading). Mail, contacts and tasks each have their own file. "
                     + "Ctrl+click: edit the file. File: " + SettingsPaths.ViewColumnsFile(kind);
             }, "");
+        }
+
+        public bool GetAutoColumnSizingPressed(Office.IRibbonControl control)
+        {
+            return Safe(() => _controller.AutomaticColumnSizing(control.Context as Outlook.Explorer) == true, false);
+        }
+
+        public bool GetAutoColumnSizingEnabled(Office.IRibbonControl control)
+        {
+            return Safe(() => _controller.AutomaticColumnSizing(control.Context as Outlook.Explorer) != null, false);
+        }
+
+        public void OnAutoColumnSizingToggle(Office.IRibbonControl control, bool pressed)
+        {
+            Run(control, ex => _controller.SetAutomaticColumnSizing(ex, pressed));
         }
 
         public void OnViewFont(Office.IRibbonControl control)

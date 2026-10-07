@@ -1030,8 +1030,8 @@ namespace tinykit.OutlookAddin
         }
 
         /// <summary>
-        /// View Columns button: replaces the current table view's columns with the View Columns file of the folder's kind
-        /// (mail, contacts, tasks; created with defaults on first use). Ctrl+click opens that file for editing instead.
+        /// Apply Predefined Columns button: switches to the TinyKit view and gives it the columns of the View Columns file of
+        /// the folder's kind (mail, contacts, tasks; created with defaults on first use). Ctrl+click opens that file instead.
         /// </summary>
         public void ViewColumnsButton(Outlook.Explorer explorer)
         {
@@ -1055,17 +1055,34 @@ namespace tinykit.OutlookAddin
             }
             catch (FormatException ex)
             {
-                throw new UserMessageException(name + ": " + ex.Message + "\n\nCtrl+click View Columns to edit the file.");
+                throw new UserMessageException(name + ": " + ex.Message + "\n\nCtrl+click Apply Predefined Columns to edit the file.");
             }
             if (columns.Count == 0)
-                throw new UserMessageException(name + " has no columns (every line is empty or a # comment).\n\nCtrl+click View Columns to edit the file.");
+                throw new UserMessageException(name + " has no columns (every line is empty or a # comment).\n\nCtrl+click Apply Predefined Columns to edit the file.");
 
+            // The columns go into the TinyKit view; a quick or saved filter shown now is cleared first, as switching views
+            // would drop it anyway.
+            if (Views.HasAddinFilter(explorer, false))
+                Views.Clear(explorer, false);
             List<string> problems = null;
             KeepSelection(explorer, () => problems = ViewColumnsService.Apply(explorer, columns, Views.OwnFilter(explorer)));
+            Invalidate();
             if (problems != null && problems.Count > 0)
                 MessageBox.Show(WindowOwner.From(explorer),
-                    "The other columns were applied, but:\n\n" + string.Join("\n", problems) + "\n\nCtrl+click View Columns to edit " + path + ".",
+                    "The other columns were applied, but:\n\n" + string.Join("\n", problems) + "\n\nCtrl+click Apply Predefined Columns to edit " + path + ".",
                     ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        /// <summary>Automatic column sizing of the current table view; null when the folder is not shown as a table.</summary>
+        public bool? AutomaticColumnSizing(Outlook.Explorer explorer)
+        {
+            return ViewColumnsService.GetAutomaticColumnSizing(explorer);
+        }
+
+        public void SetAutomaticColumnSizing(Outlook.Explorer explorer, bool on)
+        {
+            KeepSelection(explorer, () => ViewColumnsService.SetAutomaticColumnSizing(explorer, on, Views.OwnFilter(explorer)));
+            Invalidate();
         }
 
         /// <summary>

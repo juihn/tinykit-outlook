@@ -8,9 +8,12 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace tinykit.OutlookAddin.Formatting
 {
-    /// <summary>Replaces the columns of the current table view with the ones from View Columns.txt.</summary>
+    /// <summary>Replaces the columns of the TinyKit table view with the ones from View Columns.txt.</summary>
     internal static class ViewColumnsService
     {
+        /// <summary>The add-in's own table view (one per kind of folder), so Outlook's views such as Compact stay as they are.</summary>
+        public const string ViewName = "TinyKit";
+
         /// <summary>The add-in's own fields; created as text fields in a folder that doesn't have them yet.</summary>
         private static readonly HashSet<string> OwnFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -24,7 +27,7 @@ namespace tinykit.OutlookAddin.Formatting
         /// </summary>
         public static List<string> Apply(Outlook.Explorer explorer, IList<ViewColumn> columns, string ownFilter)
         {
-            var view = (Outlook.TableView)ViewFilterService.RequireTableView(explorer);
+            var view = UseOwnView(explorer);
             var folder = explorer.CurrentFolder;
             var problems = new List<string>();
             // A view can show user-defined columns the folder does not define (e.g. a new folder whose view was copied
@@ -76,6 +79,47 @@ namespace tinykit.OutlookAddin.Formatting
             ConditionalFormatService.SaveView(view, ownFilter);
             Reselect(explorer, view, ownFilter);
             return problems;
+        }
+
+        /// <summary>
+        /// Switches the folder to the TinyKit view, first making it (for all folders of this kind) as a copy of the current
+        /// table view, so it starts with that view's font, sort, filter and conditional formatting.
+        /// </summary>
+        public static Outlook.TableView UseOwnView(Outlook.Explorer explorer)
+        {
+            var current = (Outlook.TableView)ViewFilterService.RequireTableView(explorer);
+            if (current.Name == ViewName)
+                return current;
+            Outlook.View own = null;
+            foreach (Outlook.View v in explorer.CurrentFolder.Views)
+            {
+                if (v.Name == ViewName)
+                    own = v;
+            }
+            if (own == null)
+            {
+                own = current.Copy(ViewName, Outlook.OlViewSaveOption.olViewSaveOptionAllFoldersOfType);
+                Common.Log.Info("View Columns: made the " + ViewName + " view from \"" + current.Name + "\"");
+            }
+            if (!(own is Outlook.TableView))
+                throw new Common.UserMessageException("This folder has a view named \"" + ViewName + "\" that is not a table view. Rename it, then try again.");
+            explorer.CurrentView = ViewName;
+            return (Outlook.TableView)ViewFilterService.RequireTableView(explorer);
+        }
+
+        /// <summary>Automatic column sizing of the current table view (View Settings &gt; Other Settings), or null when not a table view.</summary>
+        public static bool? GetAutomaticColumnSizing(Outlook.Explorer explorer)
+        {
+            var view = ViewFilterService.GetTableView(explorer) as Outlook.TableView;
+            return view == null ? (bool?)null : view.AutomaticColumnSizing;
+        }
+
+        public static void SetAutomaticColumnSizing(Outlook.Explorer explorer, bool on, string ownFilter)
+        {
+            var view = (Outlook.TableView)ViewFilterService.RequireTableView(explorer);
+            view.AutomaticColumnSizing = on;
+            ConditionalFormatService.SaveView(view, ownFilter);
+            Reselect(explorer, view, ownFilter);
         }
 
         /// <summary>Replaces the current table view's sort with the given fields, all ascending, and saves the view.</summary>

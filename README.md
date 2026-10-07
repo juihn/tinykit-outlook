@@ -302,9 +302,14 @@ Tools for the selected items; each button shows only in the folders where it app
   select the same contacts again. If a contact still opens with the old form, restart Outlook.
 
 ### Table View group
-- **View Columns** replaces the columns of the current table view with the ones in the View Columns file of the folder's
-  kind (`View Columns - Mail.txt`, `- Contacts.txt`, `- Tasks.txt`), in that order. **Ctrl+click** opens that file in
-  VS Code (Notepad if not installed). Each file is created with default columns on first use.
+- **Apply Predefined Columns** switches the folder to the **TinyKit** view and gives it the columns in the View Columns
+  file of the folder's kind (`View Columns - Mail.txt`, `- Contacts.txt`, `- Tasks.txt`), in that order. The TinyKit view
+  is made on first use as a copy of the current table view (its font, sort, filter and conditional formatting), for all
+  folders of that kind, so Compact and Outlook's other views stay as they are. A quick or saved filter shown is cleared
+  first. **Ctrl+click** opens the file in VS Code (Notepad if not installed). Each file is created with default columns
+  on first use.
+- **Automatic column sizing** turns the current view's View Settings > Other Settings > Automatic column sizing on or off
+  (on: the columns fill the width of the list; off: they keep their widths and the list scrolls sideways).
 - **View Font...** sets the font and size (9, 10, 11 or 12) for the whole current table view: rows, and optionally column
   headers and all conditional formatting rules, which keep their own style and color. Table views store whole point sizes
   only (9.5pt is saved as 9pt), so there are no half sizes.

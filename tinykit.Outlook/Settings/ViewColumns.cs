@@ -33,7 +33,7 @@ namespace tinykit.OutlookAddin.Settings
 @"# tinykit Outlook: the columns of the current table view. One file per kind of folder:
 #   View Columns - Mail.txt, View Columns - Contacts.txt, View Columns - Tasks.txt.
 #   View Columns (ribbon, View group) replaces the view's columns with the lines below, in this order.
-#   Ctrl+click View Columns to edit the file of the folder you are in. Lines starting with # are skipped.
+#   Ctrl+click Apply Predefined Columns to edit the file of the folder you are in. Lines starting with # are skipped.
 #
 # Fields, in this order, separated by tabs (several tabs in a row count as one, so they can be lined up). A field can
 # be left out: each value goes to the next field whose format it fits.
