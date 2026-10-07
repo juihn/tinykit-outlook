@@ -323,6 +323,9 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<button id=\"mSortCompany\" label=\"Sort by Company/Dept\" imageMso=\"SortDialog\" onAction=\"OnSortByCompany\"")
               .Append(" getVisible=\"GetContactVisible\" screentip=\"Sort by Company/Dept\" supertip=\"Sort the contacts by Company, and ")
               .Append("within a company by Department (both A to Z). The view keeps this sort.\"/>");
+            sb.Append("<dialogBoxLauncher><button id=\"mMeSymbols\" onAction=\"OnMeSymbols\" screentip=\"me Column Symbols\"")
+              .Append(" supertip=\"Choose the symbols of the me column: mail you sent, mail with you in To, mail with you only in Cc. ")
+              .Append("Mail that has an old symbol and saved filters that use it are changed too.\"/></dialogBoxLauncher>");
             sb.Append("</group>");
 
             // Quick Filter (mail and contact folders): one input box, then four buttons, each followed by its own
@@ -651,6 +654,11 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnCustomFilter(Office.IRibbonControl control)
         {
             Run(control, ex => _controller.ShowCustomFilter(ex));
+        }
+
+        public void OnMeSymbols(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.EditMeSymbols(ex));
         }
 
         public void OnCustomShortcuts(Office.IRibbonControl control)

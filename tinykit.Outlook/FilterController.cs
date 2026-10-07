@@ -108,6 +108,11 @@ namespace tinykit.OutlookAddin
                 && _states.Values.Any(st => st.Settings.Filters.Any(s => Dasl.SameFilter(s.Sql, f))
                                          || Dasl.SameFilter(OthersSql(st.Settings) ?? "", f));
             State(ItemKind.Mail); // mail settings hold autoFillFields, needed at startup
+            MeSymbols.Current = () =>
+            {
+                var mail = State(ItemKind.Mail).Settings;
+                return Tuple.Create(mail.MeSent, mail.MeTo, mail.MeCc);
+            };
         }
 
         // ---------- Saved Filters - <kind>.xml sync ----------
@@ -443,6 +448,150 @@ namespace tinykit.OutlookAddin
             });
             _customFilter.Icon = OfficeImage.IconFromImageMso(explorer.CommandBars, "ApplyFilter");
             WindowOwner.ShowCentred(_customFilter, explorer);
+        }
+
+        private const string MeProperty = "http://schemas.microsoft.com/mapi/string/{00020329-0000-0000-C000-000000000046}/me";
+
+        /// <summary>
+        /// me Column Symbols (Table View group's dialog button): picks the symbols for mail I sent, me in To and me only in
+        /// Cc. A changed symbol is also changed in the saved filters that compare me with it, and in the mail that has it
+        /// (all mail folders, asked first), so filters and the column stay consistent.
+        /// </summary>
+        public void EditMeSymbols(Outlook.Explorer explorer)
+        {
+            ReloadIfChanged(ItemKind.Mail, explorer);
+            var settings = State(ItemKind.Mail).Settings;
+            string sent, to, cc;
+            using (var form = new MeSymbolsForm(settings.MeSent, settings.MeTo, settings.MeCc))
+            {
+                form.Icon = OfficeImage.IconFromImageMso(explorer.CommandBars, "TableInsert");
+                if (form.ShowDialog(WindowOwner.From(explorer)) != DialogResult.OK)
+                    return;
+                sent = form.Sent;
+                to = form.To;
+                cc = form.Cc;
+            }
+            if (sent == to || sent == cc || to == cc)
+                throw new UserMessageException("Sent Mail, To and Cc need three different symbols.");
+            var changes = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (sent != settings.MeSent) changes[settings.MeSent] = sent;
+            if (to != settings.MeTo) changes[settings.MeTo] = to;
+            if (cc != settings.MeCc) changes[settings.MeCc] = cc;
+            if (changes.Count == 0)
+                return;
+
+            // Mail that has an old symbol, found before anything changes (so swapping two symbols works).
+            var session = explorer.Application.Session;
+            var targets = new List<Tuple<string, string, string>>(); // entry id, store id, new symbol
+            Cursor.Current = Cursors.WaitCursor;
+            foreach (Outlook.Store store in session.Stores)
+            {
+                List<Search.FindFolder> folders;
+                try
+                {
+                    folders = Search.FindItems.FoldersOf(store, new[] { Search.FindKind.Mail });
+                }
+                catch (COMException)
+                {
+                    continue;
+                }
+                foreach (var f in folders)
+                {
+                    foreach (var change in changes)
+                    {
+                        try
+                        {
+                            var table = f.Folder.GetTable("@SQL=" + Dasl.PropertyEquals(MeProperty, change.Key), Outlook.OlTableContents.olUserItems);
+                            table.Columns.RemoveAll();
+                            table.Columns.Add("EntryID");
+                            while (!table.EndOfTable)
+                                targets.Add(Tuple.Create((string)table.GetNextRow()[1], f.StoreId, change.Value));
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Info("me symbols: " + f.Path + " skipped: " + ex.Message);
+                        }
+                    }
+                }
+            }
+            Cursor.Current = Cursors.Default;
+            if (targets.Count > 0 && MessageBox.Show(WindowOwner.From(explorer),
+                    "Change the me column of " + targets.Count + " mail(s) that have the old symbol(s)?\n"
+                    + "(No: only mail filled from now on gets the new symbols.)",
+                    ThisAddIn.Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                targets.Clear();
+
+            settings.MeSent = sent;
+            settings.MeTo = to;
+            settings.MeCc = cc;
+            SaveSettings(ItemKind.Mail);
+            var filters = ChangeMeInSavedFilters(changes);
+
+            int done = 0, failed = 0;
+            Cursor.Current = Cursors.WaitCursor;
+            foreach (var t in targets)
+            {
+                try
+                {
+                    dynamic item = session.GetItemFromID(t.Item1, t.Item2);
+                    var prop = item.UserProperties.Find(CustomFieldNames.Me);
+                    if (prop != null)
+                    {
+                        prop.Value = t.Item3;
+                        item.Save();
+                        done++;
+                    }
+                    Marshal.ReleaseComObject(item);
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    Log.Info("me symbols: an item not changed: " + ex.Message);
+                }
+                if ((done + failed) % 25 == 0)
+                    Application.DoEvents();
+            }
+            Cursor.Current = Cursors.Default;
+            var summary = "me symbols now: sent " + sent + ", To " + to + ", Cc " + cc + ". " + done + " mail(s) changed"
+                + (failed > 0 ? ", " + failed + " could not be" : "") + "; " + filters + " saved filter(s) updated.";
+            Log.Info(summary);
+            Notifier.Info(explorer, summary);
+        }
+
+        // In every kind's saved filters: "me" = 'old' becomes "me" = 'new' (all at once, so swapped symbols do not mix).
+        private int ChangeMeInSavedFilters(IDictionary<string, string> changes)
+        {
+            int count = 0;
+            foreach (ItemKind kind in Enum.GetValues(typeof(ItemKind)))
+            {
+                var state = State(kind);
+                bool changed = false;
+                foreach (var f in state.Settings.Filters)
+                {
+                    if (string.IsNullOrEmpty(f.Sql))
+                        continue;
+                    var sql = f.Sql;
+                    var marks = new Dictionary<string, string>();
+                    int n = 0;
+                    foreach (var change in changes)
+                    {
+                        var mark = "\u0001" + (n++) + "\u0001";
+                        sql = sql.Replace(Dasl.PropertyEquals(MeProperty, change.Key), mark);
+                        marks[mark] = Dasl.PropertyEquals(MeProperty, change.Value);
+                    }
+                    foreach (var m in marks)
+                        sql = sql.Replace(m.Key, m.Value);
+                    if (sql != f.Sql)
+                    {
+                        f.Sql = sql;
+                        changed = true;
+                        count++;
+                    }
+                }
+                if (changed)
+                    SaveSettings(kind);
+            }
+            return count;
         }
 
         /// <summary>Custom Shortcuts window: the add-in's keyboard shortcuts, each turned on or off.</summary>

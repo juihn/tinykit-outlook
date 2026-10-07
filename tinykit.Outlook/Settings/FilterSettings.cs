@@ -83,6 +83,11 @@ namespace tinykit.OutlookAddin.Settings
         /// <summary>Mail files only: seconds a sent mail waits in the Outbox before it goes (0: at once).</summary>
         public int SendDelaySeconds = 60;
 
+        /// <summary>Mail files only: the me column's symbols for mail I sent, me in To, me only in Cc.</summary>
+        public string MeSent = CustomFields.MeSymbols.DefaultSent;
+        public string MeTo = CustomFields.MeSymbols.DefaultTo;
+        public string MeCc = CustomFields.MeSymbols.DefaultCc;
+
         /// <summary>Mail only: when Outlook closes, clear the add-in's filters in every account's Inbox.</summary>
         public bool ClearInboxFiltersOnExit = true;
 
@@ -103,6 +108,9 @@ namespace tinykit.OutlookAddin.Settings
                                                        account's Sent Items to its Inbox (Gmail left out)
                 sendDelaySeconds=""60""                 sendDelaySeconds (Mail only): seconds a sent mail
                                                        waits in the Outbox (0: sent at once)
+                meSent=""▶"" meTo=""●"" meCc=""○""         (Mail only) the me column's symbols: mail I sent,
+                                                       me in To, me only in Cc (Table View group's dialog
+                                                       button changes them, with existing mail and filters)
                 clearInboxFiltersOnExit=""true|false""  clearInboxFiltersOnExit (Mail only): when Outlook closes,
                                                        clear quick/saved filters in every account's Inbox
                 formatsOn=""true|false"">               formatsOn: all formats on/off (All Formats Off /
@@ -166,6 +174,9 @@ namespace tinykit.OutlookAddin.Settings
                 SendDelaySeconds = ParseSeconds(root.Attribute("sendDelaySeconds"),
                     Math.Min(3600, ParseSeconds(root.Attribute("sendDelayMinutes"), 1) * 60)),
                 ClearInboxFiltersOnExit = ParseBool(root.Attribute("clearInboxFiltersOnExit"), true),
+                MeSent = NonEmpty(root.Attribute("meSent"), CustomFields.MeSymbols.DefaultSent),
+                MeTo = NonEmpty(root.Attribute("meTo"), CustomFields.MeSymbols.DefaultTo),
+                MeCc = NonEmpty(root.Attribute("meCc"), CustomFields.MeSymbols.DefaultCc),
                 FormatsOn = ParseBool(root.Attribute("formatsOn"), true),
             };
             foreach (var e in root.Elements("Filter"))
@@ -204,6 +215,9 @@ namespace tinykit.OutlookAddin.Settings
                     Kind == ItemKind.Mail ? new XAttribute("autoFillFields", AutoFillFields ? "true" : "false") : null,
                     Kind == ItemKind.Mail ? new XAttribute("moveSentToInbox", MoveSentToInbox ? "true" : "false") : null,
                     Kind == ItemKind.Mail ? new XAttribute("sendDelaySeconds", SendDelaySeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)) : null,
+                    Kind == ItemKind.Mail ? new XAttribute("meSent", MeSent) : null,
+                    Kind == ItemKind.Mail ? new XAttribute("meTo", MeTo) : null,
+                    Kind == ItemKind.Mail ? new XAttribute("meCc", MeCc) : null,
                     Kind == ItemKind.Mail ? new XAttribute("clearInboxFiltersOnExit", ClearInboxFiltersOnExit ? "true" : "false") : null,
                     new XAttribute("formatsOn", FormatsOn ? "true" : "false"),
                     Filters.Select(ToElement)));
@@ -254,6 +268,11 @@ namespace tinykit.OutlookAddin.Settings
                 Underline = ParseBool(fe.Attribute("underline"), false),
                 Color = OlColorMap.Parse((string)fe.Attribute("color")),
             };
+        }
+
+        private static string NonEmpty(XAttribute a, string fallback)
+        {
+            return a == null || string.IsNullOrWhiteSpace(a.Value) ? fallback : a.Value.Trim();
         }
 
         private static int ParseSeconds(XAttribute a, int fallback)

@@ -140,7 +140,7 @@ The add-in writes these text columns (user properties) on mail and meeting items
 |---|---|---|
 | `domainRelated` | sender's domain label, then its subdomains nearest first: `a@billing.fabrikam.com` → `fabrikam/billing` (for *on behalf of*, the principal's) | same, for the first To recipient (no To: first Cc) |
 | `nameRelated` | `[contact name]` if the sender is in Contacts, else the sender display name; `(local part)` when that is just the address | `▶ ` + first recipient (`tos` / `ccs` count the recipients; mail filled before 2026-10 may still end in ` (+)`) |
-| `me` | `●` I am in To · `○` I am in Cc · `-` | `▶` |
+| `me` | `●` I am in To · `○` I am only in Cc · `-` neither (e.g. Bcc, a list address) | `▶` |
 | `tos` / `ccs` | number of To / Cc recipients (`-` for 0) | same |
 | `unknownDomain` | `*` the sender's domain is not in *Known Domains.txt* · `+` it is, but a recipient's is not · `-` all known | `+` / `-` for the recipients (I am a known sender) |
 
@@ -330,6 +330,11 @@ Tools for the selected items; each button shows only in the folders where it app
 - **View Font...** sets the font and size (9, 10, 11 or 12) for the whole current table view: rows, and optionally column
   headers and all conditional formatting rules, which keep their own style and color. Table views store whole point sizes
   only (9.5pt is saved as 9pt), so there are no half sizes.
+- The group's **dialog button** (corner arrow) opens **me Column Symbols**: a drop-down each for mail I sent
+  (→ ⇒ ⇥ ⇨ ▶ ▷ ⟶ ⟹), me in To and me only in Cc (■ □ ▢ ◆ ○ ● ✓ and Ⓣ/Ⓒ in a circle or square, plain or negative),
+  each shown with its code point and Unicode name. A changed symbol is also changed in the saved filters that compare
+  `me` with it, and, if you agree, in every mail that has it (all mail folders). Kept as `meSent` / `meTo` / `meCc` in
+  `Saved Filters - Mail.xml`.
 - **Sort by Company/Dept** (contact folders) sorts the view by Company, and within a company by Department, both A to Z;
   the view keeps this sort (its grouping, if any, stays).
 

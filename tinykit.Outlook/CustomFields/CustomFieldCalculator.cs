@@ -34,9 +34,6 @@ namespace tinykit.OutlookAddin.CustomFields
         private const string RecipientSmtpTag = PropTag + "0x39FE001F";
 
         private const string SentPrefix = "▶ ";
-        private const string MeInTo = "●";
-        private const string MeInCc = "○";
-        private const string MeSender = "▶";
 
         private readonly Outlook.NameSpace _session;
         private readonly Dictionary<string, string> _exToSmtp = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -103,7 +100,8 @@ namespace tinykit.OutlookAddin.CustomFields
             values.UnknownDomain = UnknownDomainOf(sentByMe, fromSmtp, all);
             values.Tos = Count(to.Count);
             values.Ccs = Count(cc.Count);
-            values.Me = sentByMe ? MeSender : to.Any(IsMe) ? MeInTo : cc.Any(IsMe) ? MeInCc : CustomFieldValues.None;
+            var symbols = MeSymbols.Current(); // sent, to, cc (Mail settings)
+            values.Me = sentByMe ? symbols.Item1 : to.Any(IsMe) ? symbols.Item2 : cc.Any(IsMe) ? symbols.Item3 : CustomFieldValues.None;
 
             if (sentByMe)
             {
