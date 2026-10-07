@@ -112,7 +112,7 @@ The filter shows the items whose field *contains* the value (`LIKE '%value%'`):
 |---|---|---|
 | Mail | **F** | the From (sender) e-mail address |
 | Mail | **S** | the subject (RE:/FW: ignored when taken from a mail) |
-| Mail | **N** | `nameRelated` (taken from a mail without the sent symbol, ` (+)`, `[ ]`/`( )`, so received and sent mail of the same person match) |
+| Mail | **N** | `nameRelated` (taken from a mail without the sent symbol, `👤`, ` (+)`, `[ ]`/`( )`, so received and sent mail of the same person match) |
 | Mail | **D** | `domainRelated` |
 | Contacts | **F** | File As |
 | Contacts | **E** | E-mail, E-mail 2 or E-mail 3 |
@@ -139,12 +139,12 @@ The add-in writes these text columns (user properties) on mail and meeting items
 | Column | Received mail | Mail I sent |
 |---|---|---|
 | `domainRelated` | sender's domain label, then its subdomains nearest first: `a@billing.fabrikam.com` → `fabrikam/billing` (for *on behalf of*, the principal's) | same, for the first To recipient (no To: first Cc) |
-| `nameRelated` | `[contact name]` if the sender is in Contacts, else the sender display name; `(local part)` when that is just the address | the `me` column's sent symbol (`▶` by default) + a space + first recipient (`tos` / `ccs` count the recipients; mail filled before 2026-10 may still end in ` (+)`) |
+| `nameRelated` | `👤contact name` if the sender is in Contacts (mail filled before 2026-10: `[contact name]`), else the sender display name; `(local part)` when that is just the address | the `me` column's sent symbol (`▶` by default) + a space + first recipient (`tos` / `ccs` count the recipients; mail filled before 2026-10 may still end in ` (+)`) |
 | `me` | `●` I am in To · `○` I am only in Cc · `-` neither (e.g. Bcc, a list address) | `▶` |
 | `tos` / `ccs` | number of To / Cc recipients (`-` for 0) | same |
 | `unknownDomain` | `*` the sender's domain is not in *Known Domains.txt* · `+` it is, but a recipient's is not · `-` all known | `+` / `-` for the recipients (I am a known sender) |
 
-- For mail I sent, the first recipient is shown as follows. If it was picked from an address book (contact or GAL), it shows the name Outlook displayed. If an address was typed or pasted (`Name <address>`), it shows `[contact name]` when the address is in Contacts, otherwise the address itself.
+- For mail I sent, the first recipient is shown as follows. If it was picked from an address book (contact or GAL), it shows the name Outlook displayed. If an address was typed or pasted (`Name <address>`), it shows `👤contact name` when the address is in Contacts, otherwise the address itself.
 - Contact name means the contact's e-mail display name for that address, or File As if that is empty. Contacts are looked up in every store's Contacts folder and its subfolders (e.g. `olk/family`), skipping system folders such as Recipient Cache and GAL Contacts.
 - A mail counts as "mine" when its sender (or principal) is one of my accounts' addresses.
 - **Auto-fill new mail** fills mail as it arrives in each account's Inbox or Sent Items.

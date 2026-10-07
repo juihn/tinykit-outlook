@@ -128,7 +128,7 @@ namespace tinykit.OutlookAddin.Settings
 
   Flagged, Sent, Unknown and Others are not like the other saved filters:
   - They are the mail list's own kinds of items, not a choice of yours: a flagged mail (PR_FLAG_STATUS set), mail
-    you sent (me = '▶'), received mail whose sender is not in Contacts (nameRelated not '[contact name]'). They are
+    you sent (me = '▶'), received mail whose sender is not in Contacts (nameRelated not '👤contact name'). They are
     created with the first Saved Filters - Mail.xml and carry an icon (Flagged FlagToday, Sent SendDefault, Unknown
     Help), so they stand apart at the front of the group. Sent and Unknown read the Custom Mail Fields (me,
     nameRelated): older mail needs Fill Fields once.
@@ -385,12 +385,13 @@ namespace tinykit.OutlookAddin.Settings
                 FormatEnabled = true,
                 Format = new FilterFormat { Underline = true, Color = Outlook.OlColor.olColorTeal },
             });
-            // Received mail whose sender is not in Contacts (nameRelated is "[contact name]" only for contacts).
+            // Received mail whose sender is not in Contacts (nameRelated is "👤contact name" only for contacts).
             s.Filters.Add(new SavedFilter
             {
                 Name = "Unknown",
                 Icon = UnknownIcon,
-                Sql = "\"" + userProp + "nameRelated\" IS NOT NULL AND NOT (\"" + userProp + "nameRelated\" LIKE '[%')"
+                Sql = "\"" + userProp + "nameRelated\" IS NOT NULL AND NOT (\"" + userProp + "nameRelated\" LIKE '"
+                    + CustomFields.CustomFieldCalculator.ContactMark + "%')"
                     + " AND \"" + userProp + "me\" <> '▶'",
                 FormatEnabled = true,
                 Format = new FilterFormat { Color = Outlook.OlColor.olColorGray },
