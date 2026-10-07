@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -524,6 +524,17 @@ namespace tinykit.OutlookAddin
                             nameCount++;
                         }
                     }
+                    // The old form of a name from Contacts, "[name]": recomputed per mail (the sender's contact may have
+                    // been renamed since), so it gets the chosen mark or, for a sender no longer in Contacts, the plain name.
+                    foreach (var id in EntryIds(f, Dasl.Like(NameRelatedProperty, "[%"), NameRelatedProperty + "/0x0000001F"))
+                    {
+                        var value = (id.Item2 ?? "").Trim();
+                        if (!value.EndsWith("]", StringComparison.Ordinal) || updates.ContainsKey(id.Item1)
+                            || ComputesTo(session, id.Item1, f.StoreId, value))
+                            continue; // e.g. a sender whose own display name is in brackets
+                        Fix(updates, id.Item1, f.StoreId).Recompute = true;
+                        nameCount++;
+                    }
                 }
             }
             Cursor.Current = Cursors.Default;
@@ -557,7 +568,18 @@ namespace tinykit.OutlookAddin
                         var prop = item.UserProperties.Find(CustomFieldNames.Me);
                         if (prop != null) { prop.Value = u.Value.Me; changed = true; }
                     }
-                    if (u.Value.NameRelated != null)
+                    if (u.Value.Recompute)
+                    {
+                        // after the settings are saved above, so the computed name has the chosen mark
+                        CustomFieldValues values = Fields.Compute((object)item);
+                        var prop = item.UserProperties.Find(CustomFieldNames.NameRelated);
+                        if (values != null && prop != null && !string.Equals(prop.Value as string, values.NameRelated, StringComparison.Ordinal))
+                        {
+                            prop.Value = values.NameRelated;
+                            changed = true;
+                        }
+                    }
+                    else if (u.Value.NameRelated != null)
                     {
                         var prop = item.UserProperties.Find(CustomFieldNames.NameRelated);
                         if (prop != null) { prop.Value = u.Value.NameRelated; changed = true; }
@@ -605,6 +627,27 @@ namespace tinykit.OutlookAddin
             return sentSymbol != null ? sent + " " + rest : rest;
         }
 
+        // Whether the mail's nameRelated computed now is the value it has (then there is nothing to recompute).
+        private bool ComputesTo(Outlook.NameSpace session, string entryId, string storeId, string value)
+        {
+            object item = null;
+            try
+            {
+                item = session.GetItemFromID(entryId, storeId);
+                var values = Fields.Compute(item);
+                return values != null && string.Equals(values.NameRelated, value, StringComparison.Ordinal);
+            }
+            catch (COMException)
+            {
+                return true; // gone or not reachable: leave it
+            }
+            finally
+            {
+                if (item != null)
+                    Marshal.ReleaseComObject(item);
+            }
+        }
+
         private const string NameRelatedProperty = "http://schemas.microsoft.com/mapi/string/{00020329-0000-0000-C000-000000000046}/nameRelated";
 
         /// <summary>What one mail gets: a new me value and/or a new nameRelated (null: unchanged).</summary>
@@ -613,6 +656,7 @@ namespace tinykit.OutlookAddin
             public string StoreId;
             public string Me;
             public string NameRelated;
+            public bool Recompute; // nameRelated in the old "[name]" form: computed again
         }
 
         private static MailFix Fix(Dictionary<string, MailFix> updates, string entryId, string storeId)
