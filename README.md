@@ -239,7 +239,7 @@ Tools for the selected items; each button shows only in the folders where it app
 
   Message Body and Notes start unticked (searching bodies is slower). Calendar, card and other views can be filtered
   too, not only table views.
-- **Find Items** opens a resizable window that finds text in mail, calendar items, contacts and tasks of all folders
+- **Find Items** (**Ctrl+Alt+F** in the main window) opens a resizable window that finds text in mail, calendar items, contacts and tasks of all folders
   at once (each folder read with `Folder.GetTable`, `LIKE '%text%'`, up to 5000 results). It searches the subject and
 
   | Items | Also searched |

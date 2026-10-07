@@ -74,6 +74,15 @@ namespace tinykit.OutlookAddin
                             Notifier.Info(explorer, ex.Message);
                         }
                     });
+                // Ctrl+Alt+F: Find Items, in the main window only (it takes the key from Outlook's own use there).
+                _shortcuts.Add(System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F,
+                    () => Application.ActiveWindow() is Outlook.Explorer,
+                    () =>
+                    {
+                        var explorer = Application.ActiveWindow() as Outlook.Explorer;
+                        if (explorer != null)
+                            Controller.ShowFindItems(explorer);
+                    });
                 // Tab in the ribbon skips the Quick Filter's recent-value lists.
                 RibbonTabSkip.Start();
                 _shortcuts.After(System.Windows.Forms.Keys.Tab, RibbonTabSkip.AfterTab);

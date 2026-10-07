@@ -299,7 +299,7 @@ namespace tinykit.OutlookAddin.Ribbon
 
             // Custom mail fields (domainRelated, nameRelated, me, tos, ccs, unknownDomain): mail folders only.
             sb.Append("<group id=\"grpFields\" insertBeforeQ=\"tk:AfterItems\" label=\"Custom Mail Fields\" getVisible=\"GetMailVisible\">");
-            sb.Append("<button id=\"cfFill\" label=\"Fill Fields\" imageMso=\"PropertySheet\" onAction=\"OnFillFields\"")
+            sb.Append("<button id=\"cfFill\" label=\"Fill Fields\" imageMso=\"DrawLayoutTable\" onAction=\"OnFillFields\"")
               .Append(" screentip=\"Fill Fields\" supertip=\"Fill domainRelated, nameRelated, me, tos, ccs and unknownDomain. ")
               .Append("Click: the items of the current folder that do not have them yet (e.g. mail received while Outlook was closed, ")
               .Append("or in folders other than Inbox and Sent Items). Shift+click: recompute the selected items, even if they already have ")
@@ -418,7 +418,7 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("Calendar: organizer name and address, subject, body. Contacts: company, department, names, e-mail addresses, ")
               .Append("phone numbers, notes. Tasks: subject, body.\"/>");
             sb.Append("<button id=\"cfFindItems\" label=\"Find Items\" imageMso=\"FindDialog\" onAction=\"OnFindItems\"")
-              .Append(" screentip=\"Find Items\" supertip=\"Open a window to find text in mail, calendar items, contacts and tasks of ")
+              .Append(" screentip=\"Find Items (Ctrl+Alt+F)\" supertip=\"Open a window to find text in mail, calendar items, contacts and tasks of ")
               .Append("all folders at once. Subject, and mail: sender name; calendar: location; contacts: File As, company, department, ")
               .Append("nickname, e-mail addresses and display names, phone numbers; with Message Body / Notes ticked also the body. ")
               .Append("Filter chooses the item types and accounts. Click a result for its details, double-click to open it.\"/>");
