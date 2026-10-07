@@ -139,12 +139,12 @@ The add-in writes these text columns (user properties) on mail and meeting items
 | Column | Received mail | Mail I sent |
 |---|---|---|
 | `domainRelated` | sender's domain label, then its subdomains nearest first: `a@billing.fabrikam.com` → `fabrikam/billing` (for *on behalf of*, the principal's) | same, for the first To recipient (no To: first Cc) |
-| `nameRelated` | `☺contact name` if the sender is in Contacts (mail filled before 2026-10: `[contact name]`), else the sender display name; `(local part)` when that is just the address | the `me` column's sent symbol (`▶` by default) + a space + first recipient (`tos` / `ccs` count the recipients; mail filled before 2026-10 may still end in ` (+)`) |
+| `nameRelated` | `☺ contact name` if the sender is in Contacts (mail filled before 2026-10: `[contact name]`), else the sender display name; `(local part)` when that is just the address | the `me` column's sent symbol (`▶` by default) + a space + first recipient (`tos` / `ccs` count the recipients; mail filled before 2026-10 may still end in ` (+)`) |
 | `me` | `●` I am in To · `○` I am only in Cc · `-` neither (e.g. Bcc, a list address) | `▶` |
 | `tos` / `ccs` | number of To / Cc recipients (`-` for 0) | same |
 | `unknownDomain` | `*` the sender's domain is not in *Known Domains.txt* · `+` it is, but a recipient's is not · `-` all known | `+` / `-` for the recipients (I am a known sender) |
 
-- For mail I sent, the first recipient is shown as `☺contact name` when the address is in Contacts, however it was entered. Otherwise it shows the name Outlook displayed if it was picked from an address book (e.g. the GAL), else the address itself.
+- For mail I sent, the first recipient is shown as `☺ contact name` when the address is in Contacts, however it was entered. Otherwise it shows the name Outlook displayed if it was picked from an address book (e.g. the GAL), else the address itself.
 - Contact name means the contact's e-mail display name for that address, or File As if that is empty. Contacts are looked up in every store's Contacts folder and its subfolders (e.g. `olk/family`), skipping system folders such as Recipient Cache and GAL Contacts.
 - A mail counts as "mine" when its sender (or principal) is one of my accounts' addresses.
 - **Auto-fill new mail** fills mail as it arrives in each account's Inbox or Sent Items.

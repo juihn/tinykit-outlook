@@ -484,7 +484,7 @@ namespace tinykit.OutlookAddin
 
             // Mail to change, found before anything changes (so swapping two symbols works): me values with an old symbol,
             // and nameRelated values starting with a sent symbol or a contact mark that are not in the chosen form
-            // ("<sent> <contact>name" for sent mail, "<contact>name" for received mail).
+            // ("<sent> <contact> name" for sent mail, "<contact> name" for received mail).
             var session = explorer.Application.Session;
             var updates = new Dictionary<string, MailFix>(StringComparer.Ordinal); // by entry id
             int meCount = 0, nameCount = 0;
@@ -553,7 +553,7 @@ namespace tinykit.OutlookAddin
             if (updates.Count > 0 && MessageBox.Show(WindowOwner.From(explorer),
                     "Change " + updates.Count + " mail(s)?\n"
                     + (meCount > 0 ? "\n- the me column of " + meCount + " mail(s) to the new symbol(s)" : "")
-                    + (nameCount > 0 ? "\n- the nameRelated of " + nameCount + " mail(s) to the marks \"" + sent + " \" (sent) and \"" + contact + "\" (Contacts)" : "")
+                    + (nameCount > 0 ? "\n- the nameRelated of " + nameCount + " mail(s) to the marks \"" + sent + " \" (sent) and \"" + contact + " \" (Contacts)" : "")
                     + "\n\n(No: only mail filled from now on gets them.)",
                     ThisAddIn.Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 updates.Clear();
@@ -631,7 +631,7 @@ namespace tinykit.OutlookAddin
         /// <summary>
         /// A nameRelated value in the chosen form, or null when it does not start with a sent symbol or a contact mark: the
         /// sent symbol (any) becomes "<paramref name="sent"/> ", and a contact mark (any) right after it, or at the start of
-        /// a received mail's value, becomes <paramref name="contact"/> with no space before the name.
+        /// a received mail's value, becomes <paramref name="contact"/> and one space before the name.
         /// </summary>
         private static string NameRelatedIn(string value, FilterSettings settings, string sent, string contact)
         {
@@ -643,7 +643,7 @@ namespace tinykit.OutlookAddin
                 rest = rest.Substring(sentSymbol.Length).TrimStart();
             var mark = marks.FirstOrDefault(x => rest.StartsWith(x, StringComparison.Ordinal));
             if (mark != null)
-                rest = contact + rest.Substring(mark.Length).TrimStart();
+                rest = contact + " " + rest.Substring(mark.Length).TrimStart();
             if (sentSymbol == null && mark == null)
                 return null;
             return sentSymbol != null ? sent + " " + rest : rest;

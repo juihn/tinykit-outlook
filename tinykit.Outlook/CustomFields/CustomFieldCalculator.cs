@@ -13,10 +13,10 @@ namespace tinykit.OutlookAddin.CustomFields
     /// <item>domainRelated — domain label then subdomains, e.g. gojek/invoicing.
     ///   Received: the sender's (on behalf of: the principal's);
     ///   sent by me: first To recipient's (no To: first Cc's).</item>
-    /// <item>nameRelated — received: "☺contact name" if the sender is in Contacts, else the sender display name
+    /// <item>nameRelated — received: "☺ contact name" if the sender is in Contacts, else the sender display name
     ///   ("(local part)" when the display name is just the address);
     ///   sent by me: the me column's sent symbol (▶ by default) + " " + first recipient's name (tos / ccs give the number of recipients):
-    ///   "☺contact name" when the address is in Contacts, else the name shown when picked from an address book, else the address.</item>
+    ///   "☺ contact name" when the address is in Contacts, else the name shown when picked from an address book, else the address.</item>
     /// <item>me — ▶ sent by me, else ● I am in To, ○ I am in Cc, else "-".  tos / ccs — number of To / Cc recipients, "-" for 0.</item>
     /// </list>
     /// </summary>
@@ -143,7 +143,7 @@ namespace tinykit.OutlookAddin.CustomFields
             {
                 values.DomainRelated = MailInfo.DomainPath(fromSmtp) ?? CustomFieldValues.None;
                 var contact = Contacts.Find(fromSmtp);
-                values.NameRelated = contact != null ? MeSymbols.Current().Item4 + contact : SenderDisplay(fromName, fromSmtp);
+                values.NameRelated = contact != null ? MeSymbols.Current().Item4 + " " + contact : SenderDisplay(fromName, fromSmtp);
             }
             return values;
         }
@@ -181,14 +181,14 @@ namespace tinykit.OutlookAddin.CustomFields
         }
 
         /// <summary>
-        /// Name shown for a recipient of my mail: "☺contact name" when the address is in Contacts (however the recipient
+        /// Name shown for a recipient of my mail: "☺ contact name" when the address is in Contacts (however the recipient
         /// was entered), else the resolved name when it was picked from an address book, else the address itself.
         /// </summary>
         private string RecipientName(Outlook.Recipient r, string smtp)
         {
             var contact = Contacts.Find(smtp);
             if (contact != null)
-                return MeSymbols.Current().Item4 + contact;
+                return MeSymbols.Current().Item4 + " " + contact;
             if (!IsOneOff(r) && !string.IsNullOrWhiteSpace(r.Name))
                 return r.Name.Trim();
             return smtp ?? r.Name ?? r.Address ?? CustomFieldValues.None;
