@@ -139,7 +139,7 @@ The add-in writes these text columns (user properties) on mail and meeting items
 | Column | Received mail | Mail I sent |
 |---|---|---|
 | `domainRelated` | sender's domain label, then its subdomains nearest first: `a@billing.fabrikam.com` → `fabrikam/billing` (for *on behalf of*, the principal's) | same, for the first To recipient (no To: first Cc) |
-| `nameRelated` | `[contact name]` if the sender is in Contacts, else the sender display name; `(local part)` when that is just the address | `▶ ` + first recipient + ` (+)` when there are several recipients |
+| `nameRelated` | `[contact name]` if the sender is in Contacts, else the sender display name; `(local part)` when that is just the address | `▶ ` + first recipient (`tos` / `ccs` count the recipients; mail filled before 2026-10 may still end in ` (+)`) |
 | `me` | `●` I am in To · `○` I am in Cc · `-` | `▶` |
 | `tos` / `ccs` | number of To / Cc recipients (`-` for 0) | same |
 | `unknownDomain` | `*` the sender's domain is not in *Known Domains.txt* · `+` it is, but a recipient's is not · `-` all known | `+` / `-` for the recipients (I am a known sender) |
@@ -148,6 +148,11 @@ The add-in writes these text columns (user properties) on mail and meeting items
 - Contact name means the contact's e-mail display name for that address, or File As if that is empty. Contacts are looked up in every store's Contacts folder and its subfolders (e.g. `olk/family`), skipping system folders such as Recipient Cache and GAL Contacts.
 - A mail counts as "mine" when its sender (or principal) is one of my accounts' addresses.
 - **Auto-fill new mail** fills mail as it arrives in each account's Inbox or Sent Items.
+- **Move Sent Mail to Inbox** moves mail in each account's Sent Items to the same account's Inbox, so a conversation reads
+  in one place: a few seconds after Outlook starts and after mail arrives in Sent Items, each time all of Sent Items (so
+  mail sent from another mail client and synchronized is moved too). Meeting requests stay. Gmail accounts are left out:
+  there Sent Mail is a label, and moving out of it over IMAP deletes Gmail's sent copy or brings it back.
+  (`moveSentToInbox` in `Saved Filters - Mail.xml`; on by default.)
 - **Fill Fields** fills the current folder's items that have no `domainRelated` or `unknownDomain` yet, e.g. mail that arrived
   while Outlook was closed or in folders other than Inbox and Sent Items.
   **Shift+click** recomputes the selected items instead, even if they already have values (e.g. after editing Known Domains.txt).
@@ -308,7 +313,7 @@ Tools for the selected items; each button shows only in the folders where it app
 
 ### Saved Filters - Mail.xml / - Contacts.xml / - Tasks.xml
 ```xml
-<SavedFilters autoApplyFormats="true" autoFillFields="true" formatsOn="true">
+<SavedFilters autoApplyFormats="true" autoFillFields="true" moveSentToInbox="true" formatsOn="true">
   <Filter name="Unread" formatEnabled="true">
     <Sql><![CDATA["urn:schemas:httpmail:read" = 0]]></Sql>
     <Format font="Segoe UI" size="9" style="Bold" strikeout="false" underline="false" color="Navy" />

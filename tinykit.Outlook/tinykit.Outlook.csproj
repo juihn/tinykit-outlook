@@ -138,6 +138,7 @@
     <Compile Include="CustomFields\ItemView.cs" />
     <Compile Include="CustomFields\KnownDomains.cs" />
     <Compile Include="CustomFields\MyIdentity.cs" />
+    <Compile Include="CustomFields\SentToInbox.cs" />
     <Compile Include="Filtering\AddConditionsDialog.cs">
       <SubType>Form</SubType>
     </Compile>

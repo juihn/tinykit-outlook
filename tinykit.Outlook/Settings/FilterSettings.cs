@@ -77,6 +77,9 @@ namespace tinykit.OutlookAddin.Settings
         /// <summary>Mail only: fill the custom mail fields of arriving mail.</summary>
         public bool AutoFillFields = true;
 
+        /// <summary>Mail files only: move mail in each account's Sent Items to its Inbox (Gmail left out).</summary>
+        public bool MoveSentToInbox = true;
+
         /// <summary>Mail only: when Outlook closes, clear the add-in's filters in every account's Inbox.</summary>
         public bool ClearInboxFiltersOnExit = true;
 
@@ -93,6 +96,8 @@ namespace tinykit.OutlookAddin.Settings
                                                        each table view when you switch folders/views
                 autoFillFields=""true|false""           autoFillFields (Mail only): fill domainRelated/nameRelated/
                                                        me/tos/ccs of mail arriving in Inbox / Sent Items
+                moveSentToInbox=""true|false""          moveSentToInbox (Mail only): move mail in each
+                                                       account's Sent Items to its Inbox (Gmail left out)
                 clearInboxFiltersOnExit=""true|false""  clearInboxFiltersOnExit (Mail only): when Outlook closes,
                                                        clear quick/saved filters in every account's Inbox
                 formatsOn=""true|false"">               formatsOn: all formats on/off (All Formats Off /
@@ -151,6 +156,7 @@ namespace tinykit.OutlookAddin.Settings
                 Kind = kind,
                 AutoApplyFormats = ParseBool(root.Attribute("autoApplyFormats"), true),
                 AutoFillFields = ParseBool(root.Attribute("autoFillFields"), true),
+                MoveSentToInbox = ParseBool(root.Attribute("moveSentToInbox"), true),
                 ClearInboxFiltersOnExit = ParseBool(root.Attribute("clearInboxFiltersOnExit"), true),
                 FormatsOn = ParseBool(root.Attribute("formatsOn"), true),
             };
@@ -188,6 +194,7 @@ namespace tinykit.OutlookAddin.Settings
                 new XElement("SavedFilters",
                     new XAttribute("autoApplyFormats", AutoApplyFormats ? "true" : "false"),
                     Kind == ItemKind.Mail ? new XAttribute("autoFillFields", AutoFillFields ? "true" : "false") : null,
+                    Kind == ItemKind.Mail ? new XAttribute("moveSentToInbox", MoveSentToInbox ? "true" : "false") : null,
                     Kind == ItemKind.Mail ? new XAttribute("clearInboxFiltersOnExit", ClearInboxFiltersOnExit ? "true" : "false") : null,
                     new XAttribute("formatsOn", FormatsOn ? "true" : "false"),
                     Filters.Select(ToElement)));

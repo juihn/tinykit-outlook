@@ -56,6 +56,16 @@ namespace tinykit.OutlookAddin
 
             try
             {
+                Controller.SentMail = new SentToInbox(Application, Controller.MoveSentToInbox);
+                Controller.SentMail.Start();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("SentToInbox.Start", ex);
+            }
+
+            try
+            {
                 _shortcuts = new KeyboardShortcuts();
                 // Ctrl+Alt+2: Custom Filter, in the main window only (mail and item windows keep theirs, e.g. Heading 2).
                 _shortcuts.Add(System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.D2,

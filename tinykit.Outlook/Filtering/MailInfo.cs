@@ -28,7 +28,7 @@ namespace tinykit.OutlookAddin.Filtering
         /// <summary>The item's domainRelated (sender's, or first recipient's for my own mail); may be null.</summary>
         public string DomainRelated { get; private set; }
 
-        /// <summary>The item's nameRelated (e.g. "▶ [Kim (contoso)] (+)"); may be null.</summary>
+        /// <summary>The item's nameRelated (e.g. "▶ [Kim (contoso)]"; older sent mail may end in " (+)"); may be null.</summary>
         public string NameRelated { get; private set; }
 
         public string ValueFor(QuickKind kind)

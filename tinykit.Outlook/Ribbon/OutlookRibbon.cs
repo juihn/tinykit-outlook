@@ -308,6 +308,10 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" screentip=\"Add Known Domain\" getSupertip=\"GetAddKnownSupertip\"/>");
             sb.Append("<checkBox id=\"cfAutoFill\" label=\"Auto-fill new mail\" getPressed=\"GetAutoFillPressed\" onAction=\"OnAutoFillToggle\"")
               .Append(" screentip=\"Auto-fill new mail\" supertip=\"Fill the fields of mail arriving in each account's Inbox and Sent Items.\"/>");
+            sb.Append("<checkBox id=\"cfSentToInbox\" label=\"Move Sent Mail to Inbox\" getPressed=\"GetSentToInboxPressed\" onAction=\"OnSentToInboxToggle\"")
+              .Append(" screentip=\"Move Sent Mail to Inbox\" supertip=\"Move mail in each account's Sent Items to the same account's Inbox: ")
+              .Append("a few seconds after Outlook starts and after mail arrives in Sent Items (also mail sent from another mail client). ")
+              .Append("Gmail accounts are left out (there Sent Mail is a label).\"/>");
             sb.Append("</group>");
 
             // Table View.
@@ -1078,6 +1082,16 @@ namespace tinykit.OutlookAddin.Ribbon
         public bool GetAutoFillPressed(Office.IRibbonControl control)
         {
             return _controller.AutoFillFields;
+        }
+
+        public bool GetSentToInboxPressed(Office.IRibbonControl control)
+        {
+            return _controller.MoveSentToInbox;
+        }
+
+        public void OnSentToInboxToggle(Office.IRibbonControl control, bool pressed)
+        {
+            Run(control, ex => _controller.SetMoveSentToInbox(pressed));
         }
 
         public void OnAutoFillToggle(Office.IRibbonControl control, bool pressed)

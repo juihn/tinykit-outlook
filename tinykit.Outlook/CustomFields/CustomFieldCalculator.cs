@@ -15,7 +15,7 @@ namespace tinykit.OutlookAddin.CustomFields
     ///   sent by me: first To recipient's (no To: first Cc's).</item>
     /// <item>nameRelated — received: [contact name] if the sender is in Contacts, else the sender display name
     ///   ("(local part)" when the display name is just the address);
-    ///   sent by me: "▶ " + first recipient's name (+ " (+)" with several recipients), where a recipient
+    ///   sent by me: "▶ " + first recipient's name (tos / ccs give the number of recipients), where a recipient
     ///   picked from an address book keeps its shown name, and a typed address becomes [contact name] or the address.</item>
     /// <item>me — ▶ sent by me, else ● I am in To, ○ I am in Cc, else "-".  tos / ccs — number of To / Cc recipients, "-" for 0.</item>
     /// </list>
@@ -34,7 +34,6 @@ namespace tinykit.OutlookAddin.CustomFields
         private const string RecipientSmtpTag = PropTag + "0x39FE001F";
 
         private const string SentPrefix = "▶ ";
-        private const string MultipleSuffix = " (+)";
         private const string MeInTo = "●";
         private const string MeInCc = "○";
         private const string MeSender = "▶";
@@ -113,7 +112,7 @@ namespace tinykit.OutlookAddin.CustomFields
                 {
                     var smtp = RecipientSmtp(first);
                     values.DomainRelated = MailInfo.DomainPath(smtp) ?? CustomFieldValues.None;
-                    values.NameRelated = SentPrefix + RecipientName(first, smtp) + (total > 1 ? MultipleSuffix : "");
+                    values.NameRelated = SentPrefix + RecipientName(first, smtp);
                 }
             }
             else

@@ -92,6 +92,9 @@ namespace tinykit.OutlookAddin
         /// <summary>Custom-column stamping; set by ThisAddIn at startup.</summary>
         public CustomFieldService Fields { get; set; }
 
+        /// <summary>Moves mail in Sent Items to the same account's Inbox (Move Sent Mail to Inbox).</summary>
+        public SentToInbox SentMail { get; set; }
+
         /// <summary>Set by the ribbon once loaded; refreshes every control.</summary>
         public Action Invalidate = delegate { };
 
@@ -208,6 +211,8 @@ namespace tinykit.OutlookAddin
                 State(kind).Settings = loaded;
                 if (kind == ItemKind.Mail && Fields != null)
                     Fields.AutoFill = loaded.AutoFillFields;
+                if (SentMail != null && kind == ItemKind.Mail)
+                    SentMail.Enabled = loaded.MoveSentToInbox;
                 if (shown)
                 {
                     if (active != null)
@@ -1725,6 +1730,21 @@ namespace tinykit.OutlookAddin
             State(ItemKind.Mail).Settings.AutoFillFields = on;
             if (Fields != null)
                 Fields.AutoFill = on;
+            SaveSettings(ItemKind.Mail);
+        }
+
+        /// <summary>Kept in the mail saved filters file (moveSentToInbox).</summary>
+        public bool MoveSentToInbox
+        {
+            get { return State(ItemKind.Mail).Settings.MoveSentToInbox; }
+        }
+
+        public void SetMoveSentToInbox(bool on)
+        {
+            ReloadIfChanged(ItemKind.Mail, _activeExplorer());
+            State(ItemKind.Mail).Settings.MoveSentToInbox = on;
+            if (SentMail != null)
+                SentMail.Enabled = on;
             SaveSettings(ItemKind.Mail);
         }
 
