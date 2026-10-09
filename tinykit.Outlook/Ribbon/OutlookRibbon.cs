@@ -446,7 +446,10 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("If there is none, a new contact with that name and address opens, ")
               .Append("in the Contacts folder of the mail's account (else of the default account), to be saved there.\"/>");
             // Mail folders: what happens to mail I send.
-            sb.Append("<dropDown id=\"cfSendDelay\" label=\"Send Delay\" getVisible=\"GetMailVisible\" sizeString=\"60 sec\"")
+            // In a box of its own, so the drop-down sits right after its label (the ribbon lines up the drop-downs of a
+            // column at the widest label of that column otherwise).
+            sb.Append("<box id=\"cfSendDelayBox\" boxStyle=\"horizontal\" getVisible=\"GetMailVisible\">");
+            sb.Append("<dropDown id=\"cfSendDelay\" label=\"Send Delay\" imageMso=\"DelayDeliveryOutlook\" showImage=\"true\" sizeString=\"60 sec\"")
               .Append(" getItemCount=\"GetSendDelayCount\" getItemLabel=\"GetSendDelayLabel\" getSelectedItemIndex=\"GetSendDelayIndex\"")
               .Append(" onAction=\"OnSendDelayPick\" screentip=\"Send Delay\" supertip=\"Mail you send waits this long in the Outbox ")
               .Append("(Do not deliver before) before it goes: open it there to change it and send it again, or delete it to cancel. ")
@@ -454,6 +457,7 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("server, so Outlook may be closed; IMAP accounts (Naver, Gmail) go only while Outlook runs. With File &gt; Options ")
               .Append("&gt; Advanced &gt; Send immediately when connected off, mail goes at the first Send/Receive after the delay. ")
               .Append("Off: mail goes at once.\"/>");
+            sb.Append("</box>");
             sb.Append("<button id=\"cfShortcuts\" label=\"Custom Shortcuts\" imageMso=\"AdpPrimaryKey\" onAction=\"OnCustomShortcuts\"")
               .Append(" screentip=\"Custom Shortcuts\" supertip=\"Show the add-in's keyboard shortcuts (Ctrl+Alt+Q Quick Filter box, Ctrl+Alt+W ")
               .Append("Open in New Window, Ctrl+Alt+E Find Items, Ctrl+Alt+R reading pane Right/Bottom/Off, Ctrl+Alt+F Custom Filter, Ctrl+Alt+C Clear Filter) and turn each on or off.\"/>");
