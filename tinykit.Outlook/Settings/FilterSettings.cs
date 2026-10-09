@@ -80,6 +80,9 @@ namespace tinykit.OutlookAddin.Settings
         /// <summary>Mail files only: move mail in each account's Sent Items to its Inbox (Gmail left out).</summary>
         public bool MoveSentToInbox = true;
 
+        /// <summary>Mail files only: move mail in each account's Junk Email to its Inbox.</summary>
+        public bool MoveJunkToInbox;
+
         /// <summary>Mail files only: seconds a sent mail waits in the Outbox before it goes (0: at once).</summary>
         public int SendDelaySeconds = 60;
 
@@ -109,6 +112,8 @@ namespace tinykit.OutlookAddin.Settings
                                                        me/tos/ccs of mail arriving in Inbox / Sent Items
                 moveSentToInbox=""true|false""          moveSentToInbox (Mail only): move mail in each
                                                        account's Sent Items to its Inbox (Gmail left out)
+                moveJunkToInbox=""true|false""          moveJunkToInbox (Mail only): move mail in each
+                                                       account's Junk Email to its Inbox
                 sendDelaySeconds=""60""                 sendDelaySeconds (Mail only): seconds a sent mail
                                                        waits in the Outbox (0: sent at once)
                 meSent=""▶"" meTo=""●"" meCc=""○""         (Mail only) the me column's symbols: mail I sent,
@@ -175,6 +180,7 @@ namespace tinykit.OutlookAddin.Settings
                 AutoApplyFormats = ParseBool(root.Attribute("autoApplyFormats"), true),
                 AutoFillFields = ParseBool(root.Attribute("autoFillFields"), true),
                 MoveSentToInbox = ParseBool(root.Attribute("moveSentToInbox"), true),
+                MoveJunkToInbox = ParseBool(root.Attribute("moveJunkToInbox"), false),
                 // sendDelayMinutes: the first version's setting, in minutes
                 SendDelaySeconds = ParseSeconds(root.Attribute("sendDelaySeconds"),
                     Math.Min(3600, ParseSeconds(root.Attribute("sendDelayMinutes"), 1) * 60)),
@@ -220,6 +226,7 @@ namespace tinykit.OutlookAddin.Settings
                     new XAttribute("autoApplyFormats", AutoApplyFormats ? "true" : "false"),
                     Kind == ItemKind.Mail ? new XAttribute("autoFillFields", AutoFillFields ? "true" : "false") : null,
                     Kind == ItemKind.Mail ? new XAttribute("moveSentToInbox", MoveSentToInbox ? "true" : "false") : null,
+                    Kind == ItemKind.Mail ? new XAttribute("moveJunkToInbox", MoveJunkToInbox ? "true" : "false") : null,
                     Kind == ItemKind.Mail ? new XAttribute("sendDelaySeconds", SendDelaySeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)) : null,
                     Kind == ItemKind.Mail ? new XAttribute("meSent", MeSent) : null,
                     Kind == ItemKind.Mail ? new XAttribute("meTo", MeTo) : null,

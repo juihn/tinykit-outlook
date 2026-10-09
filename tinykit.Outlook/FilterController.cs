@@ -93,7 +93,10 @@ namespace tinykit.OutlookAddin
         public CustomFieldService Fields { get; set; }
 
         /// <summary>Moves mail in Sent Items to the same account's Inbox (Move Sent Mail to Inbox).</summary>
-        public SentToInbox SentMail { get; set; }
+        public FolderToInbox SentMail { get; set; }
+
+        /// <summary>Moves mail in Junk Email to the same account's Inbox (Move Junk Mail to Inbox).</summary>
+        public FolderToInbox JunkMail { get; set; }
 
         /// <summary>Set by the ribbon once loaded; refreshes every control.</summary>
         public Action Invalidate = delegate { };
@@ -218,6 +221,8 @@ namespace tinykit.OutlookAddin
                     Fields.AutoFill = loaded.AutoFillFields;
                 if (SentMail != null && kind == ItemKind.Mail)
                     SentMail.Enabled = loaded.MoveSentToInbox;
+                if (JunkMail != null && kind == ItemKind.Mail)
+                    JunkMail.Enabled = loaded.MoveJunkToInbox;
                 if (shown)
                 {
                     if (active != null)
@@ -2011,7 +2016,7 @@ namespace tinykit.OutlookAddin
         }
 
         /// <summary>
-        /// Open Contact Item of nameRelated: opens the contact that has the address of the person in the first selected
+        /// Open Contact of MailItem: opens the contact that has the address of the person in the first selected
         /// mail's nameRelated (mail I sent: the first recipient; otherwise the sender), from any Contacts folder as
         /// Recipients Report finds them. Without one, a new contact with that name and address is opened (not saved) in the
         /// Contacts folder of the mail's own account, else of the default account.
@@ -2166,6 +2171,21 @@ namespace tinykit.OutlookAddin
             State(ItemKind.Mail).Settings.MoveSentToInbox = on;
             if (SentMail != null)
                 SentMail.Enabled = on;
+            SaveSettings(ItemKind.Mail);
+        }
+
+        /// <summary>Kept in the mail saved filters file (moveJunkToInbox).</summary>
+        public bool MoveJunkToInbox
+        {
+            get { return State(ItemKind.Mail).Settings.MoveJunkToInbox; }
+        }
+
+        public void SetMoveJunkToInbox(bool on)
+        {
+            ReloadIfChanged(ItemKind.Mail, _activeExplorer());
+            State(ItemKind.Mail).Settings.MoveJunkToInbox = on;
+            if (JunkMail != null)
+                JunkMail.Enabled = on;
             SaveSettings(ItemKind.Mail);
         }
 

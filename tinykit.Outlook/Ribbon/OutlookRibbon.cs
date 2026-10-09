@@ -419,7 +419,7 @@ namespace tinykit.OutlookAddin.Ribbon
             // Items: tools for the selected items of any kind; each button shows where it applies. Another add-in's group
             // goes after it (idQ tk:AfterItems, insertAfterQ tk:Items); as Outlook ignores a reference to a group not loaded
             // yet, every group here also goes before tk:AfterItems, so the order holds whichever add-in loads first.
-            sb.Append("<group idQ=\"tk:Items\" insertBeforeQ=\"tk:AfterItems\" label=\"Items\" getVisible=\"GetItemsVisible\">");
+            sb.Append("<group idQ=\"tk:Items\" insertBeforeQ=\"tk:AfterItems\" label=\"Tools\" getVisible=\"GetItemsVisible\">");
             sb.Append("<button id=\"cfCustomFilter\" label=\"Custom Filter\" imageMso=\"Filter\" onAction=\"OnCustomFilter\"")
               .Append(" screentip=\"Custom Filter (Ctrl+Alt+F)\" supertip=\"Open a window to find text in the fields you tick (any of them), with the ")
               .Append("filter shown as you type. Mail: sender name and address, nameRelated, domainRelated, recipient names, subject, body. ")
@@ -439,16 +439,12 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<button id=\"cfCopyItems\" label=\"Copy Items Text\" imageMso=\"GroupClipboard\" onAction=\"OnCopyItems\"")
               .Append(" getVisible=\"GetMailVisible\" screentip=\"Copy Items Text\" supertip=\"Copy one line per selected mail to the clipboard: ")
               .Append("'yy.MM.dd요일 HH:mm &lt;sender&gt; subject. Shift+click: put the new lines before the clipboard's current text.\"/>");
-            sb.Append("<button id=\"cfNameRelatedContact\" label=\"Open Contact Item of nameRelated\" imageMso=\"AddressBook\" onAction=\"OnOpenNameRelatedContact\"")
-              .Append(" getVisible=\"GetMailVisible\" screentip=\"Open Contact Item of nameRelated\" supertip=\"Open the contact of the person in the ")
+            sb.Append("<button id=\"cfNameRelatedContact\" label=\"Open Contact of MailItem\" imageMso=\"AddressBook\" onAction=\"OnOpenNameRelatedContact\"")
+              .Append(" getVisible=\"GetMailVisible\" screentip=\"Open Contact of MailItem\" supertip=\"Open the contact of the person in the ")
               .Append("selected mail's nameRelated: the first recipient of mail you sent, otherwise the sender (from any Contacts folder). ")
               .Append("If there is none, a new contact with that name and address opens, ")
               .Append("in the Contacts folder of the mail's account (else of the default account), to be saved there.\"/>");
             // Mail folders: what happens to mail I send.
-            sb.Append("<checkBox id=\"cfSentToInbox\" label=\"Move Sent Mail to Inbox\" getVisible=\"GetMailVisible\" getPressed=\"GetSentToInboxPressed\" onAction=\"OnSentToInboxToggle\"")
-              .Append(" screentip=\"Move Sent Mail to Inbox\" supertip=\"Move mail in each account's Sent Items to the same account's Inbox: ")
-              .Append("a few seconds after Outlook starts and after mail arrives in Sent Items (also mail sent from another mail client). ")
-              .Append("Gmail accounts are left out (there Sent Mail is a label).\"/>");
             sb.Append("<dropDown id=\"cfSendDelay\" label=\"Send Delay\" getVisible=\"GetMailVisible\" sizeString=\"60 sec\"")
               .Append(" getItemCount=\"GetSendDelayCount\" getItemLabel=\"GetSendDelayLabel\" getSelectedItemIndex=\"GetSendDelayIndex\"")
               .Append(" onAction=\"OnSendDelayPick\" screentip=\"Send Delay\" supertip=\"Mail you send waits this long in the Outbox ")
@@ -460,6 +456,14 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<button id=\"cfShortcuts\" label=\"Custom Shortcuts\" imageMso=\"AdpPrimaryKey\" onAction=\"OnCustomShortcuts\"")
               .Append(" screentip=\"Custom Shortcuts\" supertip=\"Show the add-in's keyboard shortcuts (Ctrl+Alt+E Find Items, Ctrl+Alt+F ")
               .Append("Custom Filter, Ctrl+Alt+W Open in New Window, Ctrl+Alt+R reading pane Right/Bottom/Off) and turn each on or off.\"/>");
+            // Mail folders: sent and junk mail moved to the Inbox.
+            sb.Append("<checkBox id=\"cfSentToInbox\" label=\"Move Sent Mail to Inbox\" getVisible=\"GetMailVisible\" getPressed=\"GetSentToInboxPressed\" onAction=\"OnSentToInboxToggle\"")
+              .Append(" screentip=\"Move Sent Mail to Inbox\" supertip=\"Move mail in each account's Sent Items to the same account's Inbox: ")
+              .Append("a few seconds after Outlook starts and after mail arrives in Sent Items (also mail sent from another mail client). ")
+              .Append("Gmail accounts are left out (there Sent Mail is a label).\"/>");
+            sb.Append("<checkBox id=\"cfJunkToInbox\" label=\"Move Junk Mail to Inbox\" getVisible=\"GetMailVisible\" getPressed=\"GetJunkToInboxPressed\" onAction=\"OnJunkToInboxToggle\"")
+              .Append(" screentip=\"Move Junk Mail to Inbox\" supertip=\"Move mail in each account's Junk Email to the same account's Inbox: ")
+              .Append("a few seconds after Outlook starts and after mail arrives in Junk Email (for Gmail, moving out of Spam marks it not spam).\"/>");
             // Contact folders: switch the selected contacts between Outlook's form and the folder's custom form.
             sb.Append("<button id=\"cfFormDefault\" label=\"Default Contact Form\" imageMso=\"NewContact\"")
               .Append(" getVisible=\"GetContactVisible\" onAction=\"OnSetDefaultContactForm\" screentip=\"Default Contact Form\"")
@@ -1270,6 +1274,16 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnSentToInboxToggle(Office.IRibbonControl control, bool pressed)
         {
             Run(control, ex => _controller.SetMoveSentToInbox(pressed));
+        }
+
+        public bool GetJunkToInboxPressed(Office.IRibbonControl control)
+        {
+            return _controller.MoveJunkToInbox;
+        }
+
+        public void OnJunkToInboxToggle(Office.IRibbonControl control, bool pressed)
+        {
+            Run(control, ex => _controller.SetMoveJunkToInbox(pressed));
         }
 
         public void OnAutoFillToggle(Office.IRibbonControl control, bool pressed)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -8,32 +8,52 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 namespace tinykit.OutlookAddin.CustomFields
 {
     /// <summary>
-    /// Sent mail to Inbox: mail in an account's Sent Items is moved to the same account's Inbox, so a conversation reads
-    /// in one place. It runs a few seconds after Outlook starts and after mail arrives in Sent Items (sent from Outlook,
-    /// or sent from another mail client and synchronized), each time for all of Sent Items, so nothing is missed when
-    /// many arrive at once. Gmail accounts are left out: there Sent Mail is a label, and moving out of it over IMAP
-    /// deletes Gmail's sent copy or brings it back.
+    /// Mail in one default folder of each account (Sent Items, Junk Email) is moved to the same account's Inbox. It runs a
+    /// few seconds after Outlook starts and after mail arrives in that folder, each time for the whole folder, so nothing
+    /// is missed when many arrive at once.
+    /// <list type="bullet">
+    /// <item>Sent Items: a conversation reads in one place, also mail sent from another mail client and synchronized.
+    ///   Gmail accounts are left out: there Sent Mail is a label, and moving out of it over IMAP deletes Gmail's sent
+    ///   copy or brings it back.</item>
+    /// <item>Junk Email: nothing is lost to a wrong junk verdict (Gmail's Spam too: moving out of it is "not spam").</item>
+    /// </list>
     /// </summary>
-    internal sealed class SentToInbox
+    internal sealed class FolderToInbox
     {
         private const int DelayMs = 5000; // lets the custom fields be filled first (they are filled again in the Inbox anyway)
 
         private sealed class Pair
         {
-            public Outlook.MAPIFolder Sent;
+            public Outlook.MAPIFolder Source;
             public Outlook.MAPIFolder Inbox;
             public Outlook.Items Items; // kept alive or ItemAdd stops firing
         }
 
         private readonly Outlook.Application _app;
+        private readonly Outlook.OlDefaultFolders _source;
+        private readonly string _what; // for the log, e.g. "Sent to Inbox"
+        private readonly bool _skipGmail;
         private readonly List<Pair> _pairs = new List<Pair>();
         private readonly Timer _timer = new Timer { Interval = DelayMs };
         private bool _enabled;
 
-        public SentToInbox(Outlook.Application app, bool enabled)
+        public static FolderToInbox SentMail(Outlook.Application app, bool enabled)
+        {
+            return new FolderToInbox(app, enabled, Outlook.OlDefaultFolders.olFolderSentMail, "Sent to Inbox", true);
+        }
+
+        public static FolderToInbox JunkMail(Outlook.Application app, bool enabled)
+        {
+            return new FolderToInbox(app, enabled, Outlook.OlDefaultFolders.olFolderJunk, "Junk to Inbox", false);
+        }
+
+        private FolderToInbox(Outlook.Application app, bool enabled, Outlook.OlDefaultFolders source, string what, bool skipGmail)
         {
             _app = app;
             _enabled = enabled;
+            _source = source;
+            _what = what;
+            _skipGmail = skipGmail;
             _timer.Tick += (s, e) =>
             {
                 // An exception left to Outlook from a timer crashes it, and Outlook then disables the add-in.
@@ -43,12 +63,12 @@ namespace tinykit.OutlookAddin.CustomFields
                 }
                 catch (Exception ex)
                 {
-                    Log.Error("Sent to Inbox", ex);
+                    Log.Error(_what, ex);
                 }
             };
         }
 
-        /// <summary>On: the next sweep moves what is in Sent Items now.</summary>
+        /// <summary>On: the next sweep moves what is in the folder now.</summary>
         public bool Enabled
         {
             get { return _enabled; }
@@ -60,7 +80,7 @@ namespace tinykit.OutlookAddin.CustomFields
             }
         }
 
-        /// <summary>Watches the Sent Items of every account's delivery store (Gmail left out) and sweeps once.</summary>
+        /// <summary>Watches the folder of every account's delivery store (Gmail left out for Sent Items) and sweeps once.</summary>
         public void Start()
         {
             var stores = new HashSet<string>(StringComparer.Ordinal);
@@ -71,17 +91,17 @@ namespace tinykit.OutlookAddin.CustomFields
                     var store = account.DeliveryStore;
                     if (store == null || !stores.Add(store.StoreID))
                         continue;
-                    var sent = store.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderSentMail);
-                    if (IsGmail(sent))
+                    var source = store.GetDefaultFolder(_source);
+                    if (_skipGmail && IsGmail(source))
                     {
-                        Log.Info("Sent to Inbox: " + sent.FolderPath + " left out (Gmail)");
+                        Log.Info(_what + ": " + source.FolderPath + " left out (Gmail)");
                         continue;
                     }
                     var pair = new Pair
                     {
-                        Sent = sent,
+                        Source = source,
                         Inbox = store.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderInbox),
-                        Items = sent.Items,
+                        Items = source.Items,
                     };
                     pair.Items.ItemAdd += item =>
                     {
@@ -91,14 +111,14 @@ namespace tinykit.OutlookAddin.CustomFields
                         }
                         catch (Exception ex)
                         {
-                            Log.Error("Sent to Inbox: ItemAdd", ex);
+                            Log.Error(_what + ": ItemAdd", ex);
                         }
                     };
                     _pairs.Add(pair);
                 }
                 catch (COMException ex)
                 {
-                    Log.Info("Sent to Inbox: account " + account.DisplayName + " left out: " + ex.Message);
+                    Log.Info(_what + ": account " + account.DisplayName + " left out: " + ex.Message);
                 }
             }
             Schedule();
@@ -142,7 +162,7 @@ namespace tinykit.OutlookAddin.CustomFields
                 int moved = 0;
                 try
                 {
-                    var items = pair.Sent.Items;
+                    var items = pair.Source.Items;
                     for (int i = items.Count; i >= 1; i--) // from the end: moving takes the item out of the collection
                     {
                         var mail = items[i] as Outlook.MailItem;
@@ -155,7 +175,7 @@ namespace tinykit.OutlookAddin.CustomFields
                         }
                         catch (COMException ex)
                         {
-                            Log.Info("Sent to Inbox: \"" + mail.Subject + "\" not moved: " + ex.Message);
+                            Log.Info(_what + ": \"" + mail.Subject + "\" not moved: " + ex.Message);
                         }
                         finally
                         {
@@ -165,10 +185,10 @@ namespace tinykit.OutlookAddin.CustomFields
                 }
                 catch (Exception ex)
                 {
-                    Log.Error("Sent to Inbox: " + PathOf(pair.Sent), ex);
+                    Log.Error(_what + ": " + PathOf(pair.Source), ex);
                 }
                 if (moved > 0)
-                    Log.Info("Sent to Inbox: moved " + moved + " mail(s) from " + PathOf(pair.Sent) + " to " + PathOf(pair.Inbox));
+                    Log.Info(_what + ": moved " + moved + " mail(s) from " + PathOf(pair.Source) + " to " + PathOf(pair.Inbox));
             }
         }
     }

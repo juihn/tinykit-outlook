@@ -87,12 +87,22 @@ namespace tinykit.OutlookAddin
 
             try
             {
-                Controller.SentMail = new SentToInbox(Application, Controller.MoveSentToInbox);
+                Controller.SentMail = FolderToInbox.SentMail(Application, Controller.MoveSentToInbox);
                 Controller.SentMail.Start();
             }
             catch (Exception ex)
             {
-                Log.Error("SentToInbox.Start", ex);
+                Log.Error("Sent to Inbox: start", ex);
+            }
+
+            try
+            {
+                Controller.JunkMail = FolderToInbox.JunkMail(Application, Controller.MoveJunkToInbox);
+                Controller.JunkMail.Start();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Junk to Inbox: start", ex);
             }
 
             try

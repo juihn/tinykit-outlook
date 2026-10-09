@@ -221,7 +221,7 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
 The rules are written to the view's *View Settings > Conditional Formatting* and named `[TK] <filter name> #<SQL hash>`.
 Rules without that prefix are never changed. Color is limited to the 16 colors Outlook's conditional formatting supports.
 
-### Items group (mail, calendar, contact and task folders)
+### Tools group (mail, calendar, contact and task folders)
 Tools for the selected items; each button shows only in the folders where it applies.
 - **Custom Filter** (mail, calendar, contact and task folders; **Ctrl+Alt+F** in the main window) opens a resizable window: the text to find with
   **Clear All Conditions** / **Apply** beside it, a check box per field, and the filter it makes (shown as you type or
@@ -275,11 +275,6 @@ Tools for the selected items; each button shows only in the folders where it app
   except in the results, where it (or a double-click) opens the item; after a search the first result is selected and
   has the focus, so Enter opens it (Esc goes back to the text). The window keeps its size,
   splitter, Message Body, item types and accounts (`Find Items.txt` in `%APPDATA%\tinykit\Outlook\`).
-- **Move Sent Mail to Inbox** (mail folders) moves mail in each account's Sent Items to the same account's Inbox, so a conversation reads
-  in one place: a few seconds after Outlook starts and after mail arrives in Sent Items, each time all of Sent Items (so
-  mail sent from another mail client and synchronized is moved too). Meeting requests stay. Gmail accounts are left out:
-  there Sent Mail is a label, and moving out of it over IMAP deletes Gmail's sent copy or brings it back.
-  (`moveSentToInbox` in `Saved Filters - Mail.xml`; on by default.)
 - **Send Delay** (mail folders): Off, 5, 10, 15, 30 or 60 seconds (default 60). Mail you send waits that long in the
   Outbox (*Do not deliver before*): open it there to change it and send it again, or delete it to cancel. A later delivery
   time you set yourself is kept. Exchange accounts are held by the server, so Outlook may be closed meanwhile; IMAP accounts
@@ -296,10 +291,19 @@ Tools for the selected items; each button shows only in the folders where it app
   | Ctrl+Alt+W | Open in New Window (the current folder) | – |
   | Ctrl+Alt+R | Reading pane Right → Bottom → Off → Right | Reply with Meeting |
 
-- **Open Contact Item of nameRelated** (mail folders) opens the contact of the person in the selected mail's
+- **Open Contact of MailItem** (mail folders) opens the contact of the person in the selected mail's
   `nameRelated`: the first recipient of mail I sent, otherwise the sender (any Contacts folder). Without one, a new
   contact with that name and address opens in the Contacts folder of the mail's account (else of the default account),
   to be saved there.
+- **Move Sent Mail to Inbox** (mail folders) moves mail in each account's Sent Items to the same account's Inbox, so a conversation reads
+  in one place: a few seconds after Outlook starts and after mail arrives in Sent Items, each time all of Sent Items (so
+  mail sent from another mail client and synchronized is moved too). Meeting requests stay. Gmail accounts are left out:
+  there Sent Mail is a label, and moving out of it over IMAP deletes Gmail's sent copy or brings it back.
+  (`moveSentToInbox` in `Saved Filters - Mail.xml`; on by default.)
+- **Move Junk Mail to Inbox** (mail folders) moves mail in each account's Junk Email to the same account's Inbox, the same
+  way: a few seconds after Outlook starts and after mail arrives in Junk Email, each time the whole folder, so nothing is
+  lost to a wrong junk verdict. For Gmail, moving out of Spam marks the mail not spam.
+  (`moveJunkToInbox` in `Saved Filters - Mail.xml`; off by default.)
 - **Recipients Report** (mail and calendar folders) opens a window for the selected mail: the sender, then the
   recipients grouped by **domain** and by the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background:
   in Contacts. The check boxes add each person's display name and user name. Click a person to open the contact (or
@@ -394,7 +398,7 @@ older `Filters.xml`, `Saved Filters.xml` and `View Columns.txt` are renamed auto
 Before the window's Message tab, with one **Message** group:
 - Delete, Archive, Send to OneNote · Follow Up, Flag (no date), Clear Flag · Translate, Show Original, translation
   preferences · Approve / Reject (approval requests only) · Find · Edit Message: Outlook's own commands.
-- **Recipients Report** of the open mail, as in the Items group.
+- **Recipients Report** of the open mail, as in the Tools group.
 
 ## **TinyKit** tab in a mail being written
 Before the window's Message tab, with a **Recipients** group:
@@ -403,7 +407,7 @@ Before the window's Message tab, with a **Recipients** group:
   with that contact entry, so it shows with the name set in Contacts; its type (To/Cc/Bcc) is kept. The replaced
   recipients move after the others, those in the sender's own domain (base domain, e.g. `contoso.com` for
   `a@mail.contoso.com`) last. Then Outlook's Check Names runs.
-- **Recipients Report** of this mail, as in the Items group.
+- **Recipients Report** of this mail, as in the Tools group.
 
 and a **Compose** group of Outlook's own commands: theme Fonts, Ruler, Bcc.
 
@@ -419,7 +423,7 @@ Before the window's Contact tab, with two groups:
   - **Copy to Clipboard**: `company / department / name (job title)`, e-mail, `T.`phone, `M.`mobile, tab-separated;
     **Shift+click** keeps the clipboard's text after it.
 
-To switch contacts between Outlook's form and the folder's custom form, use the Items group of the main window (the
+To switch contacts between Outlook's form and the folder's custom form, use the Tools group of the main window (the
 contact window keeps the form it opened with).
 
 Other add-ins can add their own groups to this tab: declare `xmlns:tk="tinykit"` in their ribbon XML and use
