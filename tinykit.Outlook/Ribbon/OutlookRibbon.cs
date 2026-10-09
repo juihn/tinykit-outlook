@@ -563,14 +563,16 @@ namespace tinykit.OutlookAddin.Ribbon
             _contactUi = ribbonUI;
         }
 
-        public Bitmap GetContactPicture(Office.IRibbonControl control)
+        // Never null (a Custom UI Runtime Error): without a picture, the Office icon by name.
+        public object GetContactPicture(Office.IRibbonControl control)
         {
-            return Safe(() =>
+            const string noPicture = "OrgChartPictureInsert";
+            return Safe<object>(() =>
             {
                 var inspector = control.Context as Outlook.Inspector;
-                return Contacts.ContactCommands.PictureOf(inspector == null ? null : inspector.CurrentItem as Outlook.ContactItem)
-                    ?? PictureFromMso(inspector, "OrgChartPictureInsert");
-            }, null);
+                return (object)Contacts.ContactCommands.PictureOf(inspector == null ? null : inspector.CurrentItem as Outlook.ContactItem)
+                    ?? (object)PictureFromMso(inspector, noPicture) ?? noPicture;
+            }, noPicture);
         }
 
         // An Office icon as a bitmap (a picture-less contact shows this instead).
@@ -839,10 +841,18 @@ namespace tinykit.OutlookAddin.Ribbon
             return Safe(() => { Focus(control); var f = _controller.FilterAt(SlotOf(control)); return f != null && !string.IsNullOrEmpty(f.Icon); }, false);
         }
 
-        // A string from getImage is taken as an imageMso name.
+        // A string from getImage is taken as an imageMso name. Never null: Office also asks for the image of a hidden slot
+        // (no filter, or one without an icon), and null is reported as a Custom UI Runtime Error.
+        private const string NoSavedIcon = "FilterBySelection";
+
         public object GetSavedImage(Office.IRibbonControl control)
         {
-            return Safe<object>(() => { Focus(control); var f = _controller.FilterAt(SlotOf(control)); return f == null ? null : f.Icon; }, null);
+            return Safe<object>(() =>
+            {
+                Focus(control);
+                var f = _controller.FilterAt(SlotOf(control));
+                return f == null || string.IsNullOrEmpty(f.Icon) ? NoSavedIcon : f.Icon;
+            }, NoSavedIcon);
         }
 
         public string GetSavedSupertip(Office.IRibbonControl control)
