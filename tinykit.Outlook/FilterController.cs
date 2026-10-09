@@ -1387,10 +1387,10 @@ namespace tinykit.OutlookAddin
             if (columns.Count == 0)
                 throw new UserMessageException(name + " has no columns (every line is empty or a # comment).\n\nCtrl+click Apply Predefined Columns to edit the file.");
 
-            // The columns go into the TinyKit view; a quick or saved filter shown now is cleared first, as switching views
-            // would drop it anyway.
-            if (Views.HasAddinFilter(explorer, false))
-                Views.Clear(explorer, false);
+            // The columns go into the TinyKit table view (made if needed, also from a card or other non-table view); a quick
+            // or saved filter shown now is cleared first, as switching views would drop it anyway.
+            if (Views.HasAddinFilter(explorer, true))
+                Views.Clear(explorer, true);
             List<string> problems = null;
             KeepSelection(explorer, () => problems = ViewColumnsService.Apply(explorer, columns, Views.OwnFilter(explorer)));
             Invalidate();

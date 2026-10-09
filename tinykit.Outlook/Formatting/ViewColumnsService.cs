@@ -82,24 +82,33 @@ namespace tinykit.OutlookAddin.Formatting
         }
 
         /// <summary>
-        /// Switches the folder to the TinyKit view, first making it (for all folders of this kind) as a copy of the current
-        /// table view, so it starts with that view's font, sort, filter and conditional formatting.
+        /// Switches the folder to the TinyKit view, first making it (for all folders of this kind) when there is none. It
+        /// is a copy of the current table view, so it starts with that view's font, sort, filter and conditional formatting;
+        /// when the folder is shown otherwise (e.g. contacts as business cards), a copy of the folder's first table view
+        /// (e.g. List or Phone), else a new table view.
         /// </summary>
         public static Outlook.TableView UseOwnView(Outlook.Explorer explorer)
         {
-            var current = (Outlook.TableView)ViewFilterService.RequireTableView(explorer);
-            if (current.Name == ViewName)
-                return current;
-            Outlook.View own = null;
-            foreach (Outlook.View v in explorer.CurrentFolder.Views)
+            var current = ViewFilterService.GetTableView(explorer);
+            if (current != null && current.Name == ViewName)
+                return (Outlook.TableView)current;
+            Outlook.View own = null, firstTable = null;
+            var views = explorer.CurrentFolder.Views;
+            foreach (Outlook.View v in views)
             {
                 if (v.Name == ViewName)
                     own = v;
+                else if (firstTable == null && v.ViewType == Outlook.OlViewType.olTableView)
+                    firstTable = v;
             }
             if (own == null)
             {
-                own = current.Copy(ViewName, Outlook.OlViewSaveOption.olViewSaveOptionAllFoldersOfType);
-                Common.Log.Info("View Columns: made the " + ViewName + " view from \"" + current.Name + "\"");
+                var source = current ?? firstTable;
+                own = source != null
+                    ? source.Copy(ViewName, Outlook.OlViewSaveOption.olViewSaveOptionAllFoldersOfType)
+                    : views.Add(ViewName, Outlook.OlViewType.olTableView, Outlook.OlViewSaveOption.olViewSaveOptionAllFoldersOfType);
+                Common.Log.Info("View Columns: made the " + ViewName + " view "
+                    + (source != null ? "from \"" + source.Name + "\"" : "as a new table view"));
             }
             if (!(own is Outlook.TableView))
                 throw new Common.UserMessageException("This folder has a view named \"" + ViewName + "\" that is not a table view. Rename it, then try again.");

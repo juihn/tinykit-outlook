@@ -1125,8 +1125,8 @@ namespace tinykit.OutlookAddin.Ribbon
             return Safe(() =>
             {
                 var kind = Focus(control) ?? ItemKind.Mail;
-                return "Switch to the TinyKit view (made on first use as a copy of the current table view, for all " + FolderWord(kind)
-                    + " folders; Compact and Outlook's other views stay as they are) and give it the columns defined for "
+                return "Switch to the TinyKit table view, also from a card or other non-table view (made on first use as a copy of the "
+                    + "current table view, else of the folder's first table view, for all " + FolderWord(kind) + " folders; Compact and Outlook's other views stay as they are) and give it the columns defined for "
                     + FolderWord(kind) + " folders (field, width, format, alignment, heading). Mail, contacts and tasks each have their own file. "
                     + "Ctrl+click: edit the file. File: " + SettingsPaths.ViewColumnsFile(kind);
             }, "");

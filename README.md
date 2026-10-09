@@ -323,7 +323,8 @@ Tools for the selected items; each button shows only in the folders where it app
 - **Apply Predefined Columns** switches the folder to the **TinyKit** view and gives it the columns in the View Columns
   file of the folder's kind (`View Columns - Mail.txt`, `- Contacts.txt`, `- Tasks.txt`), in that order. The TinyKit view
   is made on first use as a copy of the current table view (its font, sort, filter and conditional formatting), for all
-  folders of that kind, so Compact and Outlook's other views stay as they are. A quick or saved filter shown is cleared
+  folders of that kind. When the folder is shown otherwise (e.g. contacts as business cards), it is a copy of the
+  folder's first table view (e.g. List or Phone), else a new table view. Compact and Outlook's other views stay as they are. A quick or saved filter shown is cleared
   first. **Ctrl+click** opens the file in VS Code (Notepad if not installed). Each file is created with default columns
   on first use.
 - **Automatic column sizing** turns the current view's View Settings > Other Settings > Automatic column sizing on or off
