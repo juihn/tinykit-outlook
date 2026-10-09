@@ -129,8 +129,8 @@ The filter shows the items whose field *contains* the value (`LIKE '%value%'`):
 - The box keeps its text after filtering, so the same word can be tried with another field. **Clear Filter** empties it.
 
 ### Clear Filter group
-- **Clear Filter** removes the quick or saved filter and restores the view's own filter (recorded in `ViewState.xml`, so it survives a restart).
-- **Clear Inboxes on Exit** (toggle button, on by default): when Outlook closes (its last window), the quick, saved and Others filters are
+- **Clear Filter** (**Ctrl+Alt+C**) removes the quick or saved filter and restores the view's own filter (recorded in `ViewState.xml`, so it survives a restart).
+- **Clear Inboxes on Exit** (check box, on by default): when Outlook closes (its last window), the quick, saved and Others filters are
   cleared in every view of every account's Inbox, the same way as Clear Filter, so Outlook opens with full Inboxes.
   Filters that are part of a view's own definition (View Settings > Filter) stay. Stored as `clearInboxFiltersOnExit` in
   `Saved Filters - Mail.xml`.
@@ -305,6 +305,7 @@ Tools for the selected items; each button shows only in the folders where it app
   | Ctrl+Alt+W | Open in New Window (the current folder) | – |
   | Ctrl+Alt+R | Reading pane Right → Bottom → Off → Right | Reply with Meeting |
   | Ctrl+Alt+Q | Quick Filter box (shows the TinyKit tab, cursor in the box) | – |
+  | Ctrl+Alt+C | Clear Filter | – |
 
 - **Open Contact of MailItem** (mail folders) opens the contact of the person in the selected mail's
   `nameRelated`: the first recipient of mail I sent, otherwise the sender (any Contacts folder). Without one, a new

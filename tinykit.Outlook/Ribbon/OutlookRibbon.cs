@@ -348,9 +348,9 @@ namespace tinykit.OutlookAddin.Ribbon
 
             // Clear Filter.
             sb.Append("<group id=\"grpClear\" insertBeforeQ=\"tk:AfterItems\" label=\"Clear Filter\" getVisible=\"GetNotCalendarVisible\">");
-            sb.Append("<button id=\"qClear\" label=\"Clear Filter\" size=\"large\" imageMso=\"FilterClearAllFilters\" onAction=\"OnClear\"")
-              .Append(" screentip=\"Clear Filter\" supertip=\"Remove the quick or saved filter and restore the view's own filter.\"/>");
-            sb.Append("<toggleButton id=\"qClearOnExit\" label=\"Clear Inboxes on Exit\" size=\"large\" imageMso=\"FilterClearAllFilters\"")
+            sb.Append("<button id=\"qClear\" label=\"Clear Filter\" imageMso=\"FilterClearAllFilters\" onAction=\"OnClear\"")
+              .Append(" screentip=\"Clear Filter (Ctrl+Alt+C)\" supertip=\"Remove the quick or saved filter and restore the view's own filter.\"/>");
+            sb.Append("<checkBox id=\"qClearOnExit\" label=\"Clear Inboxes on Exit\"")
               .Append(" getPressed=\"GetClearOnExitPressed\" onAction=\"OnClearOnExitToggle\"")
               .Append(" screentip=\"Clear Inboxes on exit\" supertip=\"When Outlook closes, clear the quick, saved and Others filters in the ")
               .Append("Inbox of every account (as Clear Filter does; the views' own filters stay), so Outlook opens with full Inboxes.\"/>");
@@ -456,7 +456,7 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("Off: mail goes at once.\"/>");
             sb.Append("<button id=\"cfShortcuts\" label=\"Custom Shortcuts\" imageMso=\"AdpPrimaryKey\" onAction=\"OnCustomShortcuts\"")
               .Append(" screentip=\"Custom Shortcuts\" supertip=\"Show the add-in's keyboard shortcuts (Ctrl+Alt+E Find Items, Ctrl+Alt+F ")
-              .Append("Custom Filter, Ctrl+Alt+W Open in New Window, Ctrl+Alt+R reading pane Right/Bottom/Off, Ctrl+Alt+Q Quick Filter box) and turn each on or off.\"/>");
+              .Append("Custom Filter, Ctrl+Alt+W Open in New Window, Ctrl+Alt+R reading pane Right/Bottom/Off, Ctrl+Alt+Q Quick Filter box, Ctrl+Alt+C Clear Filter) and turn each on or off.\"/>");
             // Mail folders: sent and junk mail moved to the Inbox.
             sb.Append("<checkBox id=\"cfSentToInbox\" label=\"Move Sent Mail to Inbox\" getVisible=\"GetMailVisible\" getPressed=\"GetSentToInboxPressed\" onAction=\"OnSentToInboxToggle\"")
               .Append(" screentip=\"Move Sent Mail to Inbox\" supertip=\"Move mail in each account's Sent Items to the same account's Inbox: ")

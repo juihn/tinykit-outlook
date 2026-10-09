@@ -127,6 +127,9 @@ namespace tinykit.OutlookAddin
                 AddShortcut("QuickFilterBox", CtrlAlt | System.Windows.Forms.Keys.Q, "Quick Filter box",
                     "Show the TinyKit tab and put the cursor in the Quick Filter box (then Alt + a button's letter filters).",
                     FocusQuickFilterBox);
+                AddShortcut("ClearFilter", CtrlAlt | System.Windows.Forms.Keys.C, "Clear Filter",
+                    "Remove the quick or saved filter and restore the view's own filter (as the Clear Filter button).",
+                    ex => Controller.Clear(ex));
                 Shortcuts.Load();
                 // Tab in the ribbon skips the Quick Filter's recent-value lists.
                 RibbonTabSkip.Start();
