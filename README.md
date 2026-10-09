@@ -161,7 +161,7 @@ The add-in writes these text columns (user properties) on mail and meeting items
   `Known Domains.txt`, then refills the selected mails and this folder's mail from those domains that are still marked `🅄` or `+`.
   **Ctrl+click** opens `Known Domains.txt` in VS Code (Notepad if not installed).
 - The Custom Mail Fields group's **dialog button** (corner arrow) opens **Column Symbols**: a drop-down for the **Contact** mark before a
-  name from Contacts in `nameRelated` (☺ ☻ ✆ ☎; kept as `contactMark`), and one each for mail I **Sent**
+  name from Contacts in `nameRelated` (☺ ☻ ✆ ☎ and Ⓒ in a circle or square, plain or negative; kept as `contactMark`), and one each for mail I **Sent**
   (→ ⇒ ⇥ ⇨ ▶ ▷ ⟶ ⟹), me in To and me only in Cc (■ □ ▢ ◆ ○ ● ✓ and Ⓣ/Ⓒ in a circle or square, plain or negative),
   each shown with its code point and Unicode name. A changed symbol is also changed in the saved filters that compare
   `me` with it, and, if you agree, in every mail that has it (all mail folders). Sent mail's `nameRelated` starts with

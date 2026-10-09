@@ -51,9 +51,14 @@ namespace tinykit.OutlookAddin.CustomFields
             new MeSymbol("☻", "BLACK SMILING FACE"),
             new MeSymbol("✆", "TELEPHONE LOCATION SIGN"),
             new MeSymbol("☎", "BLACK TELEPHONE"),
+            new MeSymbol("Ⓒ", "CIRCLED LATIN CAPITAL LETTER C"),
+            new MeSymbol("\U0001F132", "SQUARED LATIN CAPITAL LETTER C"),
+            new MeSymbol("\U0001F152", "NEGATIVE CIRCLED LATIN CAPITAL LETTER C"),
+            new MeSymbol("\U0001F172", "NEGATIVE SQUARED LATIN CAPITAL LETTER C"),
         };
 
-        public static readonly string[] KnownContactMarks = { "☺", "☻", "✆", "☎", "\U0001F464" };
+        public static readonly string[] KnownContactMarks =
+            { "☺", "☻", "✆", "☎", "Ⓒ", "\U0001F132", "\U0001F152", "\U0001F172", "\U0001F464" };
 
         public static readonly IList<MeSymbol> SentChoices = new[]
         {
