@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -41,7 +42,7 @@ namespace tinykit.OutlookAddin.CustomFields
 
         public bool AutoFill { get; set; }
 
-        /// <summary>Known Domains.txt, behind the unknownDomain column.</summary>
+        /// <summary>Known Domains.txt, behind the domainMark column.</summary>
         public KnownDomains Known { get; private set; }
 
         public CustomFieldService(Outlook.Application app, bool autoFill, KnownDomains known)
@@ -92,6 +93,136 @@ namespace tinykit.OutlookAddin.CustomFields
                 Watch(store, Outlook.OlDefaultFolders.olFolderSentMail);
             }
             _timer.Start();
+
+            // A while after startup, so Outlook is settled: unknownDomain values (before 2026-10) move to domainMark.
+            var later = new Timer { Interval = 30000 };
+            later.Tick += (s, e) =>
+            {
+                later.Stop();
+                later.Dispose();
+                try
+                {
+                    StartLegacyMigration();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("domainMark migration", ex);
+                }
+            };
+            later.Start();
+        }
+
+        // ---------- unknownDomain (before 2026-10) -> domainMark ----------
+
+        private const int LegacyPerTick = 25;
+        private readonly Queue<KeyValuePair<string, string>> _legacy = new Queue<KeyValuePair<string, string>>();
+        private Timer _legacyTimer;
+        private int _legacyDone, _legacyFailed;
+
+        /// <summary>
+        /// Finds the mail of every store that still has unknownDomain and moves the value to domainMark ("*" becomes 🅄),
+        /// a few items per tick so Outlook stays usable. Nothing to do once every item has been moved.
+        /// </summary>
+        private void StartLegacyMigration()
+        {
+            var legacy = CustomFieldNames.Dasl(CustomFieldNames.LegacyUnknownDomain);
+            foreach (Outlook.Store store in _app.Session.Stores)
+            {
+                List<Search.FindFolder> folders;
+                try
+                {
+                    folders = Search.FindItems.FoldersOf(store, new[] { Search.FindKind.Mail });
+                }
+                catch (COMException)
+                {
+                    continue;
+                }
+                foreach (var f in folders)
+                {
+                    try
+                    {
+                        var table = f.Folder.GetTable("@SQL=\"" + legacy + "\" IS NOT NULL", Outlook.OlTableContents.olUserItems);
+                        table.Columns.RemoveAll();
+                        table.Columns.Add("EntryID");
+                        while (!table.EndOfTable)
+                            _legacy.Enqueue(new KeyValuePair<string, string>((string)table.GetNextRow()[1], f.StoreId));
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Info("domainMark migration: " + f.Path + " skipped: " + ex.Message);
+                    }
+                }
+            }
+            if (_legacy.Count == 0)
+                return;
+            Log.Info("domainMark migration: " + _legacy.Count + " mail(s) with unknownDomain to move");
+            _legacyTimer = new Timer { Interval = 300 };
+            _legacyTimer.Tick += (s, e) =>
+            {
+                try
+                {
+                    MigrateSome();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("domainMark migration", ex);
+                }
+            };
+            _legacyTimer.Start();
+        }
+
+        private void MigrateSome()
+        {
+            for (int n = 0; n < LegacyPerTick && _legacy.Count > 0; n++)
+            {
+                var next = _legacy.Dequeue();
+                object item = null;
+                try
+                {
+                    item = _app.Session.GetItemFromID(next.Key, next.Value);
+                    var view = ItemView.From(item);
+                    if (view != null && MoveLegacyMark(view))
+                        view.Save();
+                    _legacyDone++;
+                }
+                catch (Exception ex)
+                {
+                    _legacyFailed++;
+                    Log.Info("domainMark migration: an item not changed: " + ex.Message);
+                }
+                finally
+                {
+                    if (item != null)
+                        Marshal.ReleaseComObject(item);
+                }
+            }
+            if (_legacy.Count == 0)
+            {
+                _legacyTimer.Stop();
+                _legacyTimer.Dispose();
+                Log.Info("domainMark migration: done, " + _legacyDone + " mail(s) moved" + (_legacyFailed > 0 ? ", " + _legacyFailed + " failed" : ""));
+            }
+        }
+
+        /// <summary>
+        /// Moves an unknownDomain value to domainMark ("*" becomes 🅄; a domainMark already there wins) and removes
+        /// unknownDomain. Returns whether anything changed (the caller saves).
+        /// </summary>
+        private static bool MoveLegacyMark(ItemView view)
+        {
+            var old = view.UserProperties.Find(CustomFieldNames.LegacyUnknownDomain);
+            if (old == null)
+                return false;
+            var value = old.Value as string;
+            var mark = view.UserProperties.Find(CustomFieldNames.DomainMark);
+            if (mark == null)
+            {
+                mark = view.UserProperties.Add(CustomFieldNames.DomainMark, Outlook.OlUserPropertyType.olText, true);
+                HideFromPrint(mark);
+                mark.Value = value == CustomFieldValues.LegacyUnknownSender ? CustomFieldValues.UnknownSender : (value ?? CustomFieldValues.None);
+            }
+            old.Delete();
+            return true;
         }
 
         private void Watch(Outlook.Store store, Outlook.OlDefaultFolders which)
@@ -257,7 +388,7 @@ namespace tinykit.OutlookAddin.CustomFields
                             continue;
                         }
                         bool removed = false;
-                        foreach (var name in CustomFieldNames.All)
+                        foreach (var name in CustomFieldNames.All.Concat(new[] { CustomFieldNames.LegacyUnknownDomain }))
                         {
                             var prop = view.UserProperties.Find(name);
                             if (prop == null)
@@ -295,9 +426,17 @@ namespace tinykit.OutlookAddin.CustomFields
         {
             bool changed = false;
             var props = new List<KeyValuePair<Outlook.UserProperty, string>>();
+            if (MoveLegacyMark(view))
+                changed = true;
             foreach (var pair in values.Pairs)
             {
                 var prop = view.UserProperties.Find(pair.Key);
+                if (prop != null && pair.Key == CustomFieldNames.DomainMark && prop.Value as string == CustomFieldValues.FromJunk)
+                {
+                    // moved from Junk Email: the mark stays until the fields are cleared (Fill Fields Ctrl+click)
+                    props.Add(new KeyValuePair<Outlook.UserProperty, string>(prop, CustomFieldValues.FromJunk));
+                    continue;
+                }
                 if (prop == null)
                 {
                     prop = view.UserProperties.Add(pair.Key, Outlook.OlUserPropertyType.olText, true);
@@ -328,7 +467,7 @@ namespace tinykit.OutlookAddin.CustomFields
         }
 
         // UserProperty flags live behind DISPID 107 (see stackoverflow.com/questions/701508).
-        private static void HideFromPrint(Outlook.UserProperty prop)
+        internal static void HideFromPrint(Outlook.UserProperty prop)
         {
             try
             {

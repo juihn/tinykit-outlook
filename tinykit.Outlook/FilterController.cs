@@ -1635,14 +1635,14 @@ namespace tinykit.OutlookAddin
                 Notifier.Info(explorer, message);
         }
 
-        /// <summary>Fills the items of the current folder that have no domainRelated or no unknownDomain yet.</summary>
+        /// <summary>Fills the items of the current folder that have no domainRelated or no domainMark yet.</summary>
         public void FillMissingFields(Outlook.Explorer explorer)
         {
             var folder = explorer.CurrentFolder;
             if (folder == null)
                 return;
             var missing = folder.Items.Restrict("@SQL=\"" + CustomFieldNames.Dasl(CustomFieldNames.DomainRelated) + "\" IS NULL OR \""
-                + CustomFieldNames.Dasl(CustomFieldNames.UnknownDomain) + "\" IS NULL");
+                + CustomFieldNames.Dasl(CustomFieldNames.DomainMark) + "\" IS NULL");
             int count = missing.Count;
             if (count == 0)
                 throw new UserMessageException("Every item in \"" + folder.Name + "\" already has its fields.\n"
@@ -1682,7 +1682,7 @@ namespace tinykit.OutlookAddin
             for (int i = 1; i <= selection.Count; i++)
                 items.Add(selection[i]);
             var ids = new HashSet<string>(items.Select(it => (string)((dynamic)it).EntryID));
-            var unknownDomain = CustomFieldNames.Dasl(CustomFieldNames.UnknownDomain);
+            var domainMark = CustomFieldNames.Dasl(CustomFieldNames.DomainMark);
             var fromDomain = string.Join(" OR ", domains.SelectMany(d => new[]
             {
                 Dasl.Like(Dasl.SenderSmtp, "%@" + d), Dasl.Like(Dasl.SenderSmtp, "%." + d),
@@ -1690,8 +1690,8 @@ namespace tinykit.OutlookAddin
             }));
             try
             {
-                var more = explorer.CurrentFolder.Items.Restrict("@SQL=(" + fromDomain + ") AND (\"" + unknownDomain
-                    + "\" IS NULL OR \"" + unknownDomain + "\" <> '" + CustomFieldValues.None + "')");
+                var more = explorer.CurrentFolder.Items.Restrict("@SQL=(" + fromDomain + ") AND (\"" + domainMark
+                    + "\" IS NULL OR \"" + domainMark + "\" <> '" + CustomFieldValues.None + "')");
                 foreach (var item in more)
                 {
                     if (ids.Add((string)((dynamic)item).EntryID))

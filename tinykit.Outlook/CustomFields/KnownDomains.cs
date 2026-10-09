@@ -17,8 +17,8 @@ namespace tinykit.OutlookAddin.CustomFields
     internal sealed class KnownDomains
     {
         private const string Header =
-@"# tinykit Outlook: known domains. Mail from other domains is marked in the unknownDomain column:
-#   *  the sender's domain is not known
+@"# tinykit Outlook: known domains. Mail from other domains is marked in the domainMark column:
+#   🅄  the sender's domain is not known
 #   +  the sender's domain is known, but a recipient's is not
 #   -  the sender and all recipients are in known domains
 # One domain per line, after the date it was added and a tab. A domain covers its subdomains.

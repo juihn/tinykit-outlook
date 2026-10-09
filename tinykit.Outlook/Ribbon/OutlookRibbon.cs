@@ -297,19 +297,6 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("</box>");
             sb.Append("</group>");
 
-            // Custom mail fields (domainRelated, nameRelated, me, tos, ccs, unknownDomain): mail folders only.
-            sb.Append("<group id=\"grpFields\" insertBeforeQ=\"tk:AfterItems\" label=\"Custom Mail Fields\" getVisible=\"GetMailVisible\">");
-            sb.Append("<button id=\"cfFill\" label=\"Fill Fields\" imageMso=\"DrawLayoutTable\" onAction=\"OnFillFields\"")
-              .Append(" screentip=\"Fill Fields\" supertip=\"Fill domainRelated, nameRelated, me, tos, ccs and unknownDomain. ")
-              .Append("Click: the items of the current folder that do not have them yet (e.g. mail received while Outlook was closed, ")
-              .Append("or in folders other than Inbox and Sent Items). Shift+click: recompute the selected items, even if they already have ")
-              .Append("values (e.g. after editing Known Domains.txt or adding a contact). Ctrl+click: clear the fields of the selected items.\"/>");
-            sb.Append("<button id=\"cfAddKnown\" label=\"Add Known Domain\" imageMso=\"AddToFavorites\" onAction=\"OnAddKnownDomain\"")
-              .Append(" screentip=\"Add Known Domain\" getSupertip=\"GetAddKnownSupertip\"/>");
-            sb.Append("<checkBox id=\"cfAutoFill\" label=\"Auto-fill new mail\" getPressed=\"GetAutoFillPressed\" onAction=\"OnAutoFillToggle\"")
-              .Append(" screentip=\"Auto-fill new mail\" supertip=\"Fill the fields of mail arriving in each account's Inbox and Sent Items.\"/>");
-            sb.Append("</group>");
-
             // Table View.
             sb.Append("<group id=\"grpView\" insertBeforeQ=\"tk:AfterItems\" label=\"Table View\" getVisible=\"GetNotCalendarVisible\">");
             sb.Append("<button id=\"mViewColumns\" label=\"Apply Predefined Columns\" imageMso=\"TableInsert\" onAction=\"OnViewColumns\"")
@@ -328,6 +315,19 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("for mail you sent (it also starts a sent mail's nameRelated), mail with you in To, mail with you only in Cc. ")
               .Append("Mail that has an old symbol and saved filters that use it are changed too.\"/></dialogBoxLauncher>");
             sb.Append("</group>");
+            // Custom mail fields (domainRelated, nameRelated, me, tos, ccs, domainMark): mail folders only.
+            sb.Append("<group id=\"grpFields\" insertBeforeQ=\"tk:AfterItems\" label=\"Custom Mail Fields\" getVisible=\"GetMailVisible\">");
+            sb.Append("<button id=\"cfFill\" label=\"Fill Fields\" imageMso=\"DrawLayoutTable\" onAction=\"OnFillFields\"")
+              .Append(" screentip=\"Fill Fields\" supertip=\"Fill domainRelated, nameRelated, me, tos, ccs and domainMark. ")
+              .Append("Click: the items of the current folder that do not have them yet (e.g. mail received while Outlook was closed, ")
+              .Append("or in folders other than Inbox and Sent Items). Shift+click: recompute the selected items, even if they already have ")
+              .Append("values (e.g. after editing Known Domains.txt or adding a contact). Ctrl+click: clear the fields of the selected items.\"/>");
+            sb.Append("<button id=\"cfAddKnown\" label=\"Add Known Domain\" imageMso=\"AddToFavorites\" onAction=\"OnAddKnownDomain\"")
+              .Append(" screentip=\"Add Known Domain\" getSupertip=\"GetAddKnownSupertip\"/>");
+            sb.Append("<checkBox id=\"cfAutoFill\" label=\"Auto-fill new mail\" getPressed=\"GetAutoFillPressed\" onAction=\"OnAutoFillToggle\"")
+              .Append(" screentip=\"Auto-fill new mail\" supertip=\"Fill the fields of mail arriving in each account's Inbox and Sent Items.\"/>");
+            sb.Append("</group>");
+
 
             // Quick Filter (mail and contact folders): one input box, then four buttons, each followed by its own
             // history drop-down; what they filter by depends on the folder.
@@ -460,10 +460,10 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<checkBox id=\"cfSentToInbox\" label=\"Move Sent Mail to Inbox\" getVisible=\"GetMailVisible\" getPressed=\"GetSentToInboxPressed\" onAction=\"OnSentToInboxToggle\"")
               .Append(" screentip=\"Move Sent Mail to Inbox\" supertip=\"Move mail in each account's Sent Items to the same account's Inbox: ")
               .Append("a few seconds after Outlook starts and after mail arrives in Sent Items (also mail sent from another mail client). ")
-              .Append("Gmail accounts are left out (there Sent Mail is a label).\"/>");
+              .Append("Gmail accounts too (moving out of Sent Mail takes its label off).\"/>");
             sb.Append("<checkBox id=\"cfJunkToInbox\" label=\"Move Junk Mail to Inbox\" getVisible=\"GetMailVisible\" getPressed=\"GetJunkToInboxPressed\" onAction=\"OnJunkToInboxToggle\"")
               .Append(" screentip=\"Move Junk Mail to Inbox\" supertip=\"Move mail in each account's Junk Email to the same account's Inbox: ")
-              .Append("a few seconds after Outlook starts and after mail arrives in Junk Email (for Gmail, moving out of Spam marks it not spam).\"/>");
+              .Append("a few seconds after Outlook starts and after mail arrives in Junk Email (for Gmail, moving out of Spam marks it not spam). The moved mail gets 🅙 in domainMark.\"/>");
             // Contact folders: switch the selected contacts between Outlook's form and the folder's custom form.
             sb.Append("<button id=\"cfFormDefault\" label=\"Default Contact Form\" imageMso=\"NewContact\"")
               .Append(" getVisible=\"GetContactVisible\" onAction=\"OnSetDefaultContactForm\" screentip=\"Default Contact Form\"")
@@ -1214,8 +1214,8 @@ namespace tinykit.OutlookAddin.Ribbon
         private string GetAddKnownSupertipText(Office.IRibbonControl control)
         {
             return Safe(() => "Add the base domain of each selected mail's sender (billing.fabrikam.com → fabrikam.com) to the known domains, "
-                + "then refill unknownDomain of the selected mails and of this folder's mail from those domains. "
-                + "unknownDomain: * unknown sender domain, + known sender but an unknown recipient domain, - all known. "
+                + "then refill domainMark of the selected mails and of this folder's mail from those domains. "
+                + "domainMark: 🅄 unknown sender domain, + known sender but an unknown recipient domain, - all known, 🅙 moved from Junk Email (kept). "
                 + "Ctrl+click: edit the list. File: " + SettingsPaths.KnownDomainsFile, "");
         }
 

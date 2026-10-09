@@ -142,13 +142,16 @@ The add-in writes these text columns (user properties) on mail and meeting items
 | `nameRelated` | `☺ contact name` if the sender is in Contacts (mail filled before 2026-10: `[contact name]`), else the sender display name; `(local part)` when that is just the address | the `me` column's sent symbol (`▶` by default) + a space + first recipient (`tos` / `ccs` count the recipients; mail filled before 2026-10 may still end in ` (+)`) |
 | `me` | `●` I am in To · `○` I am only in Cc · `-` neither (e.g. Bcc, a list address) | `▶` |
 | `tos` / `ccs` | number of To / Cc recipients (`-` for 0) | same |
-| `unknownDomain` | `*` the sender's domain is not in *Known Domains.txt* · `+` it is, but a recipient's is not · `-` all known | `+` / `-` for the recipients (I am a known sender) |
+| `domainMark` | `🅄` the sender's domain is not in *Known Domains.txt* · `+` it is, but a recipient's is not · `-` all known · `🅙` moved from Junk Email by Move Junk Mail to Inbox (kept when the fields are filled again) | `+` / `-` for the recipients (I am a known sender) |
 
 - For mail I sent, the first recipient is shown as `☺ contact name` when the address is in Contacts, however it was entered. Otherwise it shows the name Outlook displayed if it was picked from an address book (e.g. the GAL), else the address itself.
 - Contact name means the contact's e-mail display name for that address, or File As if that is empty. Contacts are looked up in every store's Contacts folder and its subfolders (e.g. `olk/family`), skipping system folders such as Recipient Cache and GAL Contacts.
+- `domainMark` was called `unknownDomain` before 2026-10, with `*` for an unknown sender. A while after Outlook starts,
+  mail that still has `unknownDomain` gets its value in `domainMark` (`*` → `🅄`), a few at a time; saved filters and the
+  View Columns file are read with the new name too.
 - A mail counts as "mine" when its sender (or principal) is one of my accounts' addresses.
 - **Auto-fill new mail** fills mail as it arrives in each account's Inbox or Sent Items.
-- **Fill Fields** fills the current folder's items that have no `domainRelated` or `unknownDomain` yet, e.g. mail that arrived
+- **Fill Fields** fills the current folder's items that have no `domainRelated` or `domainMark` yet, e.g. mail that arrived
   while Outlook was closed or in folders other than Inbox and Sent Items.
   **Shift+click** recomputes the selected items instead, even if they already have values (e.g. after editing Known Domains.txt).
   **Ctrl+click** clears the fields of the selected items (asked first); they stay empty until filled again.
@@ -297,12 +300,13 @@ Tools for the selected items; each button shows only in the folders where it app
   to be saved there.
 - **Move Sent Mail to Inbox** (mail folders) moves mail in each account's Sent Items to the same account's Inbox, so a conversation reads
   in one place: a few seconds after Outlook starts and after mail arrives in Sent Items, each time all of Sent Items (so
-  mail sent from another mail client and synchronized is moved too). Meeting requests stay. Gmail accounts are left out:
-  there Sent Mail is a label, and moving out of it over IMAP deletes Gmail's sent copy or brings it back.
+  mail sent from another mail client and synchronized is moved too). Meeting requests stay. Gmail accounts too:
+  there Sent Mail is a label, and moving out of it over IMAP takes that label off.
   (`moveSentToInbox` in `Saved Filters - Mail.xml`; on by default.)
 - **Move Junk Mail to Inbox** (mail folders) moves mail in each account's Junk Email to the same account's Inbox, the same
   way: a few seconds after Outlook starts and after mail arrives in Junk Email, each time the whole folder, so nothing is
-  lost to a wrong junk verdict. For Gmail, moving out of Spam marks the mail not spam.
+  lost to a wrong junk verdict. For Gmail, moving out of Spam marks the mail not spam. The moved
+  mail gets `🅙` in `domainMark`.
   (`moveJunkToInbox` in `Saved Filters - Mail.xml`; off by default.)
 - **Recipients Report** (mail and calendar folders) opens a window for the selected mail: the sender, then the
   recipients grouped by **domain** and by the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background:
@@ -364,7 +368,7 @@ The file is rewritten when you change settings from the ribbon, so comments you 
 ### View Columns - Mail.txt / - Contacts.txt / - Tasks.txt
 One column per line; `#` lines are skipped. The values are separated by tabs, and several tabs in a row count as one,
 so the lines can be lined up freely. After the field name, each value goes to the next field whose format it fits,
-so fields can be left out (`me⇥Center` is a centered column with no width; `unknownDomain⇥4⇥Center⇥ud` skips Type and
+so fields can be left out (`me⇥Center` is a centered column with no width; `domainMark⇥4⇥Center⇥ud` skips Type and
 Format):
 
 | Field (in order) | Format | Meaning |
@@ -384,7 +388,7 @@ Format):
 #											Alias
 Received		18	olDateTime	3
 nameRelated		18					Right
-unknownDomain	4					Center	ud
+domainMark	4					Center	ud
 Size			9				3	Right
 ```
 

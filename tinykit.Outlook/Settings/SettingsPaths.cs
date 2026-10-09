@@ -90,7 +90,7 @@ namespace tinykit.OutlookAddin.Settings
 
         public static string HistoryFile { get { return Path.Combine(SettingsFolder, "History.xml"); } }
 
-        /// <summary>Base domains trusted by the unknownDomain column.</summary>
+        /// <summary>Base domains trusted by the domainMark column.</summary>
         public static string KnownDomainsFile { get { return Path.Combine(SettingsFolder, "Known Domains.txt"); } }
 
         /// <summary>Table view columns of one kind of folder: View Columns - Mail.txt, - Contacts.txt, - Tasks.txt.</summary>

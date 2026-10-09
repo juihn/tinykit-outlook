@@ -123,7 +123,7 @@ namespace tinykit.OutlookAddin.CustomFields
                 else if (r.Type == (int)Outlook.OlMailRecipientType.olCC)
                     cc.Add(r);
             }
-            values.UnknownDomain = UnknownDomainOf(sentByMe, fromSmtp, all);
+            values.DomainMark = DomainMarkOf(sentByMe, fromSmtp, all);
             values.Tos = Count(to.Count);
             values.Ccs = Count(cc.Count);
             var symbols = MeSymbols.Current(); // sent, to, cc (Mail settings)
@@ -149,10 +149,10 @@ namespace tinykit.OutlookAddin.CustomFields
         }
 
         /// <summary>
-        /// "*" when the sender's domain is not known, "+" when it is but some recipient's is not, "-" otherwise.
+        /// "🅄" when the sender's domain is not known, "+" when it is but some recipient's is not, "-" otherwise.
         /// Mail I sent counts as a known sender, and my own addresses among the recipients are skipped.
         /// </summary>
-        private string UnknownDomainOf(bool sentByMe, string fromSmtp, List<Outlook.Recipient> recipients)
+        private string DomainMarkOf(bool sentByMe, string fromSmtp, List<Outlook.Recipient> recipients)
         {
             if (Known == null)
                 return CustomFieldValues.None;

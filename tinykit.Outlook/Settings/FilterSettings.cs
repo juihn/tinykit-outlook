@@ -77,7 +77,7 @@ namespace tinykit.OutlookAddin.Settings
         /// <summary>Mail only: fill the custom mail fields of arriving mail.</summary>
         public bool AutoFillFields = true;
 
-        /// <summary>Mail files only: move mail in each account's Sent Items to its Inbox (Gmail left out).</summary>
+        /// <summary>Mail files only: move mail in each account's Sent Items to its Inbox.</summary>
         public bool MoveSentToInbox = true;
 
         /// <summary>Mail files only: move mail in each account's Junk Email to its Inbox.</summary>
@@ -111,7 +111,7 @@ namespace tinykit.OutlookAddin.Settings
                 autoFillFields=""true|false""           autoFillFields (Mail only): fill domainRelated/nameRelated/
                                                        me/tos/ccs of mail arriving in Inbox / Sent Items
                 moveSentToInbox=""true|false""          moveSentToInbox (Mail only): move mail in each
-                                                       account's Sent Items to its Inbox (Gmail left out)
+                                                       account's Sent Items to its Inbox
                 moveJunkToInbox=""true|false""          moveJunkToInbox (Mail only): move mail in each
                                                        account's Junk Email to its Inbox
                 sendDelaySeconds=""60""                 sendDelaySeconds (Mail only): seconds a sent mail
@@ -160,6 +160,24 @@ namespace tinykit.OutlookAddin.Settings
   subject pattern, or several together) to the saved filter named Delete; New... names a new filter first.
 ";
 
+        /// <summary>
+        /// A filter written before 2026-10 for unknownDomain (now domainMark, with 🅄 for an unknown sender instead of "*").
+        /// The file keeps the old text until the saved filters are next saved.
+        /// </summary>
+        private static string MigrateSql(string sql)
+        {
+            var legacy = "/" + CustomFields.CustomFieldNames.LegacyUnknownDomain + "\"";
+            if (sql.IndexOf(legacy, StringComparison.OrdinalIgnoreCase) < 0)
+                return sql;
+            var name = "/" + CustomFields.CustomFieldNames.DomainMark + "\"";
+            sql = System.Text.RegularExpressions.Regex.Replace(sql,
+                System.Text.RegularExpressions.Regex.Escape(legacy) + @"(\s*(?:=|<>|LIKE)\s*)'\*'",
+                name.Replace("$", "$$") + "${1}'" + CustomFields.CustomFieldValues.UnknownSender + "'",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            return System.Text.RegularExpressions.Regex.Replace(sql, System.Text.RegularExpressions.Regex.Escape(legacy),
+                name, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+
         public static FilterSettings Load(string path, ItemKind kind)
         {
             if (!File.Exists(path))
@@ -195,7 +213,7 @@ namespace tinykit.OutlookAddin.Settings
             {
                 var name = ((string)e.Attribute("name") ?? "").Trim();
                 var rawSql = (string)e.Element("Sql") ?? "";
-                var sql = rawSql.Trim();
+                var sql = MigrateSql(rawSql.Trim());
                 // A filter without SQL is kept as a placeholder (e.g. set up for "Add to ..." with its format ready);
                 // it is not shown on the ribbon until it has SQL.
                 if (name.Length == 0)

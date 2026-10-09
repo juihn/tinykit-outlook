@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -131,6 +131,9 @@ In Folder		12
 
                 var fields = SplitFields(line, lineNo);
                 var c = new ViewColumn { Line = lineNo, FieldName = fields[FieldName] };
+                // domainMark was called unknownDomain before 2026-10
+                if (string.Equals(c.FieldName, CustomFields.CustomFieldNames.LegacyUnknownDomain, StringComparison.OrdinalIgnoreCase))
+                    c.FieldName = CustomFields.CustomFieldNames.DomainMark;
                 c.Width = PositiveInt(fields[Width]);
                 c.Format = PositiveInt(fields[Format]);
                 Outlook.OlUserPropertyType type;

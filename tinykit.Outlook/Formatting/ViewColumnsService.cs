@@ -18,7 +18,7 @@ namespace tinykit.OutlookAddin.Formatting
         private static readonly HashSet<string> OwnFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             CustomFieldNames.DomainRelated, CustomFieldNames.NameRelated, CustomFieldNames.Me, CustomFieldNames.Tos, CustomFieldNames.Ccs,
-            CustomFieldNames.UnknownDomain,
+            CustomFieldNames.DomainMark,
         };
 
         /// <summary>

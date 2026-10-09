@@ -10,9 +10,12 @@ namespace tinykit.OutlookAddin.CustomFields
         public const string Me = "me";
         public const string Tos = "tos";
         public const string Ccs = "ccs";
-        public const string UnknownDomain = "unknownDomain";
+        public const string DomainMark = "domainMark";
 
-        public static readonly string[] All = { DomainRelated, NameRelated, Me, Tos, Ccs, UnknownDomain };
+        /// <summary>domainMark's name before 2026-10 (values "*", "+", "-"); moved to domainMark at startup.</summary>
+        public const string LegacyUnknownDomain = "unknownDomain";
+
+        public static readonly string[] All = { DomainRelated, NameRelated, Me, Tos, Ccs, DomainMark };
 
         /// <summary>DASL name of a (PS_PUBLIC_STRINGS) user property, for filters.</summary>
         public static string Dasl(string name)
@@ -32,11 +35,16 @@ namespace tinykit.OutlookAddin.CustomFields
         public string Tos = None;
         public string Ccs = None;
 
-        /// <summary>"*" unknown sender domain, "+" known sender but an unknown recipient domain, "-" all known.</summary>
-        public string UnknownDomain = None;
+        /// <summary>
+        /// "🅄" unknown sender domain, "+" known sender but an unknown recipient domain, "-" all known; "🅙" moved from
+        /// Junk Email to the Inbox (Move Junk Mail to Inbox), which recomputing keeps.
+        /// </summary>
+        public string DomainMark = None;
 
-        public const string UnknownSender = "*";
+        public const string UnknownSender = "🅄";    // 🅄 SQUARED LATIN CAPITAL LETTER U
         public const string UnknownRecipient = "+";
+        public const string FromJunk = "🅙";         // 🅙 NEGATIVE CIRCLED LATIN CAPITAL LETTER J
+        public const string LegacyUnknownSender = "*";       // unknownDomain's mark before 2026-10
 
         public IEnumerable<KeyValuePair<string, string>> Pairs
         {
@@ -47,13 +55,13 @@ namespace tinykit.OutlookAddin.CustomFields
                 yield return new KeyValuePair<string, string>(CustomFieldNames.Me, Me);
                 yield return new KeyValuePair<string, string>(CustomFieldNames.Tos, Tos);
                 yield return new KeyValuePair<string, string>(CustomFieldNames.Ccs, Ccs);
-                yield return new KeyValuePair<string, string>(CustomFieldNames.UnknownDomain, UnknownDomain);
+                yield return new KeyValuePair<string, string>(CustomFieldNames.DomainMark, DomainMark);
             }
         }
 
         public override string ToString()
         {
-            return DomainRelated + " | " + NameRelated + " | " + Me + " | " + Tos + " | " + Ccs + " | " + UnknownDomain;
+            return DomainRelated + " | " + NameRelated + " | " + Me + " | " + Tos + " | " + Ccs + " | " + DomainMark;
         }
     }
 }
