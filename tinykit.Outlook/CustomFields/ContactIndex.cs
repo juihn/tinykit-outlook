@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -27,6 +27,10 @@ namespace tinykit.OutlookAddin.CustomFields
         private const string ContactSet = "http://schemas.microsoft.com/mapi/id/{00062004-0000-0000-C000-000000000046}/";
         private const string FileAs = ContactSet + "8005001F";
         private const string Department = "urn:schemas:contacts:department";
+        private const string NickName = "urn:schemas:contacts:nickname";
+        private const string GivenName = "urn:schemas:contacts:givenName";
+        private const string MiddleName = "urn:schemas:contacts:middlename";
+        private const string Surname = "urn:schemas:contacts:sn";
         private const int BatchRows = 2000;
 
         // (address, e-mail display name) per e-mail slot 1..3
@@ -106,14 +110,19 @@ namespace tinykit.OutlookAddin.CustomFields
                     table.Columns.Add("EntryID");
                     table.Columns.Add(FileAs);
                     table.Columns.Add(Department);
+                    table.Columns.Add(NickName);
+                    table.Columns.Add(GivenName);
+                    table.Columns.Add(MiddleName);
+                    table.Columns.Add(Surname);
                     foreach (var slot in Slots)
                     {
                         table.Columns.Add(slot[0]);
                         table.Columns.Add(slot[1]);
                     }
 
-                    // Columns: 0 MessageClass, 1 EntryID, 2 FileAs, 3 Department, then (address, display name) per slot.
-                    const int firstSlot = 4;
+                    // Columns: 0 MessageClass, 1 EntryID, 2 FileAs, 3 Department, 4 NickName, 5-7 given, middle and
+                    // surname, then (address, display name) per slot.
+                    const int firstSlot = 8;
                     while (!table.EndOfTable)
                     {
                         var rows = (Array)table.GetArray(BatchRows);
@@ -126,13 +135,15 @@ namespace tinykit.OutlookAddin.CustomFields
                             var entryId = rows.GetValue(r, c0 + 1) as string;
                             var fileAs = (rows.GetValue(r, c0 + 2) as string ?? "").Trim();
                             var department = (rows.GetValue(r, c0 + 3) as string ?? "").Trim();
+                            var nickName = (rows.GetValue(r, c0 + 4) as string ?? "").Trim();
+                            bool hasName = Enumerable.Range(5, 3).Any(i => !string.IsNullOrWhiteSpace(rows.GetValue(r, c0 + i) as string));
                             for (int s = 0; s < Slots.Length; s++)
                             {
                                 var address = (rows.GetValue(r, c0 + firstSlot + 2 * s) as string ?? "").Trim();
                                 if (address.IndexOf('@') < 0 || entries.ContainsKey(address))
                                     continue;
                                 var display = (rows.GetValue(r, c0 + firstSlot + 1 + 2 * s) as string ?? "").Trim();
-                                var name = display.Length > 0 ? display : fileAs;
+                                var name = display.Length > 0 ? WithoutNickName(display, nickName, hasName) : fileAs;
                                 if (name.Length > 0)
                                     entries[address] = new ContactEntry
                                     {
@@ -151,6 +162,25 @@ namespace tinykit.OutlookAddin.CustomFields
                 }
             }
             _entries = entries;
+        }
+
+        /// <summary>
+        /// The e-mail display name without the nickname when the contact has another name (first, middle or last):
+        /// Restate Contact Fields puts both in it ("name nickname [domain]"), and the nickname is only wanted when it is
+        /// the only name.
+        /// </summary>
+        private static string WithoutNickName(string display, string nickName, bool hasName)
+        {
+            if (!hasName || nickName.Length == 0)
+                return display;
+            var words = " " + display + " ";
+            var at = words.IndexOf(" " + nickName + " ", StringComparison.Ordinal);
+            if (at < 0)
+                return display;
+            var rest = (words.Substring(0, at) + " " + words.Substring(at + nickName.Length + 2)).Trim();
+            rest = System.Text.RegularExpressions.Regex.Replace(rest, @"\s{2,}", " ");
+            // nothing left but the domain tag, e.g. "[unigrant]": keep the display name as it is
+            return rest.Length == 0 || rest.StartsWith("[", StringComparison.Ordinal) || rest.StartsWith("(", StringComparison.Ordinal) ? display : rest;
         }
 
         private IEnumerable<Outlook.MAPIFolder> ContactFolders()

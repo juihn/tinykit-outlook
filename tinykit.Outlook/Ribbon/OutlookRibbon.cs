@@ -462,8 +462,8 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("a few seconds after Outlook starts and after mail arrives in Sent Items (also mail sent from another mail client). ")
               .Append("Gmail accounts too (moving out of Sent Mail takes its label off).\"/>");
             sb.Append("<checkBox id=\"cfJunkToInbox\" label=\"Move Junk Mail to Inbox\" getVisible=\"GetMailVisible\" getPressed=\"GetJunkToInboxPressed\" onAction=\"OnJunkToInboxToggle\"")
-              .Append(" screentip=\"Move Junk Mail to Inbox\" supertip=\"Move mail in each account's Junk Email to the same account's Inbox: ")
-              .Append("a few seconds after Outlook starts and after mail arrives in Junk Email (for Gmail, moving out of Spam marks it not spam). The moved mail gets 🅙 in domainMark.\"/>");
+              .Append(" screentip=\"Move Junk Mail to Inbox\" supertip=\"Move mail arriving in each account's Junk Email to the same account's Inbox, ")
+              .Append("a few seconds after it arrives (mail already there when Outlook starts or this is turned on stays; for Gmail, moving out of Spam marks it not spam). The moved mail gets 🅙 in domainMark.\"/>");
             // Contact folders: switch the selected contacts between Outlook's form and the folder's custom form.
             sb.Append("<button id=\"cfFormDefault\" label=\"Default Contact Form\" imageMso=\"NewContact\"")
               .Append(" getVisible=\"GetContactVisible\" onAction=\"OnSetDefaultContactForm\" screentip=\"Default Contact Form\"")

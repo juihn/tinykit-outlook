@@ -145,7 +145,7 @@ The add-in writes these text columns (user properties) on mail and meeting items
 | `domainMark` | `🅄` the sender's domain is not in *Known Domains.txt* · `+` it is, but a recipient's is not · `-` all known · `🅙` moved from Junk Email by Move Junk Mail to Inbox (kept when the fields are filled again) | `+` / `-` for the recipients (I am a known sender) |
 
 - For mail I sent, the first recipient is shown as `☺ contact name` when the address is in Contacts, however it was entered. Otherwise it shows the name Outlook displayed if it was picked from an address book (e.g. the GAL), else the address itself.
-- Contact name means the contact's e-mail display name for that address, or File As if that is empty. Contacts are looked up in every store's Contacts folder and its subfolders (e.g. `olk/family`), skipping system folders such as Recipient Cache and GAL Contacts.
+- Contact name means the contact's e-mail display name for that address, or File As if that is empty. A nickname in the display name is left out when the contact also has a first, middle or last name (it is used only when it is the only name). Contacts are looked up in every store's Contacts folder and its subfolders (e.g. `olk/family`), skipping system folders such as Recipient Cache and GAL Contacts.
 - `domainMark` was called `unknownDomain` before 2026-10, with `*` for an unknown sender. A while after Outlook starts,
   mail that still has `unknownDomain` gets its value in `domainMark` (`*` → `🅄`), a few at a time; saved filters and the
   View Columns file are read with the new name too.
@@ -303,9 +303,9 @@ Tools for the selected items; each button shows only in the folders where it app
   mail sent from another mail client and synchronized is moved too). Meeting requests stay. Gmail accounts too:
   there Sent Mail is a label, and moving out of it over IMAP takes that label off.
   (`moveSentToInbox` in `Saved Filters - Mail.xml`; on by default.)
-- **Move Junk Mail to Inbox** (mail folders) moves mail in each account's Junk Email to the same account's Inbox, the same
-  way: a few seconds after Outlook starts and after mail arrives in Junk Email, each time the whole folder, so nothing is
-  lost to a wrong junk verdict. For Gmail, moving out of Spam marks the mail not spam. The moved
+- **Move Junk Mail to Inbox** (mail folders) moves mail arriving in each account's Junk Email to the same account's Inbox,
+  a few seconds after it arrives, so nothing new is lost to a wrong junk verdict. Mail already in Junk Email when Outlook
+  starts or the option is turned on stays there. For Gmail, moving out of Spam marks the mail not spam. The moved
   mail gets `🅙` in `domainMark`.
   (`moveJunkToInbox` in `Saved Filters - Mail.xml`; off by default.)
 - **Recipients Report** (mail and calendar folders) opens a window for the selected mail: the sender, then the
