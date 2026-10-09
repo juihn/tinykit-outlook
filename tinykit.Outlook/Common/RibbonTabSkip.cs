@@ -60,6 +60,12 @@ namespace tinykit.OutlookAddin.Common
         [DllImport("user32.dll")]
         private static extern IntPtr GetFocus();
 
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetParent(IntPtr hwnd);
+
+        [DllImport("oleacc.dll")]
+        private static extern int AccessibleObjectFromWindow(IntPtr hwnd, int objectId, ref Guid iid, [MarshalAs(UnmanagedType.IUnknown)] out object accessible);
+
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern int GetClassName(IntPtr hwnd, StringBuilder name, int count);
 
@@ -154,6 +160,46 @@ namespace tinykit.OutlookAddin.Common
                 _skips = 0;
                 Log.Error("Ribbon Tab", ex);
             }
+        }
+
+        /// <summary>The label of the Quick Filter box (OutlookRibbon.BuildXml), its name in MSAA focus events.</summary>
+        public const string QuickBoxName = "Value";
+
+        private const int OBJID_CLIENT = unchecked((int)0xFFFFFFFC);
+
+        /// <summary>
+        /// The text in the Quick Filter box when it has the keyboard focus (as typed, before the ribbon commits it on Enter
+        /// or on leaving the box); null when the focus is elsewhere. While a ribbon box is being edited the focus is in a
+        /// RichEdit window of its own (parent NetUICtrlNotifySink, no focus event of the ribbon), named after the box.
+        /// </summary>
+        public static string QuickBoxText()
+        {
+            try
+            {
+                var focus = GetFocus();
+                if (focus == IntPtr.Zero || !ClassIs(focus, "RICHEDIT60W") || !ClassIs(GetParent(focus), "NetUICtrlNotifySink"))
+                    return null;
+                var iid = new Guid("618736e0-3c3d-11cf-810c-00aa00389b71"); // IID_IAccessible
+                object found;
+                if (AccessibleObjectFromWindow(focus, OBJID_CLIENT, ref iid, out found) != 0 || !(found is IAccessible box)
+                    || !QuickBoxName.Equals(box.get_accName(0), StringComparison.Ordinal))
+                    return null;
+                return box.get_accValue(0) ?? "";
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Quick Filter box text", ex);
+                return null;
+            }
+        }
+
+        private static bool ClassIs(IntPtr hwnd, string name)
+        {
+            if (hwnd == IntPtr.Zero)
+                return false;
+            var cls = new StringBuilder(64);
+            GetClassName(hwnd, cls, cls.Capacity);
+            return cls.ToString() == name;
         }
 
         private static bool OnGallery()

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using tinykit.OutlookAddin.Common;
 using tinykit.OutlookAddin.CustomFields;
 using tinykit.OutlookAddin.Ribbon;
@@ -22,9 +23,11 @@ namespace tinykit.OutlookAddin
         }
 
         // Called by VSTO before Startup.
+        private OutlookRibbon _ribbon;
+
         protected override Office.IRibbonExtensibility CreateRibbonExtensibilityObject()
         {
-            return new OutlookRibbon(Controller);
+            return _ribbon = new OutlookRibbon(Controller);
         }
 
         private void ThisAddIn_Startup(object sender, EventArgs e)
@@ -121,10 +124,14 @@ namespace tinykit.OutlookAddin
                 AddShortcut("ReadingPane", CtrlAlt | System.Windows.Forms.Keys.R, "Reading Pane Right/Bottom/Off",
                     "Move the reading pane: Right, then Bottom, then Off, then Right again. (Outlook: Reply with Meeting.)",
                     CycleReadingPane);
+                AddShortcut("QuickFilterBox", CtrlAlt | System.Windows.Forms.Keys.Q, "Quick Filter box",
+                    "Show the TinyKit tab and put the cursor in the Quick Filter box (then Alt + a button's letter filters).",
+                    FocusQuickFilterBox);
                 Shortcuts.Load();
                 // Tab in the ribbon skips the Quick Filter's recent-value lists.
                 RibbonTabSkip.Start();
                 _shortcuts.After(System.Windows.Forms.Keys.Tab, RibbonTabSkip.AfterTab);
+                AddQuickFilterKeys();
             }
             catch (Exception ex)
             {
@@ -156,6 +163,70 @@ namespace tinykit.OutlookAddin
                         Notifier.Info(explorer, ex.Message);
                     }
                 });
+        }
+
+        /// <summary>
+        /// Shows the TinyKit tab and puts the focus in the Quick Filter box (looked for a few times: the tab is drawn a
+        /// moment after it is shown).
+        /// </summary>
+        private void FocusQuickFilterBox(Outlook.Explorer explorer)
+        {
+            if (Controller.Focus(explorer) == null || FilterController.QuickKindsFor(Controller.Focus(explorer)).Length == 0)
+                throw new UserMessageException("The Quick Filter is in mail and contact folders.");
+            _ribbon.ActivateMainTab();
+            var owner = WindowOwner.From(explorer);
+            if (owner == null)
+                return;
+            RibbonFocus.FocusEditBox(owner.Handle, RibbonTabSkip.QuickBoxName, ok =>
+            {
+                if (!ok)
+                    Log.Info("Quick Filter box: not found in the ribbon");
+            });
+        }
+
+        /// <summary>
+        /// In the Quick Filter box, Alt + a filter button's letter (mail: F From, S Subject, N Name, D Domain; contacts:
+        /// F File As, E Email, C Company, D Department) filters by that field with the text in the box, as the button does.
+        /// </summary>
+        private void AddQuickFilterKeys()
+        {
+            var letters = ((Filtering.QuickKind[])Enum.GetValues(typeof(Filtering.QuickKind)))
+                .Select(k => k.ToString()[0]).Distinct();
+            foreach (var letter in letters)
+            {
+                var key = System.Windows.Forms.Keys.Alt | (System.Windows.Forms.Keys)char.ToUpperInvariant(letter);
+                Filtering.QuickKind kind = 0;
+                string text = null;
+                _shortcuts.Add(key,
+                    () =>
+                    {
+                        // checked in the hook: only in the box, and only for a letter of the folder's buttons
+                        var explorer = Application.ActiveWindow() as Outlook.Explorer;
+                        text = explorer == null ? null : RibbonTabSkip.QuickBoxText();
+                        if (text == null)
+                            return false;
+                        var match = FilterController.QuickKindsFor(Controller.Focus(explorer)).Where(k => k.ToString()[0] == letter).ToList();
+                        if (match.Count == 0)
+                            return false;
+                        kind = match[0];
+                        return true;
+                    },
+                    () =>
+                    {
+                        var explorer = Application.ActiveWindow() as Outlook.Explorer;
+                        if (explorer == null)
+                            return;
+                        try
+                        {
+                            Controller.SetInputText(text);
+                            Controller.QuickButton(explorer, kind);
+                        }
+                        catch (UserMessageException ex)
+                        {
+                            Notifier.Info(explorer, ex.Message);
+                        }
+                    });
+            }
         }
 
         // Reading pane Right → Bottom → Off → Right, through Outlook's own View > Reading Pane commands.

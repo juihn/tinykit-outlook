@@ -120,6 +120,8 @@ The filter shows the items whose field *contains* the value (`LIKE '%value%'`):
 | Contacts | **D** | Department |
 
 - **Button:** uses the text in the input box. If the box is empty, it uses the value of the first selected mail or contact.
+- **Alt + the button's letter** in the box (e.g. **Alt+S** filter by Subject, **Alt+D** by `domainRelated` in mail
+  folders) does what the button does, with the text as typed, without leaving the box.
 - **▼:** opens a one-level list of that field's last 19 values as `[short date] value`. Clicking one filters by it and puts it in the box.
   **Ctrl+click** removes it from the list. Every field keeps its own list, so mail and contact values never mix.
 - **Tab / Shift+Tab** go from the box through the buttons only, skipping the ▼ lists (the ribbon has no tab-stop
@@ -156,8 +158,17 @@ The add-in writes these text columns (user properties) on mail and meeting items
   **Shift+click** recomputes the selected items instead, even if they already have values (e.g. after editing Known Domains.txt).
   **Ctrl+click** clears the fields of the selected items (asked first); they stay empty until filled again.
 - **Add Known Domain** adds the base domain of each selected mail's sender (`a@billing.fabrikam.com` → `fabrikam.com`) to
-  `Known Domains.txt`, then refills the selected mails and this folder's mail from those domains that is still marked `*` or `+`.
+  `Known Domains.txt`, then refills the selected mails and this folder's mail from those domains that are still marked `🅄` or `+`.
   **Ctrl+click** opens `Known Domains.txt` in VS Code (Notepad if not installed).
+- The Custom Mail Fields group's **dialog button** (corner arrow) opens **Column Symbols**: a drop-down for the **Contact** mark before a
+  name from Contacts in `nameRelated` (☺ ☻ ✆ ☎; kept as `contactMark`), and one each for mail I **Sent**
+  (→ ⇒ ⇥ ⇨ ▶ ▷ ⟶ ⟹), me in To and me only in Cc (■ □ ▢ ◆ ○ ● ✓ and Ⓣ/Ⓒ in a circle or square, plain or negative),
+  each shown with its code point and Unicode name. A changed symbol is also changed in the saved filters that compare
+  `me` with it, and, if you agree, in every mail that has it (all mail folders). Sent mail's `nameRelated` starts with
+  the same sent symbol and one space: on OK, mail whose `nameRelated` has another sent symbol, no space after it, or
+  another contact mark is set right too (asked first, with the counts). A Font drop-down at the top (the view's font and size at first) shows the
+  symbol drop-downs in that font, as a preview of how they will look in the list; it does not change the view's font
+  (use View Font... for that). Kept as `meSent` / `meTo` / `meCc` in `Saved Filters - Mail.xml`.
 
 `Known Domains.txt` (in the settings folder) has one domain per line after the date it was added and a tab, e.g.
 `'26.09.07월 15:42:39 +08<Tab>fabrikam.com` (date, Korean day of week, time, UTC offset); a line may also be just a domain, and `#` lines are comments. A domain covers
@@ -293,6 +304,7 @@ Tools for the selected items; each button shows only in the folders where it app
   | Ctrl+Alt+F | Custom Filter | Forward as attachment |
   | Ctrl+Alt+W | Open in New Window (the current folder) | – |
   | Ctrl+Alt+R | Reading pane Right → Bottom → Off → Right | Reply with Meeting |
+  | Ctrl+Alt+Q | Quick Filter box (shows the TinyKit tab, cursor in the box) | – |
 
 - **Open Contact of MailItem** (mail folders) opens the contact of the person in the selected mail's
   `nameRelated`: the first recipient of mail I sent, otherwise the sender (any Contacts folder). Without one, a new
@@ -341,14 +353,6 @@ Tools for the selected items; each button shows only in the folders where it app
 - **View Font...** sets the font and size (9, 10, 11 or 12) for the whole current table view: rows, and optionally column
   headers and all conditional formatting rules, which keep their own style and color. Table views store whole point sizes
   only (9.5pt is saved as 9pt), so there are no half sizes.
-- The group's **dialog button** (corner arrow) opens **Column Symbols**: a drop-down for the **Contact** mark before a
-  name from Contacts in `nameRelated` (☺ ☻ ✆ ☎; kept as `contactMark`), and one each for mail I **Sent**
-  (→ ⇒ ⇥ ⇨ ▶ ▷ ⟶ ⟹), me in To and me only in Cc (■ □ ▢ ◆ ○ ● ✓ and Ⓣ/Ⓒ in a circle or square, plain or negative),
-  each shown with its code point and Unicode name. A changed symbol is also changed in the saved filters that compare
-  `me` with it, and, if you agree, in every mail that has it (all mail folders). Sent mail's `nameRelated` starts with
-  the same sent symbol and one space: on OK, mail whose `nameRelated` has another sent symbol, no space after it, or
-  another contact mark is set right too (asked first, with the counts). A Font drop-down at the top (the view's font at first) shows the three
-  drop-downs in that font, as a preview. Kept as `meSent` / `meTo` / `meCc` in `Saved Filters - Mail.xml`.
 - **Sort by Company/Dept** (contact folders) sorts the view by Company, and within a company by Department, both A to Z;
   the view keeps this sort (its grouping, if any, stays).
 

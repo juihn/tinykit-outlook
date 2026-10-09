@@ -310,10 +310,6 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<button id=\"mSortCompany\" label=\"Sort by Company/Dept\" imageMso=\"SortDialog\" onAction=\"OnSortByCompany\"")
               .Append(" getVisible=\"GetContactVisible\" screentip=\"Sort by Company/Dept\" supertip=\"Sort the contacts by Company, and ")
               .Append("within a company by Department (both A to Z). The view keeps this sort.\"/>");
-            sb.Append("<dialogBoxLauncher><button id=\"mMeSymbols\" onAction=\"OnMeSymbols\" screentip=\"Column Symbols\"")
-              .Append(" supertip=\"Choose the column symbols: the mark before a name from Contacts in nameRelated, and the me column's ")
-              .Append("for mail you sent (it also starts a sent mail's nameRelated), mail with you in To, mail with you only in Cc. ")
-              .Append("Mail that has an old symbol and saved filters that use it are changed too.\"/></dialogBoxLauncher>");
             sb.Append("</group>");
             // Custom mail fields (domainRelated, nameRelated, me, tos, ccs, domainMark): mail folders only.
             sb.Append("<group id=\"grpFields\" insertBeforeQ=\"tk:AfterItems\" label=\"Custom Mail Fields\" getVisible=\"GetMailVisible\">");
@@ -326,6 +322,10 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" screentip=\"Add Known Domain\" getSupertip=\"GetAddKnownSupertip\"/>");
             sb.Append("<checkBox id=\"cfAutoFill\" label=\"Auto-fill new mail\" getPressed=\"GetAutoFillPressed\" onAction=\"OnAutoFillToggle\"")
               .Append(" screentip=\"Auto-fill new mail\" supertip=\"Fill the fields of mail arriving in each account's Inbox and Sent Items.\"/>");
+            sb.Append("<dialogBoxLauncher><button id=\"mMeSymbols\" onAction=\"OnMeSymbols\" screentip=\"Column Symbols\"")
+              .Append(" supertip=\"Choose the column symbols: the mark before a name from Contacts in nameRelated, and the me column's ")
+              .Append("for mail you sent (it also starts a sent mail's nameRelated), mail with you in To, mail with you only in Cc. ")
+              .Append("Mail that has an old symbol and saved filters that use it are changed too.\"/></dialogBoxLauncher>");
             sb.Append("</group>");
 
 
@@ -335,7 +335,8 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<editBox id=\"qInput\" label=\"Value\" showLabel=\"false\" sizeString=\"WWWWWWWWWWm\"")
               .Append(" getText=\"GetInputText\" onChange=\"OnInputChange\" screentip=\"Quick filter value\"")
               .Append(" supertip=\"Type a value, then press a button below to show the items whose field contains it. ")
-              .Append("Leave it empty to use the value of the first selected mail or contact.\"/>");
+              .Append("Leave it empty to use the value of the first selected mail or contact. In the box, Alt + a button's letter ")
+              .Append("(e.g. Alt+S Subject) filters by that field.\"/>");
             for (int row = 0; row < QuickSlots / 2; row++)
             {
                 sb.Append("<box id=\"qRow").Append(row).Append("\" boxStyle=\"horizontal\">");
@@ -455,7 +456,7 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("Off: mail goes at once.\"/>");
             sb.Append("<button id=\"cfShortcuts\" label=\"Custom Shortcuts\" imageMso=\"AdpPrimaryKey\" onAction=\"OnCustomShortcuts\"")
               .Append(" screentip=\"Custom Shortcuts\" supertip=\"Show the add-in's keyboard shortcuts (Ctrl+Alt+E Find Items, Ctrl+Alt+F ")
-              .Append("Custom Filter, Ctrl+Alt+W Open in New Window, Ctrl+Alt+R reading pane Right/Bottom/Off) and turn each on or off.\"/>");
+              .Append("Custom Filter, Ctrl+Alt+W Open in New Window, Ctrl+Alt+R reading pane Right/Bottom/Off, Ctrl+Alt+Q Quick Filter box) and turn each on or off.\"/>");
             // Mail folders: sent and junk mail moved to the Inbox.
             sb.Append("<checkBox id=\"cfSentToInbox\" label=\"Move Sent Mail to Inbox\" getVisible=\"GetMailVisible\" getPressed=\"GetSentToInboxPressed\" onAction=\"OnSentToInboxToggle\"")
               .Append(" screentip=\"Move Sent Mail to Inbox\" supertip=\"Move mail in each account's Sent Items to the same account's Inbox: ")
@@ -504,6 +505,18 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnLoad(Office.IRibbonUI ribbonUI)
         {
             _ui = ribbonUI;
+        }
+
+        /// <summary>
+        /// Shows the TinyKit tab in the active explorer (e.g. before focusing the Quick Filter box). The ribbon ignores
+        /// activating the tab it last activated itself, even when another tab was clicked since, so Home comes first.
+        /// </summary>
+        public void ActivateMainTab()
+        {
+            if (_ui == null)
+                return;
+            _ui.ActivateTabMso("TabMail");
+            _ui.ActivateTabQ("MainTab", "tinykit");
         }
 
         // ---------- Mail compose window ----------

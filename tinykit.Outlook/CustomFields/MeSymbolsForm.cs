@@ -46,7 +46,10 @@ namespace tinykit.OutlookAddin.CustomFields
             {
                 AutoSize = true,
                 MaximumSize = new Size(LogicalToDeviceUnits(520), 0),
-                Text = "Contact: the mark before a name from Contacts in nameRelated. Sent, To, Cc: the me column for mail you "
+                Text = "Font: only to see the symbols below as they will look in the list (it starts with the table view's font "
+                    + "and size; a symbol the font lacks shows as an empty box or another font's glyph). It does not change the view's "
+                    + "font: use View Font for that.\n\n"
+                    + "Contact: the mark before a name from Contacts in nameRelated. Sent, To, Cc: the me column for mail you "
                     + "sent, mail with you in To, and mail with you only in Cc (Sent also starts a sent mail's nameRelated). "
                     + "Mail that already has an old symbol, and saved filters that use it, are changed too.",
                 Margin = new Padding(0, 0, 0, 10),
