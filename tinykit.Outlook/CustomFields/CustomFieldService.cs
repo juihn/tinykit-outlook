@@ -37,6 +37,7 @@ namespace tinykit.OutlookAddin.CustomFields
         private readonly List<Outlook.Items> _watched = new List<Outlook.Items>();
         private readonly Queue<KeyValuePair<string, string>> _queue = new Queue<KeyValuePair<string, string>>();
         private readonly HashSet<string> _queued = new HashSet<string>(StringComparer.Ordinal);
+        private readonly HashSet<string> _retried = new HashSet<string>(StringComparer.Ordinal); // requeued once after MAPI_E_OBJECT_CHANGED
         private readonly Timer _timer;
         private CustomFieldCalculator _calculator;
 
@@ -268,6 +269,12 @@ namespace tinykit.OutlookAddin.CustomFields
                 try
                 {
                     Fill(_app.Session.GetItemFromID(next.Key, next.Value));
+                    _retried.Remove(next.Key);
+                }
+                catch (COMException ex) when (ex.ErrorCode == ObjectChanged && _retried.Add(next.Key) && _queued.Add(next.Key))
+                {
+                    // changed elsewhere while being filled (server sync, another add-in): once more on a later tick
+                    _queue.Enqueue(next);
                 }
                 catch (COMException ex)
                 {
@@ -332,6 +339,36 @@ namespace tinykit.OutlookAddin.CustomFields
             return value == CustomFieldValues.None ? null : value;
         }
 
+        private const int ObjectChanged = unchecked((int)0x80040109); // MAPI_E_OBJECT_CHANGED
+
+        /// <summary>
+        /// Fill with alwaysSave. When the item was changed elsewhere after it was read (server sync, the reading pane,
+        /// another add-in), saving fails with MAPI_E_OBJECT_CHANGED: the item is opened afresh and filled once more.
+        /// </summary>
+        private bool? FillRetrying(object item)
+        {
+            try
+            {
+                return Fill(item, true);
+            }
+            catch (COMException ex) when (ex.ErrorCode == ObjectChanged)
+            {
+                dynamic d = item;
+                string entryId = d.EntryID;
+                string storeId = ((Outlook.MAPIFolder)d.Parent).StoreID;
+                var fresh = _app.Session.GetItemFromID(entryId, storeId);
+                try
+                {
+                    Log.Info("CustomFields: item changed meanwhile, filled again: " + ex.Message);
+                    return Fill(fresh, true);
+                }
+                finally
+                {
+                    Marshal.ReleaseComObject(fresh);
+                }
+            }
+        }
+
         public FillResult FillItems(IEnumerable<object> items)
         {
             var result = new FillResult();
@@ -343,7 +380,7 @@ namespace tinykit.OutlookAddin.CustomFields
                 {
                     try
                     {
-                        var changed = Fill(item, true); // Fill Fields button: always write through to the store
+                        var changed = FillRetrying(item); // Fill Fields button: always write through to the store
                         if (changed == null) result.Skipped++;
                         else if (changed.Value) result.Updated++;
                         else result.Unchanged++;
