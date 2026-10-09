@@ -700,10 +700,20 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public string GetCustomFormLabel(Office.IRibbonControl control)
         {
+            return RibbonText(GetCustomFormLabelText(control));
+        }
+
+        private string GetCustomFormLabelText(Office.IRibbonControl control)
+        {
             return Safe(() => FilterController.FormName(CustomForm(control) ?? "IPM.Contact"), "Custom Contact Form");
         }
 
         public string GetCustomFormSupertip(Office.IRibbonControl control)
+        {
+            return RibbonText(GetCustomFormSupertipText(control));
+        }
+
+        private string GetCustomFormSupertipText(Office.IRibbonControl control)
         {
             return Safe(() => "Set the selected contacts to open with the Contacts folder's form (message class "
                 + (CustomForm(control) ?? "?") + ").", "");
@@ -743,15 +753,30 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public string GetQuickLabel(Office.IRibbonControl control)
         {
+            return RibbonText(GetQuickLabelText(control));
+        }
+
+        private string GetQuickLabelText(Office.IRibbonControl control)
+        {
             return Safe(() => { var k = QuickKindOf(control); return k == null ? "" : PaddedLabels[k.Value]; }, "");
         }
 
         public string GetQuickScreentip(Office.IRibbonControl control)
         {
+            return RibbonText(GetQuickScreentipText(control));
+        }
+
+        private string GetQuickScreentipText(Office.IRibbonControl control)
+        {
             return Safe(() => { var k = QuickKindOf(control); return k == null ? "" : "Filter by " + QuickName(k.Value); }, "");
         }
 
         public string GetQuickSupertip(Office.IRibbonControl control)
+        {
+            return RibbonText(GetQuickSupertipText(control));
+        }
+
+        private string GetQuickSupertipText(Office.IRibbonControl control)
         {
             return Safe(() =>
             {
@@ -763,6 +788,11 @@ namespace tinykit.OutlookAddin.Ribbon
         }
 
         public string GetHistoryScreentip(Office.IRibbonControl control)
+        {
+            return RibbonText(GetHistoryScreentipText(control));
+        }
+
+        private string GetHistoryScreentipText(Office.IRibbonControl control)
         {
             return Safe(() => { var k = QuickKindOf(control); return k == null ? "" : "Recent " + QuickName(k.Value) + " values"; }, "");
         }
@@ -779,6 +809,11 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public string GetInputText(Office.IRibbonControl control)
         {
+            return RibbonText(GetInputTextText(control));
+        }
+
+        private string GetInputTextText(Office.IRibbonControl control)
+        {
             return _controller.InputText;
         }
 
@@ -793,6 +828,11 @@ namespace tinykit.OutlookAddin.Ribbon
         }
 
         public string GetItemLabel(Office.IRibbonControl control, int index)
+        {
+            return RibbonText(GetItemLabelText(control, index));
+        }
+
+        private string GetItemLabelText(Office.IRibbonControl control, int index)
         {
             return Safe(() =>
             {
@@ -826,6 +866,11 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public string GetSavedLabel(Office.IRibbonControl control)
         {
+            return RibbonText(GetSavedLabelText(control));
+        }
+
+        private string GetSavedLabelText(Office.IRibbonControl control)
+        {
             return Safe(() => { Focus(control); var f = _controller.FilterAt(SlotOf(control)); return f == null ? "" : f.Name; }, "");
         }
 
@@ -839,6 +884,15 @@ namespace tinykit.OutlookAddin.Ribbon
         public bool GetSavedIconVisible(Office.IRibbonControl control)
         {
             return Safe(() => { Focus(control); var f = _controller.FilterAt(SlotOf(control)); return f != null && !string.IsNullOrEmpty(f.Icon); }, false);
+        }
+
+        // Office rejects a label, screentip, supertip or edit box text over 1024 characters (a Custom UI Runtime Error), e.g. a
+        // saved filter's long SQL in its supertip; every text callback goes through this.
+        private const int MaxRibbonText = 1024;
+
+        private static string RibbonText(string text)
+        {
+            return FilterController.Truncate(text, MaxRibbonText);
         }
 
         // A string from getImage is taken as an imageMso name. Never null: Office also asks for the image of a hidden slot
@@ -856,6 +910,11 @@ namespace tinykit.OutlookAddin.Ribbon
         }
 
         public string GetSavedSupertip(Office.IRibbonControl control)
+        {
+            return RibbonText(GetSavedSupertipText(control));
+        }
+
+        private string GetSavedSupertipText(Office.IRibbonControl control)
         {
             return Safe(() =>
             {
@@ -914,6 +973,11 @@ namespace tinykit.OutlookAddin.Ribbon
         }
 
         public string GetFormatSupertip(Office.IRibbonControl control)
+        {
+            return RibbonText(GetFormatSupertipText(control));
+        }
+
+        private string GetFormatSupertipText(Office.IRibbonControl control)
         {
             var ex = control.Context as Outlook.Explorer;
             var f = ex == null ? null : Safe(() => { Focus(control); return _controller.ActiveSavedFilter(ex); }, null);
@@ -976,15 +1040,30 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public string GetSettingsScreentip(Office.IRibbonControl control)
         {
+            return RibbonText(GetSettingsScreentipText(control));
+        }
+
+        private string GetSettingsScreentipText(Office.IRibbonControl control)
+        {
             return Safe(() => { Focus(control); return "Edit " + SettingsPaths.SavedFiltersName(_controller.Kind); }, "Edit Saved Filters");
         }
 
         public string GetReloadScreentip(Office.IRibbonControl control)
         {
+            return RibbonText(GetReloadScreentipText(control));
+        }
+
+        private string GetReloadScreentipText(Office.IRibbonControl control)
+        {
             return Safe(() => { Focus(control); return "Reload " + SettingsPaths.SavedFiltersName(_controller.Kind); }, "Reload");
         }
 
         public string GetSettingsSupertip(Office.IRibbonControl control)
+        {
+            return RibbonText(GetSettingsSupertipText(control));
+        }
+
+        private string GetSettingsSupertipText(Office.IRibbonControl control)
         {
             return Safe(() =>
             {
@@ -1037,6 +1116,11 @@ namespace tinykit.OutlookAddin.Ribbon
         }
 
         public string GetViewColumnsSupertip(Office.IRibbonControl control)
+        {
+            return RibbonText(GetViewColumnsSupertipText(control));
+        }
+
+        private string GetViewColumnsSupertipText(Office.IRibbonControl control)
         {
             return Safe(() =>
             {
@@ -1120,6 +1204,11 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public string GetAddKnownSupertip(Office.IRibbonControl control)
         {
+            return RibbonText(GetAddKnownSupertipText(control));
+        }
+
+        private string GetAddKnownSupertipText(Office.IRibbonControl control)
+        {
             return Safe(() => "Add the base domain of each selected mail's sender (billing.fabrikam.com → fabrikam.com) to the known domains, "
                 + "then refill unknownDomain of the selected mails and of this folder's mail from those domains. "
                 + "unknownDomain: * unknown sender domain, + known sender but an unknown recipient domain, - all known. "
@@ -1150,6 +1239,11 @@ namespace tinykit.OutlookAddin.Ribbon
         }
 
         public string GetSendDelayLabel(Office.IRibbonControl control, int index)
+        {
+            return RibbonText(GetSendDelayLabelText(control, index));
+        }
+
+        private string GetSendDelayLabelText(Office.IRibbonControl control, int index)
         {
             return SendDelays[index] == 0 ? "Off" : SendDelays[index] + " sec";
         }
