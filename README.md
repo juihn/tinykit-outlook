@@ -300,11 +300,11 @@ Tools for the selected items; each button shows only in the folders where it app
 
   | Key | Command | Outlook's own use of the key in the main window |
   |---|---|---|
-  | Ctrl+Alt+E | Find Items | – |
-  | Ctrl+Alt+F | Custom Filter | Forward as attachment |
-  | Ctrl+Alt+W | Open in New Window (the current folder) | – |
-  | Ctrl+Alt+R | Reading pane Right → Bottom → Off → Right | Reply with Meeting |
   | Ctrl+Alt+Q | Quick Filter box (shows the TinyKit tab, cursor in the box) | – |
+  | Ctrl+Alt+W | Open in New Window (the current folder) | – |
+  | Ctrl+Alt+E | Find Items | – |
+  | Ctrl+Alt+R | Reading pane Right → Bottom → Off → Right | Reply with Meeting |
+  | Ctrl+Alt+F | Custom Filter | Forward as attachment |
   | Ctrl+Alt+C | Clear Filter | – |
 
 - **Open Contact of MailItem** (mail folders) opens the contact of the person in the selected mail's

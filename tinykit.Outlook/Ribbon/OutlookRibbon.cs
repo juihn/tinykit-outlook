@@ -455,8 +455,8 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("&gt; Advanced &gt; Send immediately when connected off, mail goes at the first Send/Receive after the delay. ")
               .Append("Off: mail goes at once.\"/>");
             sb.Append("<button id=\"cfShortcuts\" label=\"Custom Shortcuts\" imageMso=\"AdpPrimaryKey\" onAction=\"OnCustomShortcuts\"")
-              .Append(" screentip=\"Custom Shortcuts\" supertip=\"Show the add-in's keyboard shortcuts (Ctrl+Alt+E Find Items, Ctrl+Alt+F ")
-              .Append("Custom Filter, Ctrl+Alt+W Open in New Window, Ctrl+Alt+R reading pane Right/Bottom/Off, Ctrl+Alt+Q Quick Filter box, Ctrl+Alt+C Clear Filter) and turn each on or off.\"/>");
+              .Append(" screentip=\"Custom Shortcuts\" supertip=\"Show the add-in's keyboard shortcuts (Ctrl+Alt+Q Quick Filter box, Ctrl+Alt+W ")
+              .Append("Open in New Window, Ctrl+Alt+E Find Items, Ctrl+Alt+R reading pane Right/Bottom/Off, Ctrl+Alt+F Custom Filter, Ctrl+Alt+C Clear Filter) and turn each on or off.\"/>");
             // Mail folders: sent and junk mail moved to the Inbox.
             sb.Append("<checkBox id=\"cfSentToInbox\" label=\"Move Sent Mail to Inbox\" getVisible=\"GetMailVisible\" getPressed=\"GetSentToInboxPressed\" onAction=\"OnSentToInboxToggle\"")
               .Append(" screentip=\"Move Sent Mail to Inbox\" supertip=\"Move mail in each account's Sent Items to the same account's Inbox: ")

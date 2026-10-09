@@ -17,7 +17,7 @@ namespace tinykit.OutlookAddin.Common
             ShowInTaskbar = false;
             MinimizeBox = false;
             MaximizeBox = false;
-            ClientSize = new Size(1032, 300);
+            ClientSize = new Size(1057, 300);
             MinimumSize = new Size(480, 200);
 
             var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Padding = new Padding(10) };
@@ -35,7 +35,7 @@ namespace tinykit.OutlookAddin.Common
 
             var list = new ListView { Dock = DockStyle.Fill, View = View.Details, CheckBoxes = true, FullRowSelect = true, HeaderStyle = ColumnHeaderStyle.Nonclickable };
             list.Columns.Add("Shortcut", LogicalToDeviceUnits(110));
-            list.Columns.Add("Command", LogicalToDeviceUnits(190));
+            list.Columns.Add("Command", LogicalToDeviceUnits(227));
             list.Columns.Add("What it does", LogicalToDeviceUnits(690));
             foreach (var s in shortcuts.All)
             {

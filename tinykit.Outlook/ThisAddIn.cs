@@ -114,19 +114,19 @@ namespace tinykit.OutlookAddin
                 // The add-in's shortcuts, each on unless turned off in the Custom Shortcuts window. They work in the main
                 // window only, and not while typing in a reply in its reading pane (Outlook's own keys apply there).
                 const System.Windows.Forms.Keys CtrlAlt = System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt;
-                AddShortcut("FindItems", CtrlAlt | System.Windows.Forms.Keys.E, "Find Items",
-                    "Open (or bring to the front) the Find Items window.", ex => Controller.ShowFindItems(ex));
-                AddShortcut("CustomFilter", CtrlAlt | System.Windows.Forms.Keys.F, "Custom Filter",
-                    "Open the Custom Filter window for the current folder. (Outlook: Forward as attachment.)", ex => Controller.ShowCustomFilter(ex));
-                AddShortcut("OpenInNewWindow", CtrlAlt | System.Windows.Forms.Keys.W, "Open in New Window",
-                    "Open the current folder in a new Outlook window (Folder > Open in New Window).",
-                    ex => ex.CommandBars.ExecuteMso("WebOpenInNewWindow"));
-                AddShortcut("ReadingPane", CtrlAlt | System.Windows.Forms.Keys.R, "Reading Pane Right/Bottom/Off",
-                    "Move the reading pane: Right, then Bottom, then Off, then Right again. (Outlook: Reply with Meeting.)",
-                    CycleReadingPane);
                 AddShortcut("QuickFilterBox", CtrlAlt | System.Windows.Forms.Keys.Q, "Quick Filter box",
                     "Show the TinyKit tab and put the cursor in the Quick Filter box (then Alt + a button's letter filters).",
                     FocusQuickFilterBox);
+                AddShortcut("OpenInNewWindow", CtrlAlt | System.Windows.Forms.Keys.W, "Open in New Window",
+                    "Open the current folder in a new Outlook window (Folder > Open in New Window).",
+                    ex => ex.CommandBars.ExecuteMso("WebOpenInNewWindow"));
+                AddShortcut("FindItems", CtrlAlt | System.Windows.Forms.Keys.E, "Find Items",
+                    "Open (or bring to the front) the Find Items window.", ex => Controller.ShowFindItems(ex));
+                AddShortcut("ReadingPane", CtrlAlt | System.Windows.Forms.Keys.R, "Reading Pane Right/Bottom/Off",
+                    "Move the reading pane: Right, then Bottom, then Off, then Right again. (Outlook: Reply with Meeting.)",
+                    CycleReadingPane);
+                AddShortcut("CustomFilter", CtrlAlt | System.Windows.Forms.Keys.F, "Custom Filter",
+                    "Open the Custom Filter window for the current folder. (Outlook: Forward as attachment.)", ex => Controller.ShowCustomFilter(ex));
                 AddShortcut("ClearFilter", CtrlAlt | System.Windows.Forms.Keys.C, "Clear Filter",
                     "Remove the quick or saved filter and restore the view's own filter (as the Clear Filter button).",
                     ex => Controller.Clear(ex));
