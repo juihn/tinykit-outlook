@@ -37,7 +37,8 @@ namespace tinykit.OutlookAddin.CustomFields
 
         /// <summary>
         /// "🅄" unknown sender domain, "+" known sender but an unknown recipient domain, "-" all known; "🅙" moved from
-        /// Junk Email to the Inbox (Move Junk Mail to Inbox), which recomputing keeps.
+        /// Junk Email to the Inbox (Move Junk Mail to Inbox), which recomputing keeps; the Fill Fields button drops it
+        /// when the sender's domain is known.
         /// </summary>
         public string DomainMark = None;
 

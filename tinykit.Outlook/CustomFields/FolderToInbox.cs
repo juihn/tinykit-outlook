@@ -17,7 +17,7 @@ namespace tinykit.OutlookAddin.CustomFields
     ///   Gmail accounts too, where Sent Mail is a label: moving out of it over IMAP takes the label off.</item>
     /// <item>Junk Email: only mail arriving while Outlook runs with the option on (what was there before stays), so nothing
     ///   new is lost to a wrong junk verdict (Gmail's Spam too: moving out of it is "not spam"). The moved mail gets
-    ///   🅙 in domainMark, which filling the fields again keeps.</item>
+    ///   🅙 in domainMark, which filling the fields again keeps (Fill Fields drops it once the sender's domain is known).</item>
     /// </list>
     /// </summary>
     internal sealed class FolderToInbox
