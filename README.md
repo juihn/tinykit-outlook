@@ -14,14 +14,28 @@ tinykit is a set of small Office tools; add-ins for other hosts (e.g. `tinykit.W
 Requirements: Windows, Outlook Classic (Microsoft 365 / 2016 or later), Visual Studio with the *Office/SharePoint development* workload.
 
 ```powershell
-.\New-SigningCert.ps1        # once per PC: self-signed cert for the VSTO manifests + Signing.props (not committed)
-& "$env:ProgramFiles\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe" tinykit.Outlook.sln -p:Configuration=Debug
-.\Register-Addin.ps1         # -Unregister to remove, -ShareSettings to share settings through OneDrive
+.\build.ps1                  # -Configuration Release; runs New-SigningCert.ps1 first if Signing.props is missing
+.\Register-Addin.ps1         # only if the add-in is not registered yet; -Unregister to remove, -ShareSettings to share settings through OneDrive
 ```
 
-Building in Visual Studio registers the add-in automatically; a command-line build does not, hence `Register-Addin.ps1`.
-Close Outlook before building (it locks the add-in DLL) and start it afterwards. The first time, VSTO asks you to trust the
-self-signed publisher; choose **Install**.
+`build.ps1` builds with the x64 MSBuild of the latest Visual Studio, which also registers the add-in for the current user
+(as building in Visual Studio does). `New-SigningCert.ps1` makes a self-signed cert for the VSTO manifests and
+`Signing.props` (per PC, not committed).
+Close Outlook before building (it locks the add-in DLL; `build.ps1` stops if it is running) and start it afterwards. The
+first time, VSTO asks you to trust the self-signed publisher; choose **Install**.
+
+**Windows on ARM** (e.g. Parallels on Apple Silicon): Visual Studio for ARM64 has no *Office/SharePoint development*
+workload. Install it with *.NET desktop development* (and the .NET Framework 4.8 targeting pack), and copy from a PC with
+x64 Visual Studio and that workload:
+
+| To `%LOCALAPPDATA%\tinykit\vsto-build-kit\` | From the x64 PC |
+|---|---|
+| `OfficeTools\` | `<VS>\MSBuild\Microsoft\VisualStudio\v18.0\OfficeTools\*` |
+| `VSTO40\` | `Microsoft.Office.Tools.Common.v4.0.Utilities.dll`, `Microsoft.Office.Tools.Outlook.v4.0.Utilities.dll` (any VSTO add-in's output folder has them) |
+
+`build.ps1` uses this folder (`-Kit` for another one) when Visual Studio has no OfficeTools. The Office interop
+assemblies come from the GAC (installed with Office), and the x64 MSBuild runs under emulation: the add-in registration
+step loads the x64 `vstoee.dll`, which the ARM64 MSBuild cannot.
 
 The namespace is `tinykit.OutlookAddin` (not `tinykit.Outlook`) so the usual
 `using Outlook = Microsoft.Office.Interop.Outlook;` alias doesn't collide.
