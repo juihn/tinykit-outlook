@@ -1232,7 +1232,7 @@ namespace tinykit.OutlookAddin.Ribbon
         {
             return Safe(() => "Add the base domain of each selected mail's sender (billing.fabrikam.com → fabrikam.com) to the known domains, "
                 + "then refill domainMark of the selected mails and of this folder's mail from those domains. "
-                + "domainMark: 🅄 unknown sender domain, + known sender but an unknown recipient domain, - all known, 🅙 moved from Junk Email (kept). "
+                + "domainMark: 🅄 unknown sender domain, + known sender but an unknown recipient domain, - all known, 🅙 moved from Junk Email (kept while the sender's domain is unknown). "
                 + "Ctrl+click: edit the list. File: " + SettingsPaths.KnownDomainsFile, "");
         }
 

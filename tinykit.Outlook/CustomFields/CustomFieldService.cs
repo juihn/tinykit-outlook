@@ -310,15 +310,16 @@ namespace tinykit.OutlookAddin.CustomFields
 
         /// <summary>
         /// Computes and writes the columns. Returns whether a value changed (null for non-mail items).
-        /// <paramref name="alwaysSave"/> saves even when nothing changed: Outlook can keep a cached copy of an item whose
-        /// values are no longer in the store (e.g. after the server replaced the item), and then only a save writes them back.
+        /// <paramref name="byButton"/> (Fill Fields, Add Known Domain) saves even when nothing changed: Outlook can keep a
+        /// cached copy of an item whose values are no longer in the store (e.g. after the server replaced the item), and
+        /// then only a save writes them back. It also drops 🅙 when the sender's domain is known.
         /// </summary>
-        private bool? Fill(object item, bool alwaysSave)
+        private bool? Fill(object item, bool byButton)
         {
             var view = ItemView.From(item);
             if (view == null)
                 return null;
-            return Write(view, Calculator.Compute(view), alwaysSave);
+            return Write(view, Calculator.Compute(view), byButton);
         }
 
         public CustomFieldValues Compute(object item)
@@ -473,7 +474,7 @@ namespace tinykit.OutlookAddin.CustomFields
             return new[] { cleared, none, skipped, failed };
         }
 
-        private static bool Write(ItemView view, CustomFieldValues values, bool alwaysSave)
+        private static bool Write(ItemView view, CustomFieldValues values, bool byButton)
         {
             bool changed = false;
             var props = new List<KeyValuePair<Outlook.UserProperty, string>>();
@@ -482,9 +483,11 @@ namespace tinykit.OutlookAddin.CustomFields
             foreach (var pair in values.Pairs)
             {
                 var prop = view.UserProperties.Find(pair.Key);
-                if (prop != null && pair.Key == CustomFieldNames.DomainMark && prop.Value as string == CustomFieldValues.FromJunk)
+                if (prop != null && pair.Key == CustomFieldNames.DomainMark && prop.Value as string == CustomFieldValues.FromJunk
+                    && (!byButton || pair.Value == CustomFieldValues.UnknownSender))
                 {
-                    // moved from Junk Email: the mark stays until the fields are cleared (Fill Fields Ctrl+click)
+                    // moved from Junk Email: the mark stays until the fields are cleared (Fill Fields Ctrl+click), or
+                    // until Fill Fields / Add Known Domain finds the sender's domain known
                     props.Add(new KeyValuePair<Outlook.UserProperty, string>(prop, CustomFieldValues.FromJunk));
                     continue;
                 }
@@ -501,7 +504,7 @@ namespace tinykit.OutlookAddin.CustomFields
                 }
                 props.Add(new KeyValuePair<Outlook.UserProperty, string>(prop, pair.Value));
             }
-            if (!changed && alwaysSave)
+            if (!changed && byButton)
             {
                 // Save() writes nothing for an unmodified item, and a cached copy can hold values the store lacks
                 // (seen with outlook.com mail: views and IS NULL searches find no fields, the item itself has them).
@@ -512,7 +515,7 @@ namespace tinykit.OutlookAddin.CustomFields
                     pair.Key.Value = pair.Value;
                 }
             }
-            if (changed || alwaysSave)
+            if (changed || byButton)
                 view.Save();
             return changed;
         }
