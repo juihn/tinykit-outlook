@@ -165,6 +165,14 @@ namespace tinykit.OutlookAddin.CustomFields
         }
 
         // A sweep a few seconds from now (again from now if one was waiting).
+        /// <summary>Stops the timer (the add-in is being unloaded: a tick after that would end Outlook).</summary>
+        public void Stop()
+        {
+            _enabled = false;
+            _timer.Stop();
+            _timer.Dispose();
+        }
+
         private void Schedule()
         {
             if (!_enabled)

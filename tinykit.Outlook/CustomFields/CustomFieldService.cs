@@ -96,11 +96,10 @@ namespace tinykit.OutlookAddin.CustomFields
             _timer.Start();
 
             // A while after startup, so Outlook is settled: unknownDomain values (before 2026-10) move to domainMark.
-            var later = new Timer { Interval = 30000 };
-            later.Tick += (s, e) =>
+            _laterTimer = new Timer { Interval = 30000 };
+            _laterTimer.Tick += (s, e) =>
             {
-                later.Stop();
-                later.Dispose();
+                _laterTimer.Stop();
                 try
                 {
                     StartLegacyMigration();
@@ -110,7 +109,22 @@ namespace tinykit.OutlookAddin.CustomFields
                     Log.Error("domainMark migration", ex);
                 }
             };
-            later.Start();
+            _laterTimer.Start();
+        }
+
+        private Timer _laterTimer;
+
+        /// <summary>Stops every timer (the add-in is being unloaded: a tick after that would end Outlook).</summary>
+        public void Stop()
+        {
+            foreach (var timer in new[] { _timer, _laterTimer, _legacyTimer })
+            {
+                if (timer != null)
+                {
+                    timer.Stop();
+                    timer.Dispose();
+                }
+            }
         }
 
         // ---------- unknownDomain (before 2026-10) -> domainMark ----------

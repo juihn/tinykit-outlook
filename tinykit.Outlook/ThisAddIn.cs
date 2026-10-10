@@ -242,10 +242,32 @@ namespace tinykit.OutlookAddin
             bars.ExecuteMso(next);
         }
 
+        /// <summary>
+        /// Raised when the add-in is unloaded while Outlook runs (turned off in File > Options > Add-ins > COM Add-ins);
+        /// not when Outlook exits. The add-in's code is unloaded right after, but Windows would still call its keyboard
+        /// and focus hooks and its timers, and such a call ends Outlook: they are all removed here, the hooks first.
+        /// </summary>
         private void ThisAddIn_Shutdown(object sender, EventArgs e)
         {
-            // Note: Outlook no longer raises this event. If you have code that
-            //    must run when Outlook shuts down, see https://go.microsoft.com/fwlink/?LinkId=506785
+            Try("keyboard hook", () => { if (_shortcuts != null) _shortcuts.Dispose(); });
+            Try("focus hook", RibbonTabSkip.Stop);
+            Try("settings watcher", () => Controller.StopWatching());
+            Try("custom fields", () => { if (Controller.Fields != null) Controller.Fields.Stop(); });
+            Try("sent to Inbox", () => { if (Controller.SentMail != null) Controller.SentMail.Stop(); });
+            Try("junk to Inbox", () => { if (Controller.JunkMail != null) Controller.JunkMail.Stop(); });
+            Log.Info("Add-in unloaded: hooks and timers removed");
+        }
+
+        private static void Try(string what, Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Shutdown: " + what, ex);
+            }
         }
 
         private void Watch(Outlook.Explorer explorer)

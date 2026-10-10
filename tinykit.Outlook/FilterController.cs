@@ -160,6 +160,21 @@ namespace tinykit.OutlookAddin
         }
 
         /// <summary>Reloads the current kind's saved filters file if it was changed outside the add-in.</summary>
+        /// <summary>Stops watching the saved filters files (the add-in is being unloaded).</summary>
+        public void StopWatching()
+        {
+            if (_watcher != null)
+            {
+                _watcher.EnableRaisingEvents = false;
+                _watcher.Dispose();
+            }
+            if (_fileTimer != null)
+            {
+                _fileTimer.Stop();
+                _fileTimer.Dispose();
+            }
+        }
+
         private bool ReloadIfChanged(Outlook.Explorer explorer)
         {
             return ReloadIfChanged(_kind, explorer);
