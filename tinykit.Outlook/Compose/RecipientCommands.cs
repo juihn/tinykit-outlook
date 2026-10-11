@@ -8,7 +8,7 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace tinykit.OutlookAddin.Compose
 {
-    /// <summary>The Recipients group of the TinyKit tab in a mail being written.</summary>
+    /// <summary>The Recipients group of the tinykit tab in a mail being written.</summary>
     internal sealed class RecipientCommands
     {
         private readonly CustomFieldCalculator _calc;

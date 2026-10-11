@@ -779,6 +779,16 @@ namespace tinykit.OutlookAddin
             }
         }
 
+        /// <summary>Email Address Books: which Contacts folders show in the Address Book.</summary>
+        public void ShowAddressBooks(Outlook.Explorer explorer)
+        {
+            using (var form = new Contacts.AddressBooksForm(explorer.Session))
+            {
+                form.Icon = OfficeImage.IconFromImageMso(explorer.CommandBars, "AddressBook");
+                form.ShowDialog(WindowOwner.From(explorer));
+            }
+        }
+
         private Search.FindItemsForm _findItems;
 
         /// <summary>Find Items: one window for the whole session; pressing the button again brings it to the front.</summary>

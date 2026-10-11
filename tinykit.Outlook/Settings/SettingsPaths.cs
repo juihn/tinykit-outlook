@@ -109,6 +109,9 @@ namespace tinykit.OutlookAddin.Settings
         /// <summary>Custom Shortcuts: which of the add-in's keyboard shortcuts are on ("id=on|off").</summary>
         public static string ShortcutsFile { get { return Path.Combine(SettingsFolder, "Custom Shortcuts.txt"); } }
 
+        /// <summary>The main tinykit tab's groups whose button labels are hidden, one per line.</summary>
+        public static string RibbonLabelsFile { get { return Path.Combine(SettingsFolder, "Ribbon Labels.txt"); } }
+
         /// <summary>Find Items window: size, splitter, Message Body, item types and the accounts left out (this PC).</summary>
         public static string FindItemsSettingsFile { get { return Path.Combine(LocalFolder, "Find Items.txt"); } }
 

@@ -1,6 +1,6 @@
 # tinykit for Outlook
 
-A small VSTO add-in (C#, .NET Framework 4.8) for **Outlook Classic** on Windows. It adds a **TinyKit** ribbon tab with:
+A small VSTO add-in (C#, .NET Framework 4.8) for **Outlook Classic** on Windows. It adds a **tinykit** ribbon tab with:
 
 - **Quick filters** by From, Name, Subject and Domain, with recent values.
 - **Saved filters** (DASL/SQL) kept in an XML file, each with an optional conditional format (style, strikeout, underline, color).
@@ -84,9 +84,9 @@ The current local files are copied there; the local copies stay as a backup.
    The script also sets `.config` hidden, because OneDrive syncs the folder but not its Hidden attribute.
 2. Make sure OneDrive has synced `.config\tinykit\Outlook\`, then start Outlook and accept the VSTO trust prompt once.
 
-## **TinyKit** tab
+## **tinykit** tab
 
-Groups, left to right: Built-in · Custom Mail Fields · Table View · Quick Filter · Clear Filter · Saved Filters · Items.
+Groups, left to right: Settings · Built-in · Table View · Custom Mail Fields · Quick Filter · Clear Filter · Saved Filters · Tools.
 The tab follows the kind of folder you are in:
 
 | Folder | Custom Mail Fields | Quick Filter | Saved Filters, View Columns |
@@ -99,13 +99,61 @@ The tab follows the kind of folder you are in:
 In calendar folders Clear Filter and Table View are hidden too. Items shows in mail, calendar, contact and task folders, each
 button only where it applies.
 
+Every group but Quick Filter (whose one-letter buttons are their labels) has a dialog launcher (the arrow in its
+bottom-right corner). **Shift+click** it to show or hide the labels of that group's buttons, drop-downs and check boxes,
+e.g. to make the tab narrower once the icons are familiar. The groups without a dialog of their own also do it on a plain
+click; Custom Mail Fields' plain click still opens Column Symbols. With the labels hidden:
+- Table View, Custom Mail Fields and Clear Filter are named **View**, **Fields** and **Clear**;
+- Send Delay becomes a small drop-down without icon or label: Off · 5s · 10s · 15s · 30s · 60s;
+- a check box keeps only its box, and buttons without an icon (your own saved filters) keep their label.
+
+Built-in starts with its labels hidden (icons only). The groups with hidden labels are kept in `Ribbon Labels.txt` in the
+settings folder.
+
 Informational messages (results such as *Custom fields: 3 updated*, and hints such as *Select the mails first*) appear as
 Windows notifications under Outlook (classic), using the *urgent* scenario so they also show in Do Not Disturb. Errors,
 warnings and questions stay message boxes. If Outlook's notifications are turned off in Windows Settings, message boxes
 are used instead.
 
+### Settings group
+The add-in's own settings, in every folder.
+- **Custom Shortcuts** shows the add-in's keyboard shortcuts with a check box each; untick one to give the key back to
+  Outlook (`Custom Shortcuts.txt` in the settings folder). They work in the main window, but not while typing in a reply
+  in the reading pane, where Outlook's own keys apply:
+
+  | Key | Command | Outlook's own use of the key in the main window |
+  |---|---|---|
+  | Ctrl+Alt+Q | Quick Filter box (shows the tinykit tab, cursor in the box) | – |
+  | Ctrl+Alt+W | Open in New Window (the current folder) | – |
+  | Ctrl+Alt+E | Find Items | – |
+  | Ctrl+Alt+R | Reading pane Right → Bottom → Off → Right | Reply with Meeting |
+  | Ctrl+Alt+F | Custom Filter | Forward as attachment |
+  | Ctrl+Alt+C | Clear Filter | – |
+
+- **Email Address Books** opens a window with the Contacts folders of all accounts (with their subfolders, without the
+  ones Outlook or Exchange maintain such as Recipient Cache), each with a check box for its *Properties > Outlook Address
+  Book > Show this folder as an e-mail Address Book*, and the name it has there. A tick or untick is made at once; if
+  Outlook refuses it, a message says so and the box shows the folder's real setting.
+- **Send Delay**: Off, 5, 10, 15, 30 or 60 seconds (default 60). Mail you send waits that long in the
+  Outbox (*Do not deliver before*): open it there to change it and send it again, or delete it to cancel. A later delivery
+  time you set yourself is kept. Exchange accounts are held by the server, so Outlook may be closed meanwhile; IMAP accounts
+  go only while Outlook runs. With *Send immediately when connected* off (File > Options > Advanced), mail goes at the
+  first Send/Receive after the delay. (`sendDelaySeconds` in `Saved Filters - Mail.xml`.)
+- **Move Sent Mail to Inbox** moves mail in each account's Sent Items to the same account's Inbox, so a conversation reads
+  in one place: a few seconds after Outlook starts and after mail arrives in Sent Items, each time all of Sent Items (so
+  mail sent from another mail client and synchronized is moved too). Meeting requests stay. Gmail accounts too:
+  there Sent Mail is a label, and moving out of it over IMAP takes that label off.
+  (`moveSentToInbox` in `Saved Filters - Mail.xml`; on by default.)
+- **Move Junk Mail to Inbox** moves mail arriving in each account's Junk Email to the same account's Inbox,
+  a few seconds after it arrives, so nothing new is lost to a wrong junk verdict. Mail already in Junk Email when Outlook
+  starts or the option is turned on stays there. For Gmail, moving out of Spam marks the mail not spam. The moved
+  mail gets `🅙` in `domainMark`.
+  (`moveJunkToInbox` in `Saved Filters - Mail.xml`; off by default.)
+
 ### Built-in group
-Frequently used Outlook commands, icons only, in columns (the list is `BuiltInColumns` in `OutlookRibbon.cs`):
+Frequently used Outlook commands, in columns, icons only until its labels are shown (the list is `BuiltInColumns` in
+`OutlookRibbon.cs`; Outlook ignores label callbacks on its own controls, so the group is there twice, icon only and with
+labels, and the launcher shows one of them):
 - Categorize, All Categories, Send to OneNote
 - Address Book, Reminders Window
 - *separator*
@@ -113,7 +161,7 @@ Frequently used Outlook commands, icons only, in columns (the list is `BuiltInCo
 - Mark as Read / Mark as Unread (only the one that applies is shown), Show as Conversations (check box, no label),
   Messages in this Conversation
 
-The rightmost column has Outlook's **Month**, **Week** and **Go To Date**, with labels.
+The rightmost column has Outlook's **Month**, **Week** and **Go To Date**.
 
 Outlook enables and disables them as on its own tabs. Clear Flag and Messages in this Conversation have no icon of
 their own (they live in menus), so they get Delete and GroupConversations.
@@ -303,38 +351,10 @@ Tools for the selected items; each button shows only in the folders where it app
   except in the results, where it (or a double-click) opens the item; after a search the first result is selected and
   has the focus, so Enter opens it (Esc goes back to the text). The window keeps its size,
   splitter, Message Body, item types and accounts (`Find Items.txt` in `%APPDATA%\tinykit\Outlook\`).
-- **Send Delay** (mail folders): Off, 5, 10, 15, 30 or 60 seconds (default 60). Mail you send waits that long in the
-  Outbox (*Do not deliver before*): open it there to change it and send it again, or delete it to cancel. A later delivery
-  time you set yourself is kept. Exchange accounts are held by the server, so Outlook may be closed meanwhile; IMAP accounts
-  go only while Outlook runs. With *Send immediately when connected* off (File > Options > Advanced), mail goes at the
-  first Send/Receive after the delay. (`sendDelaySeconds` in `Saved Filters - Mail.xml`.)
-- **Custom Shortcuts** shows the add-in's keyboard shortcuts with a check box each; untick one to give the key back to
-  Outlook (`Custom Shortcuts.txt` in the settings folder). They work in the main window, but not while typing in a reply
-  in the reading pane, where Outlook's own keys apply:
-
-  | Key | Command | Outlook's own use of the key in the main window |
-  |---|---|---|
-  | Ctrl+Alt+Q | Quick Filter box (shows the TinyKit tab, cursor in the box) | – |
-  | Ctrl+Alt+W | Open in New Window (the current folder) | – |
-  | Ctrl+Alt+E | Find Items | – |
-  | Ctrl+Alt+R | Reading pane Right → Bottom → Off → Right | Reply with Meeting |
-  | Ctrl+Alt+F | Custom Filter | Forward as attachment |
-  | Ctrl+Alt+C | Clear Filter | – |
-
 - **Open Contact of MailItem** (mail folders) opens the contact of the person in the selected mail's
   `nameRelated`: the first recipient of mail I sent, otherwise the sender (any Contacts folder). Without one, a new
   contact with that name and address opens in the Contacts folder of the mail's account (else of the default account),
   to be saved there.
-- **Move Sent Mail to Inbox** (mail folders) moves mail in each account's Sent Items to the same account's Inbox, so a conversation reads
-  in one place: a few seconds after Outlook starts and after mail arrives in Sent Items, each time all of Sent Items (so
-  mail sent from another mail client and synchronized is moved too). Meeting requests stay. Gmail accounts too:
-  there Sent Mail is a label, and moving out of it over IMAP takes that label off.
-  (`moveSentToInbox` in `Saved Filters - Mail.xml`; on by default.)
-- **Move Junk Mail to Inbox** (mail folders) moves mail arriving in each account's Junk Email to the same account's Inbox,
-  a few seconds after it arrives, so nothing new is lost to a wrong junk verdict. Mail already in Junk Email when Outlook
-  starts or the option is turned on stays there. For Gmail, moving out of Spam marks the mail not spam. The moved
-  mail gets `🅙` in `domainMark`.
-  (`moveJunkToInbox` in `Saved Filters - Mail.xml`; off by default.)
 - **Recipients Report** (mail and calendar folders) opens a window for the selected mail: the sender, then the
   recipients grouped by **domain** and by the contacts' **department**. Blue bullet: To, gray: Cc/Bcc; green background:
   in Contacts. The check boxes add each person's display name and user name. Click a person to open the contact (or
@@ -415,15 +435,19 @@ The add-in's own fields (`domainRelated`, `nameRelated`, `me`, `tos`, `ccs`) are
 Columns that can't be added, or a Format that is not in a field's list, are reported; the other columns are still applied.
 
 Files: `Saved Filters - <kind>.xml`, `View Columns - <kind>.txt` and `History.xml` in the settings folder (see *Settings location*;
-older `Filters.xml`, `Saved Filters.xml` and `View Columns.txt` are renamed automatically); `ViewState.xml` and `OutlookAddin.log` (errors) in `%APPDATA%\tinykit\Outlook\`.
+older `Filters.xml`, `Saved Filters.xml` and `View Columns.txt` are renamed automatically); `ViewState.xml` and `OutlookAddin.log` in `%APPDATA%\tinykit\Outlook\`.
 
-## **TinyKit** tab in a received mail's window
+`OutlookAddin.log` has the errors, each command as it starts (`Command: <control id> [+Ctrl] [+Shift] in <folder>`, so a
+command Outlook hangs in is the last line), and the add-in's start (Outlook's process id and command line) and Outlook's
+exit. When the tinykit tab is missing, a session without an `Add-in started` line means Outlook did not load the add-in.
+
+## **tinykit** tab in a received mail's window
 Before the window's Message tab, with one **Message** group:
 - Delete, Archive, Send to OneNote · Follow Up, Flag (no date), Clear Flag · Translate, Show Original, translation
   preferences · Approve / Reject (approval requests only) · Find · Edit Message: Outlook's own commands.
 - **Recipients Report** of the open mail, as in the Tools group.
 
-## **TinyKit** tab in a mail being written
+## **tinykit** tab in a mail being written
 Before the window's Message tab, with a **Recipients** group:
 - **Remove Sender from Recipients** removes the sending account's own address from To, Cc and Bcc (e.g. after Reply All).
 - **Restate Recipients** replaces each recipient found in Contacts (by address, or by the contact's e-mail display name)
@@ -437,10 +461,10 @@ and a **Compose** group of Outlook's own commands: theme Fonts, Ruler, Bcc.
 The tab and group have qualified ids (`tk:ComposeTab`, `tk:ComposeRecipients`, before `tk:AfterRecipients`) so other
 add-ins can add groups, as in the contact window.
 
-## **TinyKit** tab in a contact's window
+## **tinykit** tab in a contact's window
 Before the window's Contact tab, with two groups:
 - **Built-in**: General, Details, All Fields (the window's pages), Delete, Save & Close.
-- **TinyKit**:
+- **tinykit**:
   - **Contact Picture** (large, shows the contact's picture): adds a picture, or changes it; **Shift+click** removes it.
   - **Open Address in Google Map** (the business address, or else home or other).
   - **Copy to Clipboard**: `company / department / name (job title)`, e-mail, `T.`phone, `M.`mobile, tab-separated;
@@ -450,9 +474,9 @@ To switch contacts between Outlook's form and the folder's custom form, use the 
 contact window keeps the form it opened with).
 
 Other add-ins can add their own groups to this tab: declare `xmlns:tk="tinykit"` in their ribbon XML and use
-`<tab idQ="tk:ContactTab" label="TinyKit" insertBeforeMso="TabContact">`. To put a group right after TinyKit's groups,
+`<tab idQ="tk:ContactTab" label="tinykit" insertBeforeMso="TabContact">`. To put a group right after tinykit's groups,
 give it `idQ="tk:AfterBuiltIn"` and `insertAfterQ="tk:ContactTools"`: Outlook merges groups in load order and ignores a
-reference to a group not loaded yet, so Built-in and TinyKit also name `tk:AfterBuiltIn` in their `insertBeforeQ`.
+reference to a group not loaded yet, so Built-in and tinykit also name `tk:AfterBuiltIn` in their `insertBeforeQ`.
 
 ## License
 

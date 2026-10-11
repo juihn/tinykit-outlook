@@ -77,6 +77,7 @@ namespace tinykit.OutlookAddin.Common
                 {
                     timer.Stop();
                     timer.Dispose();
+                    Log.Info("Command: shortcut " + keys); // before it runs, so a hang in it is in the log
                     try
                     {
                         run();

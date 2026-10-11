@@ -15,7 +15,7 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 namespace tinykit.OutlookAddin.Ribbon
 {
     /// <summary>
-    /// Ribbon XML for the Outlook explorer: a "TinyKit" tab with Custom Mail Fields, Quick Filter, Clear, Saved Filters, Items
+    /// Ribbon XML for the Outlook explorer: a "tinykit" tab with Custom Mail Fields, Quick Filter, Clear, Saved Filters, Items
     /// (a toggle per saved filter, formats and the file/format management buttons) and Table View groups.
     /// </summary>
     [ComVisible(true)]
@@ -26,7 +26,7 @@ namespace tinykit.OutlookAddin.Ribbon
         private const string ContactRibbonId = "Microsoft.Outlook.Contact";
         private const string ComposeMailRibbonId = "Microsoft.Outlook.Mail.Compose";
 
-        // Namespace of the qualified ids (idQ) that other add-ins use to add groups to TinyKit's tabs:
+        // Namespace of the qualified ids (idQ) that other add-ins use to add groups to tinykit's tabs:
         // xmlns:tk="tinykit" and <tab idQ="tk:ContactTab"> (contact window), after <group idQ="tk:ContactTools">;
         // <tab idQ="tk:MainTab"> (explorer), after <group idQ="tk:Items">.
         private const string SharedNamespace = "tinykit";
@@ -117,17 +117,87 @@ namespace tinykit.OutlookAddin.Ribbon
             new[] { "MarkAsRead", "MarkAsUnread", "ShowInConversations", "FindRelatedMessages" },
         };
 
+        // The Built-in group's last column: calendar views and Go To Date.
+        private static readonly string[] BuiltInCalendar = { "MonthlyView", "WeeklyView", "GoToDate" };
+
         // Built-in commands that have no icon of their own (they live in menus), with the image to show instead.
         private static readonly Dictionary<string, string> BuiltInImages = new Dictionary<string, string>
         {
             { "ClearFlag", "Delete" },
             { "FindRelatedMessages", "GroupConversations" },
+            { "GoToDate", "DateInsert" },
         };
 
-        // Built-in check boxes: showLabel does not apply to them, so their label is replaced by a blank one.
+        // Calendar view toggles (written as toggleButton so the ribbon shows them pressed).
+        private static readonly HashSet<string> BuiltInToggles = new HashSet<string> { "MonthlyView", "WeeklyView" };
+
+        private const string BuiltInGroup = "grpBuiltIn";
+        private const string BuiltInLabeledGroup = "grpBuiltInL";
+
+        /// <summary>
+        /// The Built-in group, icon only (grpBuiltIn) or with labels (grpBuiltInL); GetBuiltInVisible shows one of the two.
+        /// Its dialog launcher toggles grpBuiltIn's labels in either.
+        /// </summary>
+        private static void AppendBuiltInGroup(StringBuilder sb, bool labels)
+        {
+            sb.Append("<group id=\"").Append(labels ? BuiltInLabeledGroup : BuiltInGroup)
+              .Append("\" insertBeforeQ=\"tk:AfterItems\" label=\"Built-in\" getVisible=\"GetBuiltInVisible\">");
+            int separators = 0;
+            foreach (var column in BuiltInColumns)
+            {
+                if (column == null)
+                    sb.Append("<separator id=\"").Append(labels ? "biLSep" : "biSep").Append(separators++).Append("\"/>");
+                else
+                    AppendBuiltInColumn(sb, column[0], column, labels);
+            }
+            AppendBuiltInColumn(sb, "Calendar", BuiltInCalendar, labels); // calendar views and Go To Date
+            sb.Append("<dialogBoxLauncher><button id=\"").Append(labels ? "lblBuiltInL" : "lblBuiltIn").Append("\" tag=\"")
+              .Append(BuiltInGroup).Append("\" onAction=\"OnGroupLabels\" screentip=\"Show/Hide Labels\"")
+              .Append(" supertip=\"Click or Shift+click: show or hide the labels of this group's buttons.\"/></dialogBoxLauncher>");
+            sb.Append("</group>");
+        }
+
+        /// <summary>One column of Outlook's own controls, icon only (box bi&lt;name&gt;) or with labels (box biL&lt;name&gt;).</summary>
+        private static void AppendBuiltInColumn(StringBuilder sb, string name, string[] idMsos, bool labels)
+        {
+            sb.Append("<box id=\"").Append(labels ? "biL" : "bi").Append(name).Append("\" boxStyle=\"vertical\">");
+            var showLabel = labels ? "" : " showLabel=\"false\"";
+            foreach (var idMso in idMsos)
+            {
+                string image;
+                if (BuiltInCheckBoxes.Contains(idMso))
+                    sb.Append("<checkBox idMso=\"").Append(idMso).Append(labels ? "\"/>" : "\" label=\" \"/>");
+                else if (BuiltInImages.TryGetValue(idMso, out image))
+                    sb.Append("<button idMso=\"").Append(idMso).Append("\" imageMso=\"").Append(image).Append("\"").Append(showLabel).Append("/>");
+                else if (BuiltInToggles.Contains(idMso))
+                    sb.Append("<toggleButton idMso=\"").Append(idMso).Append("\"").Append(showLabel).Append("/>");
+                else
+                    sb.Append("<control idMso=\"").Append(idMso).Append("\"").Append(showLabel).Append("/>");
+            }
+            sb.Append("</box>");
+        }
+
+        public bool GetBuiltInVisible(Office.IRibbonControl control)
+        {
+            return Safe(() => (control.Id == BuiltInLabeledGroup) != _labels.Hidden(BuiltInGroup), control.Id != BuiltInLabeledGroup);
+        }
+
+        // Built-in check boxes: showLabel does not apply to them, so the icon-only column gives them a blank label.
         private static readonly HashSet<string> BuiltInCheckBoxes = new HashSet<string> { "ShowInConversations" };
 
+        // Groups without the labels toggle (no dialog launcher): Quick Filter's one-letter buttons are its labels.
+        private static readonly string[] NoLabelToggle = { "grpQuick" };
+
+        // Group names shown while a group's labels are hidden (RibbonLabels).
+        private static readonly Dictionary<string, string> ShortGroupNames = new Dictionary<string, string>
+        {
+            { "grpView", "View" },
+            { "grpFields", "Fields" },
+            { "grpClear", "Clear" },
+        };
+
         private readonly FilterController _controller;
+        private readonly RibbonLabels _labels = new RibbonLabels();
         private Office.IRibbonUI _ui;
         private Office.IRibbonUI _contactUi; // shared by all contact windows
 
@@ -140,7 +210,8 @@ namespace tinykit.OutlookAddin.Ribbon
         public string GetCustomUI(string ribbonID)
         {
             if (ribbonID == ExplorerRibbonId)
-                return BuildXml();
+                return _labels.Apply(BuildXml(), "OnGroupLabels", "GetShowLabel", "GetCheckBoxLabel", "GetGroupLabel", ShortGroupNames,
+                    NoLabelToggle);
             if (ribbonID == ReadMailRibbonId)
                 return BuildReadMailXml();
             if (ribbonID == ContactRibbonId)
@@ -151,7 +222,7 @@ namespace tinykit.OutlookAddin.Ribbon
         }
 
         /// <summary>
-        /// A mail being written: a TinyKit tab before its Message tab, with a Recipients group (qualified ids, like the
+        /// A mail being written: a tinykit tab before its Message tab, with a Recipients group (qualified ids, like the
         /// contact window, so other add-ins can add groups: tk:ComposeTab, tk:ComposeRecipients, before tk:AfterRecipients).
         /// </summary>
         private static string BuildComposeMailXml()
@@ -159,7 +230,7 @@ namespace tinykit.OutlookAddin.Ribbon
             var sb = new StringBuilder();
             sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\" xmlns:tk=\"")
               .Append(SharedNamespace).Append("\">");
-            sb.Append("<ribbon><tabs><tab idQ=\"tk:ComposeTab\" label=\"TinyKit\" insertBeforeMso=\"TabNewMailMessage\">");
+            sb.Append("<ribbon><tabs><tab idQ=\"tk:ComposeTab\" label=\"tinykit\" insertBeforeMso=\"TabNewMailMessage\">");
             sb.Append("<group idQ=\"tk:ComposeRecipients\" label=\"Recipients\" insertBeforeQ=\"tk:AfterRecipients\">");
             sb.Append("<button id=\"cmRemoveSender\" label=\"Remove Sender from Recipients\" imageMso=\"_1\" onAction=\"OnRemoveSender\"")
               .Append(" screentip=\"Remove Sender from Recipients\" supertip=\"Remove the sending account's own address from To, Cc and Bcc ")
@@ -183,8 +254,8 @@ namespace tinykit.OutlookAddin.Ribbon
         }
 
         /// <summary>
-        /// A contact's window: a TinyKit tab before its Contact tab, with a Built-in group of Outlook's own commands and a
-        /// TinyKit group of this add-in's. The tab and groups have qualified ids (idQ, namespace <see cref="SharedNamespace"/>)
+        /// A contact's window: a tinykit tab before its Contact tab, with a Built-in group of Outlook's own commands and a
+        /// tinykit group of this add-in's. The tab and groups have qualified ids (idQ, namespace <see cref="SharedNamespace"/>)
         /// so other add-ins can add groups to this tab.
         /// </summary>
         private static string BuildContactXml()
@@ -192,7 +263,7 @@ namespace tinykit.OutlookAddin.Ribbon
             var sb = new StringBuilder();
             sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\" xmlns:tk=\"")
               .Append(SharedNamespace).Append("\" onLoad=\"OnContactLoad\">");
-            sb.Append("<ribbon><tabs><tab idQ=\"tk:ContactTab\" label=\"TinyKit\" insertBeforeMso=\"TabContact\">");
+            sb.Append("<ribbon><tabs><tab idQ=\"tk:ContactTab\" label=\"tinykit\" insertBeforeMso=\"TabContact\">");
             // insertBeforeQ: an add-in that loads before tinykit and wants its group after these two names it tk:AfterBuiltIn.
             sb.Append("<group idQ=\"tk:ContactBuiltIn\" label=\"Built-in\" insertBeforeQ=\"tk:AfterBuiltIn\">");
             sb.Append("<box id=\"ctPages\" boxStyle=\"vertical\">")
@@ -205,7 +276,7 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("<button idMso=\"SaveAndClose\"/>")
               .Append("</box>");
             sb.Append("</group>");
-            sb.Append("<group idQ=\"tk:ContactTools\" label=\"TinyKit\" insertBeforeQ=\"tk:AfterBuiltIn\">");
+            sb.Append("<group idQ=\"tk:ContactTools\" label=\"tinykit\" insertBeforeQ=\"tk:AfterBuiltIn\">");
             sb.Append("<button id=\"ctPicture\" label=\"Contact Picture\" size=\"large\" getImage=\"GetContactPicture\" onAction=\"OnContactPicture\"")
               .Append(" screentip=\"Contact Picture\" supertip=\"Add a picture, or change it. Shift+click removes it.\"/>");
             sb.Append("<box id=\"ctTools\" boxStyle=\"vertical\">")
@@ -221,14 +292,14 @@ namespace tinykit.OutlookAddin.Ribbon
         }
 
         /// <summary>
-        /// The window of a received mail: a TinyKit tab before its Message tab, with a Message group of Outlook's own
+        /// The window of a received mail: a tinykit tab before its Message tab, with a Message group of Outlook's own
         /// commands plus Recipients Report.
         /// </summary>
         private static string BuildReadMailXml()
         {
             var sb = new StringBuilder();
             sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\">");
-            sb.Append("<ribbon><tabs><tab id=\"tabReadTinyKit\" label=\"TinyKit\" insertBeforeMso=\"TabReadMessage\">");
+            sb.Append("<ribbon><tabs><tab id=\"tabReadTinyKit\" label=\"tinykit\" insertBeforeMso=\"TabReadMessage\">");
             sb.Append("<group id=\"grpReadMessage\" label=\"Message\">");
             sb.Append("<box id=\"rmDelete\" boxStyle=\"vertical\">")
               .Append("<button idMso=\"Delete\"/>")
@@ -264,38 +335,47 @@ namespace tinykit.OutlookAddin.Ribbon
             var sb = new StringBuilder();
             sb.Append("<customUI xmlns=\"http://schemas.microsoft.com/office/2009/07/customui\" xmlns:tk=\"")
               .Append(SharedNamespace).Append("\" onLoad=\"OnLoad\">");
-            sb.Append("<ribbon><tabs><tab idQ=\"tk:MainTab\" label=\"TinyKit\" insertBeforeMso=\"TabMail\">");
+            sb.Append("<ribbon><tabs><tab idQ=\"tk:MainTab\" label=\"tinykit\" insertBeforeMso=\"TabMail\">");
 
-            // Built-in: frequently used Outlook commands, icon only, in columns.
-            sb.Append("<group id=\"grpBuiltIn\" insertBeforeQ=\"tk:AfterItems\" label=\"Built-in\">");
-            int separators = 0;
-            foreach (var column in BuiltInColumns)
-            {
-                if (column == null)
-                {
-                    sb.Append("<separator id=\"biSep").Append(separators++).Append("\"/>");
-                    continue;
-                }
-                sb.Append("<box id=\"bi").Append(column[0]).Append("\" boxStyle=\"vertical\">");
-                foreach (var idMso in column)
-                {
-                    string image;
-                    if (BuiltInCheckBoxes.Contains(idMso))
-                        sb.Append("<checkBox idMso=\"").Append(idMso).Append("\" label=\" \"/>");
-                    else if (BuiltInImages.TryGetValue(idMso, out image))
-                        sb.Append("<button idMso=\"").Append(idMso).Append("\" imageMso=\"").Append(image).Append("\" showLabel=\"false\"/>");
-                    else
-                        sb.Append("<control idMso=\"").Append(idMso).Append("\" showLabel=\"false\"/>");
-                }
-                sb.Append("</box>");
-            }
-            // Calendar views and Go To Date, with labels.
-            sb.Append("<box id=\"biCalendar\" boxStyle=\"vertical\">");
-            sb.Append("<toggleButton idMso=\"MonthlyView\"/>");
-            sb.Append("<toggleButton idMso=\"WeeklyView\"/>");
-            sb.Append("<button idMso=\"GoToDate\" imageMso=\"DateInsert\"/>");
+            // Settings: the add-in's own settings, in every folder.
+            sb.Append("<group id=\"").Append(SettingsGroup).Append("\" insertBeforeQ=\"tk:AfterItems\" label=\"Settings\">");
+            sb.Append("<button id=\"cfShortcuts\" label=\"Custom Shortcuts\" imageMso=\"AdpPrimaryKey\" onAction=\"OnCustomShortcuts\"")
+              .Append(" screentip=\"Custom Shortcuts\" supertip=\"Show the add-in's keyboard shortcuts (Ctrl+Alt+Q Quick Filter box, Ctrl+Alt+W ")
+              .Append("Open in New Window, Ctrl+Alt+E Find Items, Ctrl+Alt+R reading pane Right/Bottom/Off, Ctrl+Alt+F Custom Filter, Ctrl+Alt+C Clear Filter) and turn each on or off.\"/>");
+            sb.Append("<button id=\"stAddressBooks\" label=\"Email Address Books\" imageMso=\"AddressBook\" onAction=\"OnAddressBooks\"")
+              .Append(" screentip=\"Email Address Books\" supertip=\"List the Contacts folders of all accounts, each with a check box for ")
+              .Append("its Properties &gt; Outlook Address Book &gt; Show this folder as an e-mail Address Book.\"/>");
+            // In a box of its own, so the drop-down sits right after its label (the ribbon lines up the drop-downs of a
+            // column at the widest label of that column otherwise). Two of them, as a drop-down's width cannot change:
+            // with label and icon ("60 sec"), and while the group's labels are hidden a compact one without them ("60s").
+            sb.Append("<box id=\"cfSendDelayBox\" boxStyle=\"horizontal\">");
+            const string sendDelayTip = " screentip=\"Send Delay\" supertip=\"Mail you send waits this long in the Outbox "
+                + "(Do not deliver before) before it goes: open it there to change it and send it again, or delete it to cancel. "
+                + "A later delivery time you set yourself is kept. Exchange accounts (Outlook.com, Hotmail, work) are held by the "
+                + "server, so Outlook may be closed; IMAP accounts (Naver, Gmail) go only while Outlook runs. With File &gt; Options "
+                + "&gt; Advanced &gt; Send immediately when connected off, mail goes at the first Send/Receive after the delay. "
+                + "Off: mail goes at once.\"";
+            sb.Append("<dropDown id=\"cfSendDelay\" label=\"Send Delay\" imageMso=\"DelayDeliveryOutlook\" showImage=\"true\" sizeString=\"60 sec\"")
+              .Append(" getVisible=\"GetSendDelayVisible\" getItemCount=\"GetSendDelayCount\" getItemLabel=\"GetSendDelayLabel\"")
+              .Append(" getSelectedItemIndex=\"GetSendDelayIndex\" onAction=\"OnSendDelayPick\"").Append(sendDelayTip).Append("/>");
+            sb.Append("<dropDown id=\"").Append(SendDelayCompactId).Append("\" label=\"Send Delay\" showLabel=\"false\" showImage=\"false\" sizeString=\"60s\"")
+              .Append(" getVisible=\"GetSendDelayVisible\" getItemCount=\"GetSendDelayCount\" getItemLabel=\"GetSendDelayLabel\"")
+              .Append(" getSelectedItemIndex=\"GetSendDelayIndex\" onAction=\"OnSendDelayPick\"").Append(sendDelayTip).Append("/>");
             sb.Append("</box>");
+            sb.Append("<checkBox id=\"cfSentToInbox\" label=\"Move Sent Mail to Inbox\" getPressed=\"GetSentToInboxPressed\" onAction=\"OnSentToInboxToggle\"")
+              .Append(" screentip=\"Move Sent Mail to Inbox\" supertip=\"Move mail in each account's Sent Items to the same account's Inbox: ")
+              .Append("a few seconds after Outlook starts and after mail arrives in Sent Items (also mail sent from another mail client). ")
+              .Append("Gmail accounts too (moving out of Sent Mail takes its label off).\"/>");
+            sb.Append("<checkBox id=\"cfJunkToInbox\" label=\"Move Junk Mail to Inbox\" getPressed=\"GetJunkToInboxPressed\" onAction=\"OnJunkToInboxToggle\"")
+              .Append(" screentip=\"Move Junk Mail to Inbox\" supertip=\"Move mail arriving in each account's Junk Email to the same account's Inbox, ")
+              .Append("a few seconds after it arrives (mail already there when Outlook starts or this is turned on stays; for Gmail, moving out of Spam marks it not spam). The moved mail gets 🅙 in domainMark.\"/>");
             sb.Append("</group>");
+
+            // Built-in: frequently used Outlook commands, in columns. Outlook ignores label callbacks on its own controls
+            // (and getVisible on a box), so the group is there twice, icon only and with labels, and GetBuiltInVisible
+            // shows one of them as its labels are hidden (the default) or shown; both launchers toggle grpBuiltIn.
+            AppendBuiltInGroup(sb, false);
+            AppendBuiltInGroup(sb, true);
 
             // Table View.
             sb.Append("<group id=\"grpView\" insertBeforeQ=\"tk:AfterItems\" label=\"Table View\" getVisible=\"GetNotCalendarVisible\">");
@@ -325,7 +405,8 @@ namespace tinykit.OutlookAddin.Ribbon
             sb.Append("<dialogBoxLauncher><button id=\"mMeSymbols\" onAction=\"OnMeSymbols\" screentip=\"Column Symbols\"")
               .Append(" supertip=\"Choose the column symbols: the mark before a name from Contacts in nameRelated, and the me column's ")
               .Append("for mail you sent (it also starts a sent mail's nameRelated), mail with you in To, mail with you only in Cc. ")
-              .Append("Mail that has an old symbol and saved filters that use it are changed too.\"/></dialogBoxLauncher>");
+              .Append("Mail that has an old symbol and saved filters that use it are changed too. ")
+              .Append("Shift+click: show or hide the labels of this group's buttons.\"/></dialogBoxLauncher>");
             sb.Append("</group>");
 
 
@@ -445,30 +526,6 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append("selected mail's nameRelated: the first recipient of mail you sent, otherwise the sender (from any Contacts folder). ")
               .Append("If there is none, a new contact with that name and address opens, ")
               .Append("in the Contacts folder of the mail's account (else of the default account), to be saved there.\"/>");
-            // Mail folders: what happens to mail I send.
-            // In a box of its own, so the drop-down sits right after its label (the ribbon lines up the drop-downs of a
-            // column at the widest label of that column otherwise).
-            sb.Append("<box id=\"cfSendDelayBox\" boxStyle=\"horizontal\" getVisible=\"GetMailVisible\">");
-            sb.Append("<dropDown id=\"cfSendDelay\" label=\"Send Delay\" imageMso=\"DelayDeliveryOutlook\" showImage=\"true\" sizeString=\"60 sec\"")
-              .Append(" getItemCount=\"GetSendDelayCount\" getItemLabel=\"GetSendDelayLabel\" getSelectedItemIndex=\"GetSendDelayIndex\"")
-              .Append(" onAction=\"OnSendDelayPick\" screentip=\"Send Delay\" supertip=\"Mail you send waits this long in the Outbox ")
-              .Append("(Do not deliver before) before it goes: open it there to change it and send it again, or delete it to cancel. ")
-              .Append("A later delivery time you set yourself is kept. Exchange accounts (Outlook.com, Hotmail, work) are held by the ")
-              .Append("server, so Outlook may be closed; IMAP accounts (Naver, Gmail) go only while Outlook runs. With File &gt; Options ")
-              .Append("&gt; Advanced &gt; Send immediately when connected off, mail goes at the first Send/Receive after the delay. ")
-              .Append("Off: mail goes at once.\"/>");
-            sb.Append("</box>");
-            sb.Append("<button id=\"cfShortcuts\" label=\"Custom Shortcuts\" imageMso=\"AdpPrimaryKey\" onAction=\"OnCustomShortcuts\"")
-              .Append(" screentip=\"Custom Shortcuts\" supertip=\"Show the add-in's keyboard shortcuts (Ctrl+Alt+Q Quick Filter box, Ctrl+Alt+W ")
-              .Append("Open in New Window, Ctrl+Alt+E Find Items, Ctrl+Alt+R reading pane Right/Bottom/Off, Ctrl+Alt+F Custom Filter, Ctrl+Alt+C Clear Filter) and turn each on or off.\"/>");
-            // Mail folders: sent and junk mail moved to the Inbox.
-            sb.Append("<checkBox id=\"cfSentToInbox\" label=\"Move Sent Mail to Inbox\" getVisible=\"GetMailVisible\" getPressed=\"GetSentToInboxPressed\" onAction=\"OnSentToInboxToggle\"")
-              .Append(" screentip=\"Move Sent Mail to Inbox\" supertip=\"Move mail in each account's Sent Items to the same account's Inbox: ")
-              .Append("a few seconds after Outlook starts and after mail arrives in Sent Items (also mail sent from another mail client). ")
-              .Append("Gmail accounts too (moving out of Sent Mail takes its label off).\"/>");
-            sb.Append("<checkBox id=\"cfJunkToInbox\" label=\"Move Junk Mail to Inbox\" getVisible=\"GetMailVisible\" getPressed=\"GetJunkToInboxPressed\" onAction=\"OnJunkToInboxToggle\"")
-              .Append(" screentip=\"Move Junk Mail to Inbox\" supertip=\"Move mail arriving in each account's Junk Email to the same account's Inbox, ")
-              .Append("a few seconds after it arrives (mail already there when Outlook starts or this is turned on stays; for Gmail, moving out of Spam marks it not spam). The moved mail gets 🅙 in domainMark.\"/>");
             // Contact folders: switch the selected contacts between Outlook's form and the folder's custom form.
             sb.Append("<button id=\"cfFormDefault\" label=\"Default Contact Form\" imageMso=\"NewContact\"")
               .Append(" getVisible=\"GetContactVisible\" onAction=\"OnSetDefaultContactForm\" screentip=\"Default Contact Form\"")
@@ -512,7 +569,7 @@ namespace tinykit.OutlookAddin.Ribbon
         }
 
         /// <summary>
-        /// Shows the TinyKit tab in the active explorer (e.g. before focusing the Quick Filter box). The ribbon ignores
+        /// Shows the tinykit tab in the active explorer (e.g. before focusing the Quick Filter box). The ribbon ignores
         /// activating the tab it last activated itself, even when another tab was clicked since, so Home comes first.
         /// </summary>
         public void ActivateMainTab()
@@ -528,6 +585,7 @@ namespace tinykit.OutlookAddin.Ribbon
         private void RunCompose(Office.IRibbonControl control, Action<Outlook.Inspector, Outlook.MailItem> action)
         {
             var inspector = control.Context as Outlook.Inspector;
+            LogStart(control);
             try
             {
                 var mail = inspector == null ? null : inspector.CurrentItem as Outlook.MailItem;
@@ -618,6 +676,7 @@ namespace tinykit.OutlookAddin.Ribbon
         private void RunContact(Office.IRibbonControl control, Action<Outlook.Inspector, Outlook.ContactItem> action)
         {
             var inspector = control.Context as Outlook.Inspector;
+            LogStart(control);
             try
             {
                 action(inspector, Contacts.ContactCommands.ContactOf(inspector));
@@ -683,7 +742,41 @@ namespace tinykit.OutlookAddin.Ribbon
 
         public void OnMeSymbols(Office.IRibbonControl control)
         {
-            Run(control, ex => _controller.EditMeSymbols(ex));
+            if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift)
+                Run(control, ex => ToggleLabels(_labels.GroupOfLauncher(control.Id)));
+            else
+                Run(control, ex => _controller.EditMeSymbols(ex));
+        }
+
+        // ---------- Labels shown or hidden per group (dialog launchers) ----------
+
+        public void OnGroupLabels(Office.IRibbonControl control)
+        {
+            Run(control, ex => ToggleLabels(control.Tag));
+        }
+
+        private void ToggleLabels(string group)
+        {
+            if (group == null)
+                return;
+            _labels.Toggle(group);
+            if (_ui != null)
+                _ui.Invalidate();
+        }
+
+        public bool GetShowLabel(Office.IRibbonControl control)
+        {
+            return Safe(() => _labels.Shown(control.Id), true);
+        }
+
+        public string GetCheckBoxLabel(Office.IRibbonControl control)
+        {
+            return Safe(() => _labels.CheckBoxLabel(control.Id), " ");
+        }
+
+        public string GetGroupLabel(Office.IRibbonControl control)
+        {
+            return Safe(() => _labels.GroupLabel(control.Id), control.Id);
         }
 
         public void OnCustomShortcuts(Office.IRibbonControl control)
@@ -1191,6 +1284,7 @@ namespace tinykit.OutlookAddin.Ribbon
         public void OnReadRecipientsReport(Office.IRibbonControl control)
         {
             var inspector = control.Context as Outlook.Inspector;
+            LogStart(control);
             try
             {
                 if (inspector == null)
@@ -1254,6 +1348,20 @@ namespace tinykit.OutlookAddin.Ribbon
         // Send Delay choices, in seconds (0: off).
         private static readonly int[] SendDelays = { 0, 5, 10, 15, 30, 60 };
 
+        // The Send Delay drop-down shown while the Settings group's labels are hidden: no icon or label, "5s" items.
+        private const string SendDelayCompactId = "cfSendDelayCompact";
+        private const string SettingsGroup = "grpSettings";
+
+        public bool GetSendDelayVisible(Office.IRibbonControl control)
+        {
+            return Safe(() => (control.Id == SendDelayCompactId) == _labels.Hidden(SettingsGroup), control.Id != SendDelayCompactId);
+        }
+
+        public void OnAddressBooks(Office.IRibbonControl control)
+        {
+            Run(control, ex => _controller.ShowAddressBooks(ex));
+        }
+
         public int GetSendDelayCount(Office.IRibbonControl control)
         {
             return SendDelays.Length;
@@ -1266,7 +1374,7 @@ namespace tinykit.OutlookAddin.Ribbon
 
         private string GetSendDelayLabelText(Office.IRibbonControl control, int index)
         {
-            return SendDelays[index] == 0 ? "Off" : SendDelays[index] + " sec";
+            return SendDelays[index] == 0 ? "Off" : SendDelays[index] + (control.Id == SendDelayCompactId ? "s" : " sec");
         }
 
         public int GetSendDelayIndex(Office.IRibbonControl control)
@@ -1345,6 +1453,7 @@ namespace tinykit.OutlookAddin.Ribbon
         private void Run(Office.IRibbonControl control, Action<Outlook.Explorer> action)
         {
             var explorer = control.Context as Outlook.Explorer ?? Globals.ThisAddIn.Application.ActiveExplorer();
+            LogStart(control, explorer);
             try
             {
                 _controller.Focus(explorer);
@@ -1361,6 +1470,29 @@ namespace tinykit.OutlookAddin.Ribbon
                 MessageBox.Show(WindowOwner.From(explorer), ex.Message, ThisAddIn.Title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 _controller.Invalidate();
             }
+        }
+
+        /// <summary>
+        /// Logs that a command starts, before it runs: when Outlook hangs in one, the log's last line names it (results
+        /// are logged only when a command ends). Shift/Ctrl are included, as they change what many buttons do.
+        /// </summary>
+        private static void LogStart(Office.IRibbonControl control, Outlook.Explorer explorer = null)
+        {
+            var keys = Control.ModifierKeys;
+            var text = "Command: " + control.Id + (string.IsNullOrEmpty(control.Tag) ? "" : " [" + control.Tag + "]")
+                + ((keys & Keys.Control) == Keys.Control ? " +Ctrl" : "") + ((keys & Keys.Shift) == Keys.Shift ? " +Shift" : "");
+            if (explorer != null)
+            {
+                try
+                {
+                    text += " in " + explorer.CurrentFolder.FolderPath;
+                }
+                catch (Exception)
+                {
+                    // no folder (e.g. Outlook Today): the command alone
+                }
+            }
+            Log.Info(text);
         }
 
         private static T Safe<T>(Func<T> f, T fallback)

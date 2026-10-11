@@ -81,7 +81,7 @@ namespace tinykit.OutlookAddin.Common
         {
             try
             {
-                var lines = new List<string> { "# tinykit keyboard shortcuts: id=on|off (Custom Shortcuts button in the TinyKit tab)" };
+                var lines = new List<string> { "# tinykit keyboard shortcuts: id=on|off (Custom Shortcuts button in the tinykit tab)" };
                 lines.AddRange(_all.Select(s => s.Id + "=" + (s.Enabled ? "on" : "off") + "    # " + s.KeyText + " " + s.Command));
                 Directory.CreateDirectory(Path.GetDirectoryName(SettingsPaths.ShortcutsFile));
                 File.WriteAllLines(SettingsPaths.ShortcutsFile, lines);

@@ -30,8 +30,33 @@ namespace tinykit.OutlookAddin
             return _ribbon = new OutlookRibbon(Controller);
         }
 
+        /// <summary>This Outlook process, for the log: when the add-in goes missing, the lines show how Outlook was started.</summary>
+        internal static string ProcessText()
+        {
+            try
+            {
+                using (var p = System.Diagnostics.Process.GetCurrentProcess())
+                    return "pid " + p.Id + " (since " + p.StartTime.ToString("HH:mm:ss") + ")";
+            }
+            catch (Exception)
+            {
+                return "pid ?";
+            }
+        }
+
         private void ThisAddIn_Startup(object sender, EventArgs e)
         {
+            try
+            {
+                Log.Info("Add-in started: Outlook " + Application.Version + ", " + ProcessText() + ", "
+                    + Application.Explorers.Count + " window(s), command line: " + Environment.CommandLine);
+                ((Outlook.ApplicationEvents_11_Event)Application).Quit += () => Log.Info("Outlook quits: " + ProcessText());
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Startup log", ex);
+            }
+
             // An exception nothing caught ends Outlook and gets the add-in disabled; at least its stack is logged.
             AppDomain.CurrentDomain.UnhandledException += (s, a) =>
             {
@@ -115,7 +140,7 @@ namespace tinykit.OutlookAddin
                 // window only, and not while typing in a reply in its reading pane (Outlook's own keys apply there).
                 const System.Windows.Forms.Keys CtrlAlt = System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Alt;
                 AddShortcut("QuickFilterBox", CtrlAlt | System.Windows.Forms.Keys.Q, "Quick Filter box",
-                    "Show the TinyKit tab and put the cursor in the Quick Filter box (then Alt + a button's letter filters).",
+                    "Show the tinykit tab and put the cursor in the Quick Filter box (then Alt + a button's letter filters).",
                     FocusQuickFilterBox);
                 AddShortcut("OpenInNewWindow", CtrlAlt | System.Windows.Forms.Keys.W, "Open in New Window",
                     "Open the current folder in a new Outlook window (Folder > Open in New Window).",
@@ -169,7 +194,7 @@ namespace tinykit.OutlookAddin
         }
 
         /// <summary>
-        /// Shows the TinyKit tab and puts the focus in the Quick Filter box (looked for a few times: the tab is drawn a
+        /// Shows the tinykit tab and puts the focus in the Quick Filter box (looked for a few times: the tab is drawn a
         /// moment after it is shown).
         /// </summary>
         private void FocusQuickFilterBox(Outlook.Explorer explorer)
@@ -255,7 +280,7 @@ namespace tinykit.OutlookAddin
             Try("custom fields", () => { if (Controller.Fields != null) Controller.Fields.Stop(); });
             Try("sent to Inbox", () => { if (Controller.SentMail != null) Controller.SentMail.Stop(); });
             Try("junk to Inbox", () => { if (Controller.JunkMail != null) Controller.JunkMail.Stop(); });
-            Log.Info("Add-in unloaded: hooks and timers removed");
+            Log.Info("Add-in unloaded: hooks and timers removed, " + ProcessText());
         }
 
         private static void Try(string what, Action action)
@@ -327,7 +352,10 @@ namespace tinykit.OutlookAddin
                 try
                 {
                     if (_owner.Application.Explorers.Count <= 1)
+                    {
+                        Log.Info("Last Outlook window closed: " + ProcessText());
                         _owner.Controller.ClearInboxFiltersAtExit(_owner.Application, _explorer);
+                    }
                 }
                 catch (Exception ex)
                 {

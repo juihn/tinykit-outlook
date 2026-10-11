@@ -98,7 +98,7 @@ namespace tinykit.OutlookAddin.CustomFields
         private void Build()
         {
             var entries = new Dictionary<string, ContactEntry>(StringComparer.OrdinalIgnoreCase);
-            foreach (var folder in ContactFolders())
+            foreach (var folder in ContactFolders(_session))
             {
                 try
                 {
@@ -183,11 +183,15 @@ namespace tinykit.OutlookAddin.CustomFields
             return rest.Length == 0 || rest.StartsWith("[", StringComparison.Ordinal) || rest.StartsWith("(", StringComparison.Ordinal) ? display : rest;
         }
 
-        private IEnumerable<Outlook.MAPIFolder> ContactFolders()
+        /// <summary>
+        /// Every store's Contacts folder and its contact subfolders (default store first), without the ones Outlook or
+        /// Exchange maintain themselves. Also the Email Address Books window's list.
+        /// </summary>
+        internal static IEnumerable<Outlook.MAPIFolder> ContactFolders(Outlook.NameSpace session)
         {
-            var defaultStoreId = SafeGet(() => _session.DefaultStore.StoreID);
+            var defaultStoreId = SafeGet(() => session.DefaultStore.StoreID);
             var stores = new List<Outlook.Store>();
-            foreach (Outlook.Store s in _session.Stores)
+            foreach (Outlook.Store s in session.Stores)
                 stores.Add(s);
 
             foreach (var store in stores.OrderBy(s => SafeGet(() => s.StoreID) == defaultStoreId ? 0 : 1))

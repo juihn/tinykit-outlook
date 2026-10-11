@@ -10,7 +10,7 @@ using Outlook = Microsoft.Office.Interop.Outlook;
 
 namespace tinykit.OutlookAddin.Contacts
 {
-    /// <summary>The commands of the TinyKit tab in a contact's window; each works on the window's contact.</summary>
+    /// <summary>The commands of the tinykit tab in a contact's window; each works on the window's contact.</summary>
     internal static class ContactCommands
     {
         private const string AttachDataProp = "http://schemas.microsoft.com/mapi/proptag/0x37010102"; // PR_ATTACH_DATA_BIN
