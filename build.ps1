@@ -1,4 +1,5 @@
-# Builds tinykit.Outlook.sln with the x64 MSBuild of the latest Visual Studio (the build also registers the add-in).
+# Builds tinykit.Outlook.sln with the x64 MSBuild of the latest Visual Studio, then registers the add-in
+# (Register-Addin.ps1: in the real registry also when this runs under a packaged app such as Claude Desktop).
 # x64 MSBuild even on Windows on ARM: the registration step loads the x64 vstoee.dll, which ARM64 MSBuild cannot.
 # Visual Studio on ARM has no Office/SharePoint workload, so when its OfficeTools are missing the VSTO build files are
 # taken from -Kit: OfficeTools\ (from an x64 VS's MSBuild\Microsoft\VisualStudio\v18.0\OfficeTools) and VSTO40\
@@ -29,4 +30,9 @@ if (-not (Test-Path (Join-Path $vs 'MSBuild\Microsoft\VisualStudio\v*\OfficeTool
 }
 
 & $msbuild @msbuildArgs
-exit $LASTEXITCODE
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+# The build registers the add-in, but in an app's private registry when this runs under one (e.g. a terminal in Claude
+# Desktop), where an Outlook started normally does not look: Register-Addin.ps1 registers it outside.
+& (Join-Path $PSScriptRoot 'Register-Addin.ps1') -Configuration $Configuration
+exit 0

@@ -4,8 +4,35 @@
 param(
     [ValidateSet('Debug', 'Release')] [string] $Configuration = 'Debug',
     [switch] $Unregister,
-    [switch] $ShareSettings
+    [switch] $ShareSettings,
+    [switch] $Outside # set when it runs itself again in a process WMI starts (below)
 )
+
+# Under an app's private registry (e.g. a terminal in Claude Desktop, a packaged app), HKCU writes go to that app's own
+# copy, which an Outlook started from the Start menu or taskbar never sees, and such processes cannot tell (they have no
+# package identity). So the script always runs itself again in a process WMI starts, which is outside any such
+# container, and shows what that printed; where WMI cannot start it, it registers here.
+if (-not $Outside) {
+    $out = Join-Path $PSScriptRoot 'Register-Addin.out'
+    $switches = $(if ($Unregister) { ' -Unregister' } else { '' }) + $(if ($ShareSettings) { ' -ShareSettings' } else { '' })
+    $command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command `"& '$PSCommandPath' -Outside -Configuration $Configuration$switches *> '$out'`""
+    $process = $null
+    try {
+        $process = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $command; CurrentDirectory = $PSScriptRoot } -ErrorAction Stop
+    }
+    catch {
+        Write-Warning "Could not start the registration through WMI ($($_.Exception.Message)); registering in this process."
+    }
+    if ($process -and $process.ReturnValue -eq 0) {
+        while (Get-Process -Id $process.ProcessId -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 200 }
+        if (Test-Path $out) {
+            Get-Content $out
+            Remove-Item $out
+        }
+        return
+    }
+    if ($process) { Write-Warning "WMI did not start the registration ($($process.ReturnValue)); registering in this process." }
+}
 
 $key = 'HKCU:\Software\Microsoft\Office\Outlook\Addins\tinykit.Outlook'
 

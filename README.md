@@ -18,8 +18,10 @@ Requirements: Windows, Outlook Classic (Microsoft 365 / 2016 or later), Visual S
 .\Register-Addin.ps1         # only if the add-in is not registered yet; -Unregister to remove, -ShareSettings to share settings through OneDrive
 ```
 
-`build.ps1` builds with the x64 MSBuild of the latest Visual Studio, which also registers the add-in for the current user
-(as building in Visual Studio does). `New-SigningCert.ps1` makes a self-signed cert for the VSTO manifests and
+`build.ps1` builds with the x64 MSBuild of the latest Visual Studio, then registers the add-in for the current user with
+`Register-Addin.ps1`. That script writes the registry in a process WMI starts: a terminal of a packaged app (e.g. Claude
+Desktop) has its own private copy of HKCU and AppData, so a registration made there is seen only by an Outlook started
+from that terminal, and an Outlook started from the Start menu or taskbar would show no tinykit tab. `New-SigningCert.ps1` makes a self-signed cert for the VSTO manifests and
 `Signing.props` (per PC, not committed).
 Close Outlook before building (it locks the add-in DLL; `build.ps1` stops if it is running) and start it afterwards. The
 first time, VSTO asks you to trust the self-signed publisher; choose **Install**.

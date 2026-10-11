@@ -5,3 +5,4 @@ obj/
 *.pfx
 publish/
 Signing.props
+Register-Addin.out
