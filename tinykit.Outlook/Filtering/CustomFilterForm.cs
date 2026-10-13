@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using tinykit.OutlookAddin.Settings;
@@ -43,7 +41,7 @@ namespace tinykit.OutlookAddin.Filtering
             KeyPreview = true; // Enter / Esc wherever the focus is
             ClientSize = new Size(720, 460);
             MinimumSize = new Size(420, 240);
-            var saved = LoadSize();
+            var saved = Common.WindowSize.Load(SettingsPaths.CustomFilterSizeFile);
             if (saved.HasValue)
                 Size = saved.Value;
 
@@ -177,45 +175,8 @@ namespace tinykit.OutlookAddin.Filtering
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            SaveSize(WindowState == FormWindowState.Normal ? Size : RestoreBounds.Size);
+            Common.WindowSize.Save(SettingsPaths.CustomFilterSizeFile, this);
             base.OnFormClosed(e);
-        }
-
-        private static Size? LoadSize()
-        {
-            try
-            {
-                var path = SettingsPaths.CustomFilterSizeFile;
-                if (!File.Exists(path))
-                    return null;
-                var parts = File.ReadAllText(path).Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
-                int w, h;
-                if (parts.Length == 2 && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out w)
-                    && int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out h) && w > 0 && h > 0)
-                {
-                    var screen = Screen.PrimaryScreen.WorkingArea;
-                    return new Size(Math.Min(w, screen.Width), Math.Min(h, screen.Height));
-                }
-            }
-            catch (Exception ex)
-            {
-                Common.Log.Error("Custom Filter size", ex);
-            }
-            return null;
-        }
-
-        private static void SaveSize(Size size)
-        {
-            try
-            {
-                Directory.CreateDirectory(SettingsPaths.LocalFolder);
-                File.WriteAllText(SettingsPaths.CustomFilterSizeFile,
-                    size.Width.ToString(CultureInfo.InvariantCulture) + " " + size.Height.ToString(CultureInfo.InvariantCulture));
-            }
-            catch (Exception ex)
-            {
-                Common.Log.Error("Custom Filter size", ex);
-            }
         }
     }
 }

@@ -106,6 +106,9 @@ namespace tinykit.OutlookAddin.Settings
         /// <summary>The Custom Filter window's last size (this PC's screen): "width height" in pixels.</summary>
         public static string CustomFilterSizeFile { get { return Path.Combine(LocalFolder, "Custom Filter Size.txt"); } }
 
+        /// <summary>The Add/New... window's last size (this PC's screen): "width height" in pixels.</summary>
+        public static string AddConditionsSizeFile { get { return Path.Combine(LocalFolder, "Add Conditions Size.txt"); } }
+
         /// <summary>Custom Shortcuts: which of the add-in's keyboard shortcuts are on ("id=on|off").</summary>
         public static string ShortcutsFile { get { return Path.Combine(SettingsFolder, "Custom Shortcuts.txt"); } }
 

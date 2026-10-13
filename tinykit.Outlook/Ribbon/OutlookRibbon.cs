@@ -366,9 +366,8 @@ namespace tinykit.OutlookAddin.Ribbon
               .Append(" screentip=\"Move Sent Mail to Inbox\" supertip=\"Move mail in each account's Sent Items to the same account's Inbox: ")
               .Append("a few seconds after Outlook starts and after mail arrives in Sent Items (also mail sent from another mail client). ")
               .Append("Gmail accounts too (moving out of Sent Mail takes its label off).\"/>");
-            sb.Append("<checkBox id=\"cfJunkToInbox\" label=\"Move Junk Mail to Inbox\" getPressed=\"GetJunkToInboxPressed\" onAction=\"OnJunkToInboxToggle\"")
-              .Append(" screentip=\"Move Junk Mail to Inbox\" supertip=\"Move mail arriving in each account's Junk Email to the same account's Inbox, ")
-              .Append("a few seconds after it arrives (mail already there when Outlook starts or this is turned on stays; for Gmail, moving out of Spam marks it not spam). The moved mail gets 🅙 in domainMark.\"/>");
+            sb.Append("<button id=\"cfJunkToInbox\" label=\"Move Junk Mail to Inbox...\" imageMso=\"").Append(FilterController.JunkToInboxIcon)
+              .Append("\" onAction=\"OnJunkToInbox\" screentip=\"Move Junk Mail to Inbox\" getSupertip=\"GetJunkToInboxSupertip\"/>");
             sb.Append("</group>");
 
             // Built-in: frequently used Outlook commands, in columns. Outlook ignores label callbacks on its own controls
@@ -1401,14 +1400,20 @@ namespace tinykit.OutlookAddin.Ribbon
             Run(control, ex => _controller.SetMoveSentToInbox(pressed));
         }
 
-        public bool GetJunkToInboxPressed(Office.IRibbonControl control)
+        public void OnJunkToInbox(Office.IRibbonControl control)
         {
-            return _controller.MoveJunkToInbox;
+            Run(control, ex => _controller.ShowJunkToInbox(ex));
         }
 
-        public void OnJunkToInboxToggle(Office.IRibbonControl control, bool pressed)
+        public string GetJunkToInboxSupertip(Office.IRibbonControl control)
         {
-            Run(control, ex => _controller.SetMoveJunkToInbox(pressed));
+            return RibbonText(Safe(() =>
+            {
+                var on = _controller.JunkToInboxAccounts().Where(a => a.Value).Select(a => a.Key).ToList();
+                return "Choose the accounts whose mail arriving in Junk Email is moved to the same account's Inbox, a few seconds "
+                    + "after it arrives (mail already there stays; for Gmail, moving out of Spam marks it not spam). The moved mail "
+                    + "gets \U0001F159 in domainMark. Now: " + (on.Count > 0 ? string.Join(", ", on) : "off") + ".";
+            }, ""));
         }
 
         public void OnAutoFillToggle(Office.IRibbonControl control, bool pressed)

@@ -83,6 +83,12 @@ namespace tinykit.OutlookAddin.Settings
         /// <summary>Mail files only: move mail in each account's Junk Email to its Inbox.</summary>
         public bool MoveJunkToInbox;
 
+        /// <summary>
+        /// Mail files only: the accounts (display names) whose Junk Email is moved, when MoveJunkToInbox is on; null (a
+        /// file from before) means every account. Accounts of other PCs that share the file stay in the list.
+        /// </summary>
+        public List<string> JunkToInboxAccounts;
+
         /// <summary>Mail files only: seconds a sent mail waits in the Outbox before it goes (0: at once).</summary>
         public int SendDelaySeconds = 60;
 
@@ -114,6 +120,8 @@ namespace tinykit.OutlookAddin.Settings
                                                        account's Sent Items to its Inbox
                 moveJunkToInbox=""true|false""          moveJunkToInbox (Mail only): move mail in each
                                                        account's Junk Email to its Inbox
+                moveJunkToInboxAccounts=""a@x.com;b@y.com""  (Mail only) only these accounts' Junk Email
+                                                       (Settings > Move Junk Mail to Inbox...); none: all
                 sendDelaySeconds=""60""                 sendDelaySeconds (Mail only): seconds a sent mail
                                                        waits in the Outbox (0: sent at once)
                 meSent=""▶"" meTo=""●"" meCc=""○""         (Mail only) the me column's symbols: mail I sent,
@@ -199,6 +207,9 @@ namespace tinykit.OutlookAddin.Settings
                 AutoFillFields = ParseBool(root.Attribute("autoFillFields"), true),
                 MoveSentToInbox = ParseBool(root.Attribute("moveSentToInbox"), true),
                 MoveJunkToInbox = ParseBool(root.Attribute("moveJunkToInbox"), false),
+                JunkToInboxAccounts = root.Attribute("moveJunkToInboxAccounts") == null ? null
+                    : root.Attribute("moveJunkToInboxAccounts").Value.Split(';').Select(a => a.Trim()).Where(a => a.Length > 0)
+                        .Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
                 // sendDelayMinutes: the first version's setting, in minutes
                 SendDelaySeconds = ParseSeconds(root.Attribute("sendDelaySeconds"),
                     Math.Min(3600, ParseSeconds(root.Attribute("sendDelayMinutes"), 1) * 60)),
@@ -245,6 +256,8 @@ namespace tinykit.OutlookAddin.Settings
                     Kind == ItemKind.Mail ? new XAttribute("autoFillFields", AutoFillFields ? "true" : "false") : null,
                     Kind == ItemKind.Mail ? new XAttribute("moveSentToInbox", MoveSentToInbox ? "true" : "false") : null,
                     Kind == ItemKind.Mail ? new XAttribute("moveJunkToInbox", MoveJunkToInbox ? "true" : "false") : null,
+                    Kind == ItemKind.Mail && JunkToInboxAccounts != null
+                        ? new XAttribute("moveJunkToInboxAccounts", string.Join(";", JunkToInboxAccounts)) : null,
                     Kind == ItemKind.Mail ? new XAttribute("sendDelaySeconds", SendDelaySeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)) : null,
                     Kind == ItemKind.Mail ? new XAttribute("meSent", MeSent) : null,
                     Kind == ItemKind.Mail ? new XAttribute("meTo", MeTo) : null,

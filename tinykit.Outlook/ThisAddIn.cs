@@ -126,6 +126,7 @@ namespace tinykit.OutlookAddin
             try
             {
                 Controller.JunkMail = FolderToInbox.JunkMail(Application, Controller.MoveJunkToInbox);
+                Controller.JunkMail.SetAccounts(Controller.JunkToInboxAccountsSetting);
                 Controller.JunkMail.Start();
             }
             catch (Exception ex)

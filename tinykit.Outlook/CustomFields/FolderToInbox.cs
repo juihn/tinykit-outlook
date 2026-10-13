@@ -26,6 +26,7 @@ namespace tinykit.OutlookAddin.CustomFields
 
         private sealed class Pair
         {
+            public string Account; // the account's display name, as the settings list it
             public Outlook.MAPIFolder Source;
             public Outlook.MAPIFolder Inbox;
             public Outlook.Items Items; // kept alive or ItemAdd stops firing
@@ -40,6 +41,7 @@ namespace tinykit.OutlookAddin.CustomFields
         private readonly List<Pair> _pairs = new List<Pair>();
         private readonly Timer _timer = new Timer { Interval = DelayMs };
         private bool _enabled;
+        private HashSet<string> _accounts; // null: every account
 
         public static FolderToInbox SentMail(Outlook.Application app, bool enabled)
         {
@@ -85,6 +87,25 @@ namespace tinykit.OutlookAddin.CustomFields
             }
         }
 
+        /// <summary>The accounts (display names) whose folder is moved while Enabled; null: every account.</summary>
+        public void SetAccounts(IEnumerable<string> accounts)
+        {
+            _accounts = accounts == null ? null : new HashSet<string>(accounts, StringComparer.OrdinalIgnoreCase);
+            if (_enabled && !_newOnly)
+                Schedule();
+        }
+
+        /// <summary>The accounts whose folder is watched (those with one), in Outlook's order.</summary>
+        public IEnumerable<string> AccountNames
+        {
+            get { return _pairs.Select(p => p.Account); }
+        }
+
+        private bool On(Pair pair)
+        {
+            return _enabled && (_accounts == null || _accounts.Contains(pair.Account));
+        }
+
         /// <summary>Watches the folder of every account's delivery store and sweeps once.</summary>
         public void Start()
         {
@@ -99,6 +120,7 @@ namespace tinykit.OutlookAddin.CustomFields
                     var source = store.GetDefaultFolder(_source);
                     var pair = new Pair
                     {
+                        Account = account.DisplayName,
                         Source = source,
                         Inbox = store.GetDefaultFolder(Outlook.OlDefaultFolders.olFolderInbox),
                         Items = source.Items,
@@ -110,8 +132,8 @@ namespace tinykit.OutlookAddin.CustomFields
                             if (_newOnly)
                             {
                                 var mail = item as Outlook.MailItem;
-                                if (!_enabled || mail == null)
-                                    return; // meeting requests and other items stay
+                                if (!On(pair) || mail == null)
+                                    return; // meeting requests and other items stay; so does an account left out
                                 pair.Arrived.Add(mail.EntryID);
                             }
                             Schedule();
@@ -188,6 +210,11 @@ namespace tinykit.OutlookAddin.CustomFields
                 return;
             foreach (var pair in _pairs)
             {
+                if (!On(pair))
+                {
+                    pair.Arrived.Clear();
+                    continue;
+                }
                 int moved = 0;
                 try
                 {

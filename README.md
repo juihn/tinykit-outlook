@@ -146,11 +146,13 @@ The add-in's own settings, in every folder.
   mail sent from another mail client and synchronized is moved too). Meeting requests stay. Gmail accounts too:
   there Sent Mail is a label, and moving out of it over IMAP takes that label off.
   (`moveSentToInbox` in `Saved Filters - Mail.xml`; on by default.)
-- **Move Junk Mail to Inbox** moves mail arriving in each account's Junk Email to the same account's Inbox,
-  a few seconds after it arrives, so nothing new is lost to a wrong junk verdict. Mail already in Junk Email when Outlook
-  starts or the option is turned on stays there. For Gmail, moving out of Spam marks the mail not spam. The moved
-  mail gets `🅙` in `domainMark`.
-  (`moveJunkToInbox` in `Saved Filters - Mail.xml`; off by default.)
+- **Move Junk Mail to Inbox...** opens a window with a check box per account (those with a Junk Email folder): mail
+  arriving in a ticked account's Junk Email is moved to the same account's Inbox a few seconds after it arrives, so
+  nothing new is lost to a wrong junk verdict. Mail already in Junk Email when Outlook starts or the account is ticked
+  stays there. For Gmail, moving out of Spam marks the mail not spam. The moved mail gets `🅙` in `domainMark`. A change
+  is kept at once; the button's tip lists the ticked accounts.
+  (`moveJunkToInboxAccounts="a@x.com;b@y.com"` and `moveJunkToInbox` in `Saved Filters - Mail.xml`; off by default. A
+  file from before the list means every account; accounts of other PCs that share the file keep their choice.)
 
 ### Built-in group
 Frequently used Outlook commands, in columns, icons only until its labels are shown (the list is `BuiltInColumns` in
@@ -267,7 +269,8 @@ Sent and Unknown use the Custom Mail Fields, so older mail needs **Fill Fields**
   are computed from the mail itself), including ones added to the file later and ones that have a name and format but no
   SQL yet (they are filled in place), and last **New...**, which asks for the name of a new saved filter and then builds
   it from the selected mails in the same way (the filter is created when its conditions are added).
-  Picking a filter opens a small window with three check boxes:
+  Picking a filter opens a window (resizable; it opens at its last size, `Add Conditions Size.txt` in
+  `%APPDATA%\tinykit\Outlook\`) with three check boxes:
   - **domainRelated**: `domainRelated = '...'` for each selected mail's domain.
   - **From address**: the sender's address (`PR_SENDER_SMTP_ADDRESS` or the raw sender address, as the **F** quick filter).
   - **Subject**: a subject pattern for each selected mail.

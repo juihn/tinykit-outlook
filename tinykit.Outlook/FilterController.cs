@@ -237,7 +237,10 @@ namespace tinykit.OutlookAddin
                 if (SentMail != null && kind == ItemKind.Mail)
                     SentMail.Enabled = loaded.MoveSentToInbox;
                 if (JunkMail != null && kind == ItemKind.Mail)
+                {
+                    JunkMail.SetAccounts(loaded.JunkToInboxAccounts);
                     JunkMail.Enabled = loaded.MoveJunkToInbox;
+                }
                 if (shown)
                 {
                     if (active != null)
@@ -1764,6 +1767,13 @@ namespace tinykit.OutlookAddin
             }
             // Refresh re-reads the item, so edits (e.g. a contact added meanwhile) show up.
             var form = new Reports.RecipientsReportForm(app, () => Reports.RecipientsReport.Build(read(), Fields.Calculator));
+            // The ribbon button's image, in the title bar and on the taskbar (the Explorer and the Inspector both have CommandBars).
+            var icon = OfficeImage.IconFromImageMso((Microsoft.Office.Core.CommandBars)((dynamic)ownerWindow).CommandBars, "ContactCardViewMySite");
+            if (icon != null)
+            {
+                form.Icon = icon;
+                form.ShowIcon = true;
+            }
             form.Show(WindowOwner.From(ownerWindow));
         }
 
@@ -2205,14 +2215,63 @@ namespace tinykit.OutlookAddin
             get { return State(ItemKind.Mail).Settings.MoveJunkToInbox; }
         }
 
-        public void SetMoveJunkToInbox(bool on)
+        /// <summary>The accounts list kept in the mail saved filters file (moveJunkToInboxAccounts); null: every account.</summary>
+        public List<string> JunkToInboxAccountsSetting
+        {
+            get { return State(ItemKind.Mail).Settings.JunkToInboxAccounts; }
+        }
+
+        /// <summary>This PC's accounts with a Junk Email folder, and whether each one's junk mail is moved now.</summary>
+        public List<KeyValuePair<string, bool>> JunkToInboxAccounts()
+        {
+            var settings = State(ItemKind.Mail).Settings;
+            var names = JunkMail == null ? new List<string>() : JunkMail.AccountNames.ToList();
+            return names.Select(n => new KeyValuePair<string, bool>(n, settings.MoveJunkToInbox
+                && (settings.JunkToInboxAccounts == null || settings.JunkToInboxAccounts.Contains(n, StringComparer.OrdinalIgnoreCase)))).ToList();
+        }
+
+        /// <summary>
+        /// Moves the junk mail of these of this PC's accounts (the others of this PC are left out); accounts of other PCs
+        /// that share the settings file keep their choice.
+        /// </summary>
+        public void SetJunkToInboxAccounts(IEnumerable<string> on)
         {
             ReloadIfChanged(ItemKind.Mail, _activeExplorer());
-            State(ItemKind.Mail).Settings.MoveJunkToInbox = on;
+            var settings = State(ItemKind.Mail).Settings;
+            var here = JunkMail == null ? new List<string>() : JunkMail.AccountNames.ToList();
+            var others = settings.JunkToInboxAccounts == null ? new List<string>()
+                : settings.JunkToInboxAccounts.Where(a => !here.Contains(a, StringComparer.OrdinalIgnoreCase));
+            settings.JunkToInboxAccounts = others.Concat(on).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            settings.MoveJunkToInbox = settings.JunkToInboxAccounts.Count > 0;
             if (JunkMail != null)
-                JunkMail.Enabled = on;
+            {
+                JunkMail.SetAccounts(settings.JunkToInboxAccounts);
+                JunkMail.Enabled = settings.MoveJunkToInbox;
+            }
             SaveSettings(ItemKind.Mail);
+            Log.Info("Junk to Inbox: " + (on.Any() ? string.Join(", ", on) : "no account of this PC"));
         }
+
+        /// <summary>Move Junk Mail to Inbox...: a window with a check box per account.</summary>
+        public void ShowJunkToInbox(Outlook.Explorer explorer)
+        {
+            var accounts = JunkToInboxAccounts();
+            if (accounts.Count == 0)
+                throw new UserMessageException("No account has a Junk Email folder.");
+            using (var form = new AccountsForm("Move Junk Mail to Inbox",
+                "Mail that arrives in a ticked account's Junk Email is moved to the same account's Inbox a few seconds later "
+                + "(for Gmail, moving out of Spam marks it not spam), and gets \U0001F159 in domainMark. Mail already in Junk Email "
+                + "stays there. A change is kept at once.",
+                accounts, SetJunkToInboxAccounts))
+            {
+                form.Icon = OfficeImage.IconFromImageMso(explorer.CommandBars, JunkToInboxIcon);
+                form.ShowDialog(WindowOwner.From(explorer));
+            }
+            Invalidate(); // the button's tip lists the accounts
+        }
+
+        /// <summary>The image of the Move Junk Mail to Inbox button and window.</summary>
+        public const string JunkToInboxIcon = "JunkEmailMarkAsNotJunk";
 
         private static bool ConfirmMany(Outlook.Explorer explorer, int count, string what)
         {

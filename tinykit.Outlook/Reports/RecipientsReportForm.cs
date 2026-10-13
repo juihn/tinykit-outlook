@@ -28,6 +28,7 @@ namespace tinykit.OutlookAddin.Reports
         private readonly Outlook.Application _app;
         private RecipientsReport _report;
 
+        private readonly Panel _top, _options;
         private readonly Label _title;
         private readonly Panel _senderRow;
         private readonly Label _counts;
@@ -45,13 +46,16 @@ namespace tinykit.OutlookAddin.Reports
             Font = new Font("Segoe UI", 9f);
             KeyPreview = true;
             ShowIcon = false;
-            MinimumSize = new Size(420, 300);
+            // Sizes for a 100% screen, scaled to this one's (the fonts are).
+            MinimumSize = LogicalToDeviceUnits(new Size(420, 300));
             StartPosition = FormStartPosition.Manual;
-            var bounds = _lastBounds ?? new Rectangle(Cursor.Position.X - 300, Cursor.Position.Y + 20, 620, 520);
-            Bounds = Screen.GetWorkingArea(bounds).IntersectsWith(bounds) ? bounds : new Rectangle(100, 100, 620, 520);
+            var size = LogicalToDeviceUnits(new Size(620, 520));
+            var bounds = _lastBounds ?? new Rectangle(new Point(Cursor.Position.X - size.Width / 2, Cursor.Position.Y + 20), size);
+            Bounds = Screen.GetWorkingArea(bounds).IntersectsWith(bounds) ? bounds : new Rectangle(new Point(100, 100), size);
 
-            // Top: subject (click opens the mail) and the sender.
-            var top = new Panel { Dock = DockStyle.Top, Padding = new Padding(8, 8, 8, 4), Height = 72 };
+            // Top: subject (click opens the mail) and the sender. Heights follow the text (FitHeader), as fonts grow with
+            // the screen's scaling and fixed heights cut the text off.
+            var top = _top = new Panel { Dock = DockStyle.Top, Padding = new Padding(8, 8, 8, 4), Height = 72 };
             _title = new Label
             {
                 UseMnemonic = false,
@@ -69,8 +73,8 @@ namespace tinykit.OutlookAddin.Reports
             top.Controls.Add(_title);
 
             // Options: counts and what each person shows.
-            var options = new Panel { Dock = DockStyle.Top, Height = 26, Padding = new Padding(8, 2, 8, 2) };
-            _counts = new Label { UseMnemonic = false, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+            var options = _options = new Panel { Dock = DockStyle.Top, Height = 26, Padding = new Padding(8, 2, 8, 2) };
+            _counts = new Label { UseMnemonic = false, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true }; // one line, "…" when narrow
             _nameBox = new CheckBox { Text = "Recipient name", AutoSize = true, Dock = DockStyle.Right, Checked = _showName, ForeColor = Color.DimGray };
             _userBox = new CheckBox { Text = "Username", AutoSize = true, Dock = DockStyle.Right, Checked = _showUser, ForeColor = Color.SlateBlue };
             _nameBox.CheckedChanged += (s, e) => { _showName = _nameBox.Checked; Relayout(); };
@@ -156,6 +160,21 @@ namespace tinykit.OutlookAddin.Reports
             base.OnFormClosed(e);
         }
 
+        // The subject, sender and options rows as tall as their text in the fonts' actual size (the sender's bold chip
+        // and its label centred in their row).
+        private void FitHeader(Label senderLabel, PersonChip sender)
+        {
+            const TextFormatFlags flags = TextFormatFlags.NoPadding | TextFormatFlags.SingleLine;
+            _title.Height = TextRenderer.MeasureText("Ag", _title.Font, Size.Empty, flags).Height + 6;
+            int row = Math.Max(senderLabel.PreferredHeight, sender.Height) + 6;
+            _senderRow.Height = row;
+            senderLabel.Top = (row - senderLabel.PreferredHeight) / 2;
+            sender.Top = (row - sender.Height) / 2;
+            _top.Height = _top.Padding.Vertical + _title.Height + row;
+            _options.Height = _options.Padding.Vertical
+                + Math.Max(_counts.PreferredHeight, Math.Max(_nameBox.PreferredSize.Height, _userBox.PreferredSize.Height)) + 2;
+        }
+
         protected override void OnKeyDown(KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Escape && ActiveControl != _search)
@@ -179,6 +198,7 @@ namespace tinykit.OutlookAddin.Reports
             WireChip(sender);
             _senderRow.Controls.Add(senderLabel);
             _senderRow.Controls.Add(sender);
+            FitHeader(senderLabel, sender);
 
             _body.SuspendLayout();
             foreach (var c in _layoutItems)

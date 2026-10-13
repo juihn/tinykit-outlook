@@ -65,7 +65,7 @@ namespace tinykit.OutlookAddin.Filtering
             _mails = mails;
             Text = "Add to " + filterName;
             Font = new Font("Segoe UI", 9f);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
+            FormBorderStyle = FormBorderStyle.Sizable; // the values box grows with it; the size is kept (OnLoad, OnFormClosed)
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
@@ -110,8 +110,8 @@ namespace tinykit.OutlookAddin.Filtering
                 AcceptsTab = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
             };
-            _ok = new Button { Text = "Add", DialogResult = DialogResult.OK, Location = new Point(432, 288), Size = new Size(75, 26) };
-            var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(513, 288), Size = new Size(75, 26) };
+            _ok = new Button { Text = "Add", DialogResult = DialogResult.OK, Location = new Point(432, 288), Size = new Size(75, 26), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
+            var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(513, 288), Size = new Size(75, 26), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
             AcceptButton = _ok;
             CancelButton = cancel;
             Controls.Add(intro);
@@ -164,10 +164,26 @@ namespace tinykit.OutlookAddin.Filtering
             }
         }
 
+        // The size it was left at, once the layout is scaled to the screen; the designed size is the smallest. Kept where
+        // it was centred on Outlook's window.
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            MinimumSize = Size;
+            var saved = Common.WindowSize.Load(Settings.SettingsPaths.AddConditionsSizeFile);
+            if (saved.HasValue)
+            {
+                var centre = new Point(Left + Width / 2, Top + Height / 2);
+                Size = new Size(Math.Max(saved.Value.Width, MinimumSize.Width), Math.Max(saved.Value.Height, MinimumSize.Height));
+                Location = new Point(centre.X - Width / 2, centre.Y - Height / 2);
+            }
+        }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             if (DialogResult == DialogResult.OK)
                 LastField[_filterName] = Field;
+            Common.WindowSize.Save(Settings.SettingsPaths.AddConditionsSizeFile, this);
             base.OnFormClosed(e);
         }
 
